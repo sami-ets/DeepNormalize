@@ -61,6 +61,8 @@ class DeepNormalizeTrainer(Trainer):
 
         self._at_training_begin()
 
+        self._lambda = 0.5
+
     def train(self):
         for epoch in range(self.config.max_epoch):
             for i, sample in enumerate(self.config.dataloader):
@@ -74,20 +76,32 @@ class DeepNormalizeTrainer(Trainer):
                 self._disable_gradients(self.config.model[self.NORMALIZER])
                 self._disable_gradients(self.config.model[self.SEGMENTER])
 
+                # Train the discriminator part of the graph.
                 self._train_discriminator(X, X_n)
 
                 self._disable_gradients(self.config.model[self.DISCRIMINATOR])
                 self._enable_gradients(self.config.model[self.NORMALIZER])
                 self._enable_gradients(self.config.model[self.SEGMENTER])
 
-                # Get segmentation prediction.
+                # Train segmenter. Must do inference on Normalizer again since that part of the graph has been
+                # previously detached.
                 X_n = self.config.model[self.NORMALIZER](X)
                 X_s = self.config.model[self.SEGMENTER](X_n)
+                loss_S_X_s = self._train_segmenter(X_s)
 
-                loss_X_s = self.config.criterion[self.DICE_LOSS](torch.nn.functional.softmax(X_s, dim=1),
-                                                                 to_onehot(y, num_classes=4))
+                # Try to fool the discriminator with Normalized data as "real" data.
+                loss_D_X_n = self._evaluate_discriminator_error_on_normalized_data(X_n)
 
-                loss_X_s.backward(retain_graph=True)
+                self._enable_gradients(self.config.model[self.NORMALIZER])
+                self._disable_gradients(self.config.model[self.SEGMENTER])
+
+                # Compute total error on Normalizer and apply gradients on Normalizer.
+                total_error = loss_S_X_s + self._lambda * loss_D_X_n
+                total_error.backward()
+                self.config.optimizer[self.NORMALIZER].step()
+
+                # Re-enable all parts of the graph.
+                [self._enable_gradients(model) for model in self.config.model]
 
                 print("debug")
 
@@ -143,9 +157,7 @@ class DeepNormalizeTrainer(Trainer):
             optim.param_groups[0]["lr"] = optim.param_groups[0]["lr"] * float(
                 self.config.dataloader.batch_size * self._world_size) / 256.
 
-        # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
-        # for convenient interoperation with argparse.
-
+        # Initialize Amp.
         for i, (model, optimizer) in enumerate(zip(self.config.model, self.config.optimizer)):
             self.config.model[i], self.config.optimizer[i] = amp.initialize(model, optimizer,
                                                                             opt_level=self.config.running_config.opt_level,
@@ -187,7 +199,6 @@ class DeepNormalizeTrainer(Trainer):
         for p in model.parameters(): p.requires_grad = True
 
     def _train_discriminator(self, X, X_n):
-        # Predictions on X
         pred_X = self.config.model[self.DISCRIMINATOR](X)
         y = torch.Tensor().new_full(size=(X.size(0),), fill_value=self.REAL_LABEL, dtype=torch.long,
                                     device=self.config.running_config.device)
@@ -195,7 +206,6 @@ class DeepNormalizeTrainer(Trainer):
 
         loss_X.backward()
 
-        # Predictions on X_n
         pred_X_n = self.config.model[self.DISCRIMINATOR](X_n)
         y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.FAKE_LABEL, dtype=torch.long,
                                     device=self.config.running_config.device)
@@ -204,3 +214,19 @@ class DeepNormalizeTrainer(Trainer):
         loss_X_n.backward()
 
         self.config.optimizer[self.DISCRIMINATOR].step()
+
+    def _evaluate_discriminator_error_on_normalized_data(self, X_n):
+        pred_X_n = self.config.model[self.DISCRIMINATOR](X_n)
+        y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.REAL_LABEL, dtype=torch.long,
+                                    device=self.config.running_config.device)
+        loss_X_n = self.config.criterion[self.CROSS_ENTROPY](pred_X_n, y)
+
+        return loss_X_n
+
+    def _train_segmenter(self, X_s):
+        loss_S_X_s = self.config.criterion[self.DICE_LOSS](torch.nn.functional.softmax(X_s, dim=1),
+                                                           to_onehot(y, num_classes=4))
+        loss_S_X_s.backward(retain_graph=True)  # Retain graph in VRAM for future error addition.
+        self.config.optimizer[self.SEGMENTER].step()
+
+        return loss_S_X_s
