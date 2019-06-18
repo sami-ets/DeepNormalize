@@ -19,16 +19,15 @@ import os
 
 from datetime import datetime
 
-from samitorch.training.training_config import TrainingConfig
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.initializer import Initializer
-from deepNormalize.config.configurations import RunningConfiguration
+from deepNormalize.config.configurations import RunningConfiguration, DeepNormalizeTrainingConfig
 
 
 def main(config_path: str, running_config: RunningConfiguration):
     init = Initializer(config_path)
 
-    dataset_config, model_config, training_config = init.create_configs()
+    dataset_config, model_config, training_config, variables, logger_config = init.create_configs()
 
     metrics = init.create_metrics(training_config)
 
@@ -42,14 +41,16 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     dataloader = init.create_dataloader(dataset, training_config.batch_size)
 
-    train_config = TrainingConfig(checkpoint_every=training_config.checkpoint_every,
-                                  max_epoch=training_config.max_epoch,
-                                  criterion=criterions,
-                                  metric=metrics,
-                                  model=models,
-                                  optimizer=optimizers,
-                                  dataloader=dataloader,
-                                  running_config=running_config)
+    train_config = DeepNormalizeTrainingConfig(checkpoint_every=training_config.checkpoint_every,
+                                               max_epoch=training_config.max_iterations,
+                                               criterion=criterions,
+                                               metric=metrics,
+                                               model=models,
+                                               optimizer=optimizers,
+                                               dataloader=dataloader,
+                                               running_config=running_config,
+                                               variables=variables,
+                                               logger_config=logger_config)
 
     trainer = DeepNormalizeTrainer(train_config, None)
 
@@ -61,15 +62,12 @@ if __name__ == '__main__':
     parser.add_argument("--config", help="Path to configuration file.")
     parser.add_argument("--opt-level", type=str, default="O1",
                         help="O0 - FP32 training, 01 - Mixed Precision (recommended), 02 - Almost FP16 Mixed Precision, 03 - FP16 Training.")
-    parser.add_argument("--num-workers", default=4, type=int, help="Number of data loading workers (default: 4)")
+    parser.add_argument("--num-workers", default=8, type=int, help="Number of data loading workers (default: 4)")
     parser.add_argument("--local-rank", default=0, type=int)
     parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
     parser.add_argument('--keep-batch-norm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default=None)
     parser.add_argument('--num-gpus', type=int, default=1, help="The number of GPUs on the Node.")
-    parser.add_argument('--log', type=str,
-                        default=os.makedirs(os.path.join("/tmp/ml/", datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))),
-                        help="The log path.")
     args = parser.parse_args()
 
     running_config = RunningConfiguration(dict(vars(args)))

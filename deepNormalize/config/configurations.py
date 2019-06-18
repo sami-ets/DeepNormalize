@@ -16,7 +16,9 @@
 
 import torch
 
+from typing import Union, List
 from samitorch.configs.configurations import DatasetConfiguration, TrainingConfiguration, Configuration
+from samitorch.training.training_config import TrainingConfig
 
 
 class RunningConfiguration(Configuration):
@@ -166,10 +168,10 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._criterions = config["criterions"]
         self._metrics = config["metrics"]
         self._optimizer = config["optimizer"]
-        self._max_epoch = config["max_epoch"]
+        self._max_iterations = config["max_iterations"]
 
     @property
-    def batch_size(self):
+    def batch_size(self) -> int:
         """
         The batch size used during training.
 
@@ -179,17 +181,17 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         return self._batch_size
 
     @property
-    def max_epoch(self):
+    def max_iterations(self) -> int:
         """
         The maximum number of epochs during training.
 
         Returns:
             int: The maximum number of epochs.
         """
-        return self._max_epoch
+        return self._max_iterations
 
     @property
-    def checkpoint_every(self):
+    def checkpoint_every(self) -> int:
         """
         The frequency at which we want to save a checkpoint of the model.
 
@@ -199,7 +201,7 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         return self._checkpoint_every
 
     @property
-    def criterions(self):
+    def criterions(self) -> str:
         """
         The criterion used for model optimization.
 
@@ -209,7 +211,7 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         return self._criterions
 
     @property
-    def metrics(self):
+    def metrics(self) -> Union[list, str]:
         """
         The metrics used during learning.
 
@@ -223,11 +225,64 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._metrics = metrics
 
     @property
-    def optimizer(self):
+    def optimizer(self) -> Union[list, str]:
         """
         The optimizer used for learning.
 
         Returns:
-            str: The optimizer used.
+            str_or_list: The optimizer used.
         """
         return self._optimizer
+
+
+class VariableConfiguration(Configuration):
+
+    def __init__(self, config: dict):
+        super(VariableConfiguration, self).__init__()
+        self._lambda = config["lambda"]
+
+    @property
+    def lambda_(self) -> float:
+        """
+        The lambda variable between losses.
+
+        Returns:
+            float: The lambda variable.
+        """
+        return self._lambda
+
+
+class DeepNormalizeTrainingConfig(TrainingConfig):
+    def __init__(self, checkpoint_every: int, max_epoch: int, criterion: Union[List[torch.nn.Module], torch.nn.Module],
+                 metric,
+                 model: Union[List[torch.nn.Module], torch.nn.Module],
+                 optimizer: Union[List[torch.nn.Module], torch.nn.Module],
+                 dataloader: Union[List[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
+                 running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration) -> None:
+        super(DeepNormalizeTrainingConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
+                                                          optimizer, dataloader, running_config)
+        self._variables = variables
+        self._logger_config = logger_config
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @property
+    def logger_config(self):
+        return self._logger_config
+
+class LoggerConfiguration(Configuration):
+
+    def __init__(self, config: dict):
+        super(LoggerConfiguration, self).__init__()
+        self._path = config["path"]
+        self._frequency = config["log_after_iterations"]
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    @property
+    def frequency(self) -> int:
+        return self._frequency

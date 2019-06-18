@@ -36,8 +36,10 @@ class Initializer(object):
         datasets_configs = DeepNormalizeDatasetConfigurationParserFactory().parse(self._path)
         model_config = DeepNormalizeModelsParserFactory().parse(self._path)
         training_config = TrainingConfigurationParserFactory().parse(self._path)
+        variable_config = VariableConfigurationParserFactory().parse(self._path)
+        logger_config = LoggerConfigurationParserFactory().parse(self._path)
 
-        return datasets_configs, model_config, training_config
+        return datasets_configs, model_config, training_config, variable_config, logger_config
 
     def create_metrics(self, training_config):
         dice_metric = training_config.metrics[0]["dice"]

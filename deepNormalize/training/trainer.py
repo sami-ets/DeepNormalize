@@ -19,6 +19,7 @@ import torch.backends.cudnn as cudnn
 import os
 
 cudnn.benchmark = True
+cudnn.enabled = True
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -30,7 +31,9 @@ except ImportError:
 
 from samitorch.metrics.gauges import RunningAverageGauge
 from samitorch.training.trainer import Trainer
-from samitorch.utils.utils import to_onehot, flatten
+from samitorch.utils.utils import to_onehot
+
+from deepNormalize.utils.logger import Logger
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -60,11 +63,10 @@ class DeepNormalizeTrainer(Trainer):
         self._total_validation_loss = RunningAverageGauge()
 
         self._at_training_begin()
-
-        self._lambda = 0.5
+        self._logger = Logger(self.config.logger_config)
 
     def train(self):
-        for epoch in range(self.config.max_epoch):
+        for iteration in range(self.config.max_epoch):
             for i, sample in enumerate(self.config.dataloader):
                 X, y = self.prepare_batch(batch=sample, input_device=torch.device('cpu'),
                                           output_device=self.config.running_config.device)
@@ -87,7 +89,7 @@ class DeepNormalizeTrainer(Trainer):
                 # previously detached.
                 X_n = self.config.model[self.NORMALIZER](X)
                 X_s = self.config.model[self.SEGMENTER](X_n)
-                loss_S_X_s = self._train_segmenter(X_s)
+                loss_S_X_s = self._train_segmenter(X_s, y)
 
                 # Try to fool the discriminator with Normalized data as "real" data.
                 loss_D_X_n = self._evaluate_discriminator_error_on_normalized_data(X_n)
@@ -96,12 +98,21 @@ class DeepNormalizeTrainer(Trainer):
                 self._disable_gradients(self.config.model[self.SEGMENTER])
 
                 # Compute total error on Normalizer and apply gradients on Normalizer.
-                total_error = loss_S_X_s + self._lambda * loss_D_X_n
+                total_error = loss_S_X_s + self.config.variables.lambda_ * loss_D_X_n
                 total_error.backward()
                 self.config.optimizer[self.NORMALIZER].step()
 
                 # Re-enable all parts of the graph.
                 [self._enable_gradients(model) for model in self.config.model]
+
+                self._logger.log_images(X, y, X_n, torch.argmax(torch.nn.functional.softmax(X_s, dim=1), dim=1, keepdim=True), iteration)
+                self._logger.log_stats("training", {
+                    "alpha": 0,
+                    "lambda": self.config.variables.lambda_,
+                    "segmenter_loss": loss_S_X_s,
+                    "discriminator_loss": loss_D_X_n,
+                    "learning_rate": self.config._optimizer[0].param_groups[0]['lr']
+                }, iteration)
 
                 print("debug")
 
@@ -223,7 +234,7 @@ class DeepNormalizeTrainer(Trainer):
 
         return loss_X_n
 
-    def _train_segmenter(self, X_s):
+    def _train_segmenter(self, X_s, y):
         loss_S_X_s = self.config.criterion[self.DICE_LOSS](torch.nn.functional.softmax(X_s, dim=1),
                                                            to_onehot(y, num_classes=4))
         loss_S_X_s.backward(retain_graph=True)  # Retain graph in VRAM for future error addition.

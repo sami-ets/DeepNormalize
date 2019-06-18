@@ -20,9 +20,10 @@ import logging
 from ignite.metrics.accuracy import Accuracy
 from samitorch.configs.configurations import Configuration
 from samitorch.factories.parsers import AbstractConfigurationParserFactory
-from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration, DiceMetricConfiguration
+from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration
 
-from deepNormalize.config.configurations import DeepNormalizeDatasetConfiguration, DeepNormalizeTrainingConfiguration
+from deepNormalize.config.configurations import DeepNormalizeDatasetConfiguration, DeepNormalizeTrainingConfiguration, \
+    VariableConfiguration, LoggerConfiguration
 
 
 class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
@@ -93,6 +94,44 @@ class TrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
                 metrics = [config["training"]["metrics"][0], config["training"]["metrics"][1]]
                 config = DeepNormalizeTrainingConfiguration(config["training"])
                 config.metrics = metrics
+                return config
+            except yaml.YAMLError as e:
+                logging.error(
+                    "Unable to read the config file: {} with error {}".format(path, e))
+
+    def register(self, model_type: str, configuration_class):
+        pass
+
+
+class VariableConfigurationParserFactory(AbstractConfigurationParserFactory):
+
+    def __init__(self):
+        pass
+
+    def parse(self, path: str):
+        with open(path, 'r') as config_file:
+            try:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+                config = VariableConfiguration(config["variables"])
+                return config
+            except yaml.YAMLError as e:
+                logging.error(
+                    "Unable to read the config file: {} with error {}".format(path, e))
+
+    def register(self, model_type: str, configuration_class):
+        pass
+
+
+class LoggerConfigurationParserFactory(AbstractConfigurationParserFactory):
+
+    def __init__(self):
+        pass
+
+    def parse(self, path: str):
+        with open(path, 'r') as config_file:
+            try:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+                config = LoggerConfiguration(config["logger"])
                 return config
             except yaml.YAMLError as e:
                 logging.error(

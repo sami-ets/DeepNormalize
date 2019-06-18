@@ -57,9 +57,9 @@ dataset:
         patch_size: [32, 32, 32]
 
 training:
-  batch_size: 2
+  batch_size: 10
   checkpoint_every: 5
-  max_epoch: 100
+  max_iterations: 100
   criterions:
     - "DiceLoss"
     - "Cross_Entropy"
@@ -74,3 +74,10 @@ training:
   optimizer:
     type: "SGD"
     lr: 0.0001
+
+variables:
+  lambda: 0.5
+
+logger:
+  path: "/tmp/ml"
+  log_after_iterations: 20
