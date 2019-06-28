@@ -22,14 +22,18 @@ import re
 
 from torchvision.transforms import transforms
 
-from deepNormalize.input.transforms import ToNumpyArray, ToNiftiFile, CropToContent, PadToShape, RemapClassIDs, \
-    ResampleToImg, ExtractBrain, ToNifti1Image, Nifti1ToDisk, ExtractBrainNifti
+from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
+    ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     """
     Define a preprocessing pipeline.
     """
+
+    @staticmethod
+    def _get_image_affine(file):
+        return nib.load(file).affine
 
     @staticmethod
     def _get_image_header(file):
@@ -60,7 +64,7 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._root_dir = root_dir
         self._transforms = None
 
-    def run(self, prefix: str = "Processed_"):
+    def run(self, prefix: str = "Preprocessed_"):
         """
         Apply piepline's transformations.
 
@@ -71,7 +75,8 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
             for file in files:
                 self._transforms = transforms.Compose([ToNumpyArray(),
                                                        RemapClassIDs([10, 150, 250], [1, 2, 3]),
-                                                       ToNiftiFile(os.path.join(root, prefix + file), None)])
+                                                       ToNifti1Image(),
+                                                       NiftiToDisk(os.path.join(root, prefix + file))])
                 self._transforms(os.path.join(root, file))
 
 
@@ -87,38 +92,36 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
         self._root_dir = root_dir
         self._transforms = None
 
-    def _run_images_transforms(self, prefix: str = "Processed_"):
+    def _run_images_transforms(self, prefix: str = "Preprocessed_"):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
             images = list(filter(re.compile(r"^T.*\.nii").search, files))
             for file in images:
-                header = self._get_image_header(os.path.join(root, file))
                 if not "_1mm" in file:
-                    self._transforms = transforms.Compose([ToNifti1Image(),
-                                                           ResampleToImg(clip=False,
-                                                                         reference_nii_file=root + "/T1_1mm.nii",
-                                                                         interpolation="continuous"),
-                                                           ExtractBrainNifti(
-                                                               mask=root + "/Processed_LabelsForTesting.nii"),
-                                                           Nifti1ToDisk(os.path.join(root, prefix + file))])
+                    self._transforms = transforms.Compose([LoadNifti(),
+                                                           ResampleNiftiImageToTemplate(clip=False,
+                                                                                        template=root + "/T1_1mm.nii",
+                                                                                        interpolation="continuous"),
+                                                           ApplyMask(root + "/Preprocessed_LabelsForTesting.nii"),
+                                                           NiftiToDisk(os.path.join(root, prefix + file))])
                 else:
-                    self._transforms = transforms.Compose([ToNumpyArray(),
-                                                           ExtractBrain(mask=root + "/Processed_LabelsForTesting.nii"),
-                                                           ToNiftiFile(os.path.join(root, prefix + file), header)])
+                    self._transforms = transforms.Compose([LoadNifti(),
+                                                           ApplyMask(root + "/Preprocessed_LabelsForTesting.nii"),
+                                                           NiftiToDisk(os.path.join(root, prefix + file))])
 
                 self._transforms(os.path.join(root, file))
 
-    def _run_label_transforms(self, prefix: str = "Processed_"):
+    def _run_label_transforms(self, prefix: str = "Preprocessed_"):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
             labels = list(filter(re.compile(r"^Labels.*\.nii").search, files))
             for file in labels:
-                self._transforms = transforms.Compose([ToNifti1Image(),
-                                                       ResampleToImg(clip=True,
-                                                                     reference_nii_file=root + "/T1_1mm.nii",
-                                                                     interpolation="linear"),
-                                                       Nifti1ToDisk(os.path.join(root, prefix + file))])
+                self._transforms = transforms.Compose([LoadNifti(),
+                                                       ResampleNiftiImageToTemplate(clip=True,
+                                                                                    template=root + "/T1_1mm.nii",
+                                                                                    interpolation="linear"),
+                                                       NiftiToDisk(os.path.join(root, prefix + file))])
                 self._transforms(os.path.join(root, file))
 
-    def run(self, prefix: str = "Processed_"):
+    def run(self, prefix: str = "Preprocessed_"):
         """
         Apply piepline's transformations.
 
@@ -136,16 +139,18 @@ class T1AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._normalized_shape = self._compute_normalized_shape(root_dir)
         self._transforms = None
 
-    def run(self, prefix="Normalized_"):
+    def run(self, regexes, prefix="Normalized_"):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
-            images = list(filter(re.compile(r"^Processed_.*\.nii").search, files))
-            for file in images:
-                header = self._get_image_header(os.path.join(root, file))
-                self._transforms = transforms.Compose([ToNumpyArray(),
-                                                       CropToContent(),
-                                                       PadToShape(self._normalized_shape),
-                                                       ToNiftiFile(os.path.join(root, prefix + file), header)])
-                self._transforms(os.path.join(root, file))
+            for regex in regexes:
+                images = list(filter(re.compile(regex).search, files))
+                for file in images:
+                    header = self._get_image_header(os.path.join(root, file))
+                    self._transforms = transforms.Compose([ToNumpyArray(),
+                                                           CropToContent(),
+                                                           PadToShape(self._normalized_shape),
+                                                           ToNifti1Image(header),
+                                                           NiftiToDisk(os.path.join(root, prefix + file))])
+                    self._transforms(os.path.join(root, file))
 
     @staticmethod
     def _compute_normalized_shape(root_dir):
@@ -171,9 +176,9 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    iSEGPreProcessingPipeline(root_dir=args.path_iseg).run()
+    iSEGPreProcessingPipeline(root_dir=args.path_iseg + "/label").run()
     MRBrainsImagePreProcessingPipeline(root_dir=args.path_mrbrains).run()
-    T1AnatomicalPreProcessingPipeline(root_dir=args.path_mrbrains).run()
-    T1AnatomicalPreProcessingPipeline(root_dir=args.path_iseg).run()
+    T1AnatomicalPreProcessingPipeline(root_dir=args.path_mrbrains).run([r"^Preprocessed_.*\.nii"])
+    T1AnatomicalPreProcessingPipeline(root_dir=args.path_iseg).run([r".*T.*\.nii", r"^Preprocessed_.*label.*\.nii"])
 
     print("Preprocessing pipeline completed successfully.")
