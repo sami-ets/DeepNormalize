@@ -18,11 +18,12 @@ import torch
 
 from typing import Union, List
 from samitorch.configs.configurations import DatasetConfiguration, TrainingConfiguration, Configuration
-from samitorch.training.training_config import TrainingConfig
+from samitorch.training.trainer_configuration import TrainerConfiguration
 
 
 class RunningConfiguration(Configuration):
     def __init__(self, config: dict):
+        super(RunningConfiguration, self).__init__()
         self._opt_level = config["opt_level"]
         self._num_workers = config["num_workers"]
         self._local_rank = config["local_rank"]
@@ -121,7 +122,7 @@ class RunningConfiguration(Configuration):
 class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
 
     def __init__(self, config: dict):
-        super(DeepNormalizeDatasetConfiguration, self).__init__()
+        super(DeepNormalizeDatasetConfiguration, self).__init__(config)
 
         self._path = config["path"]
         self._training_patch_size = config["training"]["patch_size"]
@@ -161,14 +162,15 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
 class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
 
     def __init__(self, config: dict):
-        super(DeepNormalizeTrainingConfiguration, self).__init__()
-
+        super(DeepNormalizeTrainingConfiguration, self).__init__(config)
+        self._debug = config["debug"]
         self._batch_size = config["batch_size"]
         self._checkpoint_every = config["checkpoint_every"]
         self._criterions = config["criterions"]
         self._metrics = config["metrics"]
         self._optimizer = config["optimizer"]
         self._max_iterations = config["max_iterations"]
+        self._validation_split = config["validation_split"]
 
     @property
     def batch_size(self) -> int:
@@ -234,6 +236,26 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         """
         return self._optimizer
 
+    @property
+    def debug(self) -> bool:
+        """
+        Define if model is in debug mode. If so, run verifications.
+
+        Returns:
+            bool: If model is in debug mode.
+        """
+        return self._debug
+
+    @property
+    def validation_split(self) -> int:
+        """
+        The number of validation samples.
+
+        Returns:
+            int: The number of samples in validation set.
+        """
+        return self._validation_split
+
 
 class VariableConfiguration(Configuration):
 
@@ -252,17 +274,19 @@ class VariableConfiguration(Configuration):
         return self._lambda
 
 
-class DeepNormalizeTrainingConfig(TrainingConfig):
+class DeepNormalizeTrainerConfig(TrainerConfiguration):
     def __init__(self, checkpoint_every: int, max_epoch: int, criterion: Union[List[torch.nn.Module], torch.nn.Module],
                  metric,
                  model: Union[List[torch.nn.Module], torch.nn.Module],
                  optimizer: Union[List[torch.nn.Module], torch.nn.Module],
                  dataloader: Union[List[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
-                 running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration) -> None:
-        super(DeepNormalizeTrainingConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
-                                                          optimizer, dataloader, running_config)
+                 running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration,
+                 debug: bool) -> None:
+        super(DeepNormalizeTrainerConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
+                                                         optimizer, dataloader, running_config)
         self._variables = variables
         self._logger_config = logger_config
+        self._debug = debug
 
     @property
     def variables(self):
@@ -271,6 +295,11 @@ class DeepNormalizeTrainingConfig(TrainingConfig):
     @property
     def logger_config(self):
         return self._logger_config
+
+    @property
+    def debug(self):
+        return self._debug
+
 
 class LoggerConfiguration(Configuration):
 

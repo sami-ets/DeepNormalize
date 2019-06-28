@@ -15,13 +15,10 @@
 # ==============================================================================
 
 import argparse
-import os
-
-from datetime import datetime
 
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.initializer import Initializer
-from deepNormalize.config.configurations import RunningConfiguration, DeepNormalizeTrainingConfig
+from deepNormalize.config.configurations import RunningConfiguration, DeepNormalizeTrainerConfig
 
 
 def main(config_path: str, running_config: RunningConfiguration):
@@ -39,18 +36,20 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     dataset = init.create_dataset(dataset_config)
 
-    dataloader = init.create_dataloader(dataset, training_config.batch_size)
+    dataloader = init.create_dataloader(dataset, training_config.batch_size, running_config.num_workers,
+                                        training_config.validation_split)
 
-    train_config = DeepNormalizeTrainingConfig(checkpoint_every=training_config.checkpoint_every,
-                                               max_epoch=training_config.max_iterations,
-                                               criterion=criterions,
-                                               metric=metrics,
-                                               model=models,
-                                               optimizer=optimizers,
-                                               dataloader=dataloader,
-                                               running_config=running_config,
-                                               variables=variables,
-                                               logger_config=logger_config)
+    train_config = DeepNormalizeTrainerConfig(checkpoint_every=training_config.checkpoint_every,
+                                              max_epoch=training_config.max_iterations,
+                                              criterion=criterions,
+                                              metric=metrics,
+                                              model=models,
+                                              optimizer=optimizers,
+                                              dataloader=dataloader,
+                                              running_config=running_config,
+                                              variables=variables,
+                                              logger_config=logger_config,
+                                              debug=training_config.debug)
 
     trainer = DeepNormalizeTrainer(train_config, None)
 
@@ -63,13 +62,12 @@ if __name__ == '__main__':
     parser.add_argument("--opt-level", type=str, default="O1",
                         help="O0 - FP32 training, 01 - Mixed Precision (recommended), 02 - Almost FP16 Mixed Precision, 03 - FP16 Training.")
     parser.add_argument("--num-workers", default=8, type=int, help="Number of data loading workers (default: 4)")
-    parser.add_argument("--local-rank", default=0, type=int)
+    parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
     parser.add_argument('--keep-batch-norm-fp32', type=str, default=None)
-    parser.add_argument('--loss-scale', type=str, default=None)
+    parser.add_argument('--loss-scale', type=str, default="dynamic")
     parser.add_argument('--num-gpus', type=int, default=1, help="The number of GPUs on the Node.")
     args = parser.parse_args()
-
     running_config = RunningConfiguration(dict(vars(args)))
 
     main(config_path=args.config, running_config=running_config)

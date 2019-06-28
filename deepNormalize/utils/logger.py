@@ -17,6 +17,8 @@
 import os
 import torch
 import numpy as np
+import logging
+import sys
 
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
@@ -29,6 +31,15 @@ class Logger(object):
         self._config = config
         self._log_path = self._create_folder()
         self._writer = SummaryWriter(self._log_path)
+        self._logger = logging.getLogger("DeepNormalize")
+
+        self._logger.setLevel(logging.INFO)
+        # Logging to console
+        stream_handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s')
+        stream_handler.setFormatter(formatter)
+        self._logger.addHandler(stream_handler)
 
     def log_images(self, inputs: torch.Tensor, targets: torch.Tensor, normalized: torch.Tensor,
                    predictions: torch.Tensor, step: int) -> None:
@@ -57,9 +68,10 @@ class Logger(object):
             f'{phase} Alpha': values["alpha"],
             f'{phase} Lambda': values["lambda"],
             f'{phase} Segmenter Dice Loss': values["segmenter_loss"],
-            f'{phase} Discriminator Cross Entropy Loss': values["discriminator_loss"],
+            f'{phase} Discriminator D_X_n Cross Entropy Loss': values["discriminator_loss_D_X_n"],
+            f'{phase} Discriminator D_X Cross Entropy Loss': values["discriminator_loss_D"],
             # f'{phase} Discriminator Accuracy': values["discriminator_accuracy"],
-            # f'{phase} Segmentation IOU': values["segmenter_metric"],
+            f'{phase} Segmentation Dice': values["dice_score"],
             f'{phase} Learning rate': values["learning_rate"]
         }
 
@@ -95,3 +107,6 @@ class Logger(object):
         log_path = os.path.join(self._config.path, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         os.makedirs(log_path)
         return log_path
+
+    def info(self, message, *args):
+        self._logger.info(message, *args)

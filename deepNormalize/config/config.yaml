@@ -1,79 +1,88 @@
 models:
-  - preprocessor:
-      name: "UNet3D"
-      type: "UNet3D"
-      feature_maps: 64
-      in_channels: 1
-      out_channels: 1
-      num_levels: 4
-      conv_kernel_size: 3
-      pool_kernel_size: 2
-      pooling_type: "MaxPool3d"
-      num_groups: 8
-      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
-      interpolation: True
-      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-  - segmenter:
-      name: "UNet3D"
-      type: "UNet3D"
-      feature_maps: 64
-      in_channels: 1
-      out_channels: 4
-      num_levels: 4
-      conv_kernel_size: 3
-      pool_kernel_size: 2
-      pooling_type: "MaxPool3d"
-      num_groups: 8
-      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
-      interpolation: True
-      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-  - discriminator:
-      name: "ResNet18"
-      type: "ResNet3D"
-      in_channels: 1
-      out_channels: 2
-      num_groups: 8
-      conv_groups: 1
-      width_per_group: 64
-      padding: !!null
-      activation: "ReLU"
-      zero_init_residual: False
-      replace_stride_with_dilation: !!null
+  preprocessor:
+    name: "UNet3D"
+    type: "UNet3D"
+    feature_maps: 64
+    in_channels: 1
+    out_channels: 1
+    num_levels: 4
+    conv_kernel_size: 3
+    pool_kernel_size: 2
+    pooling_type: "MaxPool3d"
+    num_groups: 8
+    padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+    activation: "ReLU"
+    interpolation: True
+    scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+  segmenter:
+    name: "UNet3D"
+    type: "UNet3D"
+    feature_maps: 64
+    in_channels: 1
+    out_channels: 4
+    num_levels: 4
+    conv_kernel_size: 3
+    pool_kernel_size: 2
+    pooling_type: "MaxPool3d"
+    num_groups: 8
+    padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+    activation: "ReLU"
+    interpolation: True
+    scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+  discriminator:
+    name: "ResNet18"
+    type: "ResNet3D"
+    in_channels: 1
+    out_channels: 2
+    num_groups: 8
+    conv_groups: 1
+    width_per_group: 64
+    padding: !!null
+    activation: "ReLU"
+    zero_init_residual: False
+    replace_stride_with_dilation: !!null
 
 dataset:
-  - iSEG:
-      path: "data/iSEG"
-      training:
-        patch_size: [32, 32, 32]
-      validation:
-        patch_size: [32, 32, 32]
-  - MRBrainS:
-      path: "data/MRBrainS_2013"
-      training:
-        patch_size: [32, 32, 32]
-      validation:
-        patch_size: [32, 32, 32]
+  iSEG:
+    path: "data/iSEG"
+    training:
+      patch_size: [32, 32, 32]
+    validation:
+      patch_size: [32, 32, 32]
+  MRBrainS:
+    path: "data/MRBrainS_2013"
+    training:
+      patch_size: [32, 32, 32]
+    validation:
+      patch_size: [32, 32, 32]
 
 training:
+  debug: False
   batch_size: 10
   checkpoint_every: 5
-  max_iterations: 100
+  max_iterations: 1000000
+  validation_split: 5
   criterions:
     - "DiceLoss"
     - "Cross_Entropy"
   metrics:
-    - dice:
-        num_classes: 4
-        reduction: "mean"
-        ignore_index: 0
-        average: !!null
-    - accuracy:
-        is_multilabel: False
+    dice:
+      num_classes: 4
+      reduction: "mean"
+      ignore_index: 0
+      average: !!null
+    accuracy:
+      is_multilabel: False
   optimizer:
-    type: "SGD"
-    lr: 0.0001
+    preprocessor:
+      type: "SGD"
+      lr: 0.1
+    segmenter:
+      type: "SGD"
+      lr: 0.1
+    discriminator:
+      type: "SGD"
+      lr: 0.01
 
 variables:
   lambda: 0.5

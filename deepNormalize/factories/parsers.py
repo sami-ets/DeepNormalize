@@ -32,9 +32,8 @@ class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
         with open(path, 'r') as config_file:
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-                unets = [UNetModelConfiguration(config["models"][i][element]) for i, element in
-                         enumerate(["preprocessor", "segmenter"])]
-                resnet = [ResNetModelConfiguration(config["models"][2]["discriminator"])]
+                unets = [UNetModelConfiguration(config["models"][element]) for element in ["preprocessor", "segmenter"]]
+                resnet = [ResNetModelConfiguration(config["models"]["discriminator"])]
                 return unets + resnet
             except yaml.YAMLError as e:
                 logging.error(
@@ -62,8 +61,8 @@ class DeepNormalizeDatasetConfigurationParserFactory(AbstractConfigurationParser
         with open(path, 'r') as config_file:
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-                return [DeepNormalizeDatasetConfiguration(config["dataset"][i][element]) for i, element in
-                        enumerate(["iSEG", "MRBrainS"])]
+                return [DeepNormalizeDatasetConfiguration(config["dataset"][element]) for element in
+                        ["iSEG", "MRBrainS"]]
             except yaml.YAMLError as e:
                 logging.error(
                     "Unable to read the config file: {} with error {}".format(path, e))
@@ -91,9 +90,7 @@ class TrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
         with open(path, 'r') as config_file:
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-                metrics = [config["training"]["metrics"][0], config["training"]["metrics"][1]]
                 config = DeepNormalizeTrainingConfiguration(config["training"])
-                config.metrics = metrics
                 return config
             except yaml.YAMLError as e:
                 logging.error(

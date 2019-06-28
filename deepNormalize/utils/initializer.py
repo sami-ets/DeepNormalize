@@ -26,8 +26,6 @@ from deepNormalize.factories.parsers import *
 
 
 class Initializer(object):
-    VALIDATION_SPLIT = 5
-    NUM_WORKERS = 8
 
     def __init__(self, path: str):
         self._path = path
@@ -42,8 +40,8 @@ class Initializer(object):
         return datasets_configs, model_config, training_config, variable_config, logger_config
 
     def create_metrics(self, training_config):
-        dice_metric = training_config.metrics[0]["dice"]
-        accuracy_metric = training_config.metrics[1]["accuracy"]
+        dice_metric = training_config.metrics["dice"]
+        accuracy_metric = training_config.metrics["accuracy"]
 
         dice = MetricsFactory().create_metric(Metrics.Dice,
                                               num_classes=dice_metric["num_classes"],
@@ -68,15 +66,17 @@ class Initializer(object):
         return models
 
     def create_optimizers(self, training_config, models):
-        optimizer_preprocessor = OptimizerFactory().create_optimizer(training_config.optimizer["type"],
-                                                                     models[0].parameters(),
-                                                                     lr=training_config.optimizer["lr"])
-        optimizer_segmenter = OptimizerFactory().create_optimizer(training_config.optimizer["type"],
+        optimizer_preprocessor = OptimizerFactory().create_optimizer(
+            training_config.optimizer["preprocessor"]["type"],
+            models[0].parameters(),
+            lr=training_config.optimizer["preprocessor"]["lr"])
+        optimizer_segmenter = OptimizerFactory().create_optimizer(training_config.optimizer["segmenter"]["type"],
                                                                   models[1].parameters(),
-                                                                  lr=training_config.optimizer["lr"])
-        optimizer_discriminator = OptimizerFactory().create_optimizer(training_config.optimizer["type"],
-                                                                      models[2].parameters(),
-                                                                      lr=training_config.optimizer["lr"])
+                                                                  lr=training_config.optimizer["segmenter"]["lr"])
+        optimizer_discriminator = OptimizerFactory().create_optimizer(
+            training_config.optimizer["discriminator"]["type"],
+            models[2].parameters(),
+            lr=training_config.optimizer["discriminator"]["lr"])
         optimizers = [optimizer_preprocessor, optimizer_segmenter, optimizer_discriminator]
         return optimizers
 
@@ -93,6 +93,6 @@ class Initializer(object):
         dataset = ConcatDataset([dataset_iSEG, dataset_MRBrainS])
         return dataset
 
-    def create_dataloader(self, dataset, batch_size):
-        return DataLoader(dataset, shuffle=True, validation_split=self.VALIDATION_SPLIT, num_workers=self.NUM_WORKERS,
+    def create_dataloader(self, dataset, batch_size, num_workers, validation_split):
+        return DataLoader(dataset, shuffle=True, validation_split=validation_split, num_workers=num_workers,
                           batch_size=batch_size)
