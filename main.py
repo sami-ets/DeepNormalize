@@ -26,6 +26,8 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     dataset_config, model_config, training_config, variables, logger_config = init.create_configs()
 
+    init.init_process_group(running_config)
+
     metrics = init.create_metrics(training_config)
 
     criterions = init.create_criterions(training_config)
@@ -34,10 +36,12 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     optimizers = init.create_optimizers(training_config, models)
 
-    dataset = init.create_dataset(dataset_config)
+    datasets = init.create_dataset(dataset_config)
 
-    dataloader = init.create_dataloader(dataset, training_config.batch_size, running_config.num_workers,
-                                        training_config.validation_split)
+    dataloaders = init.create_dataloader(datasets, training_config.batch_size, running_config.num_workers,
+                                         dataset_config, is_distributed=running_config.is_distributed)
+
+    logger_config = init.create_log_folder(logger_config)
 
     train_config = DeepNormalizeTrainerConfig(checkpoint_every=training_config.checkpoint_every,
                                               max_epoch=training_config.max_iterations,
@@ -45,7 +49,7 @@ def main(config_path: str, running_config: RunningConfiguration):
                                               metric=metrics,
                                               model=models,
                                               optimizer=optimizers,
-                                              dataloader=dataloader,
+                                              dataloader=dataloaders,
                                               running_config=running_config,
                                               variables=variables,
                                               logger_config=logger_config,
@@ -59,14 +63,16 @@ def main(config_path: str, running_config: RunningConfiguration):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='DeepNormalize Training with PyTorch and SAMITorch')
     parser.add_argument("--config", help="Path to configuration file.")
-    parser.add_argument("--opt-level", type=str, default="O1",
-                        help="O0 - FP32 training, 01 - Mixed Precision (recommended), 02 - Almost FP16 Mixed Precision, 03 - FP16 Training.")
-    parser.add_argument("--num-workers", default=8, type=int, help="Number of data loading workers (default: 4)")
+    parser.add_argument("--opt-level", type=str, default="O2",
+                        help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
+    parser.add_argument("--num-workers", default=2, type=int,
+                        help="Number of data loading workers for each dataloader object (default: 4)")
     parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
     parser.add_argument('--keep-batch-norm-fp32', type=str, default=None)
     parser.add_argument('--loss-scale', type=str, default="dynamic")
     parser.add_argument('--num-gpus', type=int, default=1, help="The number of GPUs on the Node.")
+    parser.add_argument('--is_distributed', action='store_true', default=False)
     args = parser.parse_args()
     running_config = RunningConfiguration(dict(vars(args)))
 

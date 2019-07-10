@@ -18,7 +18,6 @@ import os
 import torch
 import numpy as np
 import logging
-import sys
 
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
@@ -27,19 +26,18 @@ from deepNormalize.config.configurations import LoggerConfiguration
 
 class Logger(object):
 
-    def __init__(self, config: LoggerConfiguration):
+    def __init__(self, config: LoggerConfiguration, class_name: str):
         self._config = config
-        self._log_path = self._create_folder()
-        self._writer = SummaryWriter(self._log_path)
-        self._logger = logging.getLogger("DeepNormalize")
-
+        self._writer = SummaryWriter(self._config.path)
+        self._logger = logging.getLogger(class_name)
         self._logger.setLevel(logging.INFO)
         # Logging to console
-        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler = logging.StreamHandler()
         formatter = logging.Formatter(
             '%(asctime)s [%(threadName)s] %(levelname)s %(name)s - %(message)s')
         stream_handler.setFormatter(formatter)
         self._logger.addHandler(stream_handler)
+        self._logger.propagate = False
 
     def log_images(self, inputs: torch.Tensor, targets: torch.Tensor, normalized: torch.Tensor,
                    predictions: torch.Tensor, step: int) -> None:
@@ -68,11 +66,21 @@ class Logger(object):
             f'{phase} Alpha': values["alpha"],
             f'{phase} Lambda': values["lambda"],
             f'{phase} Segmenter Dice Loss': values["segmenter_loss"],
+            f'{phase} Segmenter Dice Metric': values["segmenter_metric"],
             f'{phase} Discriminator D_X_n Cross Entropy Loss': values["discriminator_loss_D_X_n"],
-            f'{phase} Discriminator D_X Cross Entropy Loss': values["discriminator_loss_D"],
-            # f'{phase} Discriminator Accuracy': values["discriminator_accuracy"],
-            f'{phase} Segmentation Dice': values["dice_score"],
+            f'{phase} Discriminator Accuracy': values["discriminator_metric"],
             f'{phase} Learning rate': values["learning_rate"]
+        }
+
+        for tag, value in tag_value.items():
+            self._writer.add_scalar(tag, value, step)
+
+    def log_validation_stats(self, phase, values: dict, step: int) -> None:
+        tag_value = {
+            f'{phase} Segmenter Dice Loss': values["segmenter_loss"],
+            f'{phase} Segmenter Dice Metric': values["segmenter_metric"],
+            f'{phase} Discriminator D_X_n Cross Entropy Loss': values["discriminator_loss_D_X_n"],
+            f'{phase} Discriminator Accuracy Metric': values["discriminator_metric"],
         }
 
         for tag, value in tag_value.items():

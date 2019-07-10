@@ -33,6 +33,8 @@ class RunningConfiguration(Configuration):
         self._num_gpus = config["num_gpus"]
         self._device = torch.device("cuda:" + str(self._local_rank)) if torch.cuda.is_available() else torch.device(
             "cpu")
+        self._is_distributed = config["is_distributed"]
+        self._world_size = None
 
     @property
     def opt_level(self) -> str:
@@ -118,6 +120,28 @@ class RunningConfiguration(Configuration):
         """
         return self._device
 
+    @property
+    def is_distributed(self):
+        """
+        Whether or not the execution is distributed.
+
+        Returns:
+            bool: True if distributed, False otherwise.
+        """
+        return self._is_distributed
+
+    @is_distributed.setter
+    def is_distributed(self, is_distributed):
+        self._is_distributed = is_distributed
+
+    @property
+    def world_size(self) -> int:
+        return self._world_size
+
+    @world_size.setter
+    def world_size(self, world_size):
+        self._world_size = world_size
+
 
 class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
 
@@ -126,7 +150,10 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
 
         self._path = config["path"]
         self._training_patch_size = config["training"]["patch_size"]
+        self._training_patch_step = config["training"]["step"]
         self._validation_patch_size = config["validation"]["patch_size"]
+        self._validation_patch_step = config["validation"]["step"]
+        self._validation_split = config["validation_split"]
 
     @property
     def path(self):
@@ -139,6 +166,16 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
         return self._path
 
     @property
+    def validation_split(self) -> int:
+        """
+        The number of validation samples.
+
+        Returns:
+            int: The number of samples in validation set.
+        """
+        return self._validation_split
+
+    @property
     def training_patch_size(self):
         """
         The size of a training patch.
@@ -147,6 +184,16 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
             int: The size of a training patch size.
         """
         return self._training_patch_size
+
+    @property
+    def training_patch_step(self):
+        """
+        The step between two training patches.
+
+        Returns:
+            int: The step.
+        """
+        return self._training_patch_step
 
     @property
     def validation_patch_size(self):
@@ -158,6 +205,16 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
         """
         return self._validation_patch_size
 
+    @property
+    def validation_patch_step(self):
+        """
+        The step between two validation patches.
+
+        Returns:
+            int: The step.
+        """
+        return self._validation_patch_step
+
 
 class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
 
@@ -168,9 +225,8 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._checkpoint_every = config["checkpoint_every"]
         self._criterions = config["criterions"]
         self._metrics = config["metrics"]
-        self._optimizer = config["optimizer"]
-        self._max_iterations = config["max_iterations"]
-        self._validation_split = config["validation_split"]
+        self._optimizers = config["optimizers"]
+        self._max_epochs = config["max_epochs"]
 
     @property
     def batch_size(self) -> int:
@@ -190,7 +246,7 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         Returns:
             int: The maximum number of epochs.
         """
-        return self._max_iterations
+        return self._max_epochs
 
     @property
     def checkpoint_every(self) -> int:
@@ -227,14 +283,18 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._metrics = metrics
 
     @property
-    def optimizer(self) -> Union[list, str]:
+    def optimizers(self) -> Union[list, str]:
         """
         The optimizer used for learning.
 
         Returns:
             str_or_list: The optimizer used.
         """
-        return self._optimizer
+        return self._optimizers
+
+    @optimizers.setter
+    def optimizers(self, optimizers):
+        self._optimizers = optimizers
 
     @property
     def debug(self) -> bool:
@@ -245,16 +305,6 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
             bool: If model is in debug mode.
         """
         return self._debug
-
-    @property
-    def validation_split(self) -> int:
-        """
-        The number of validation samples.
-
-        Returns:
-            int: The number of samples in validation set.
-        """
-        return self._validation_split
 
 
 class VariableConfiguration(Configuration):
@@ -311,6 +361,10 @@ class LoggerConfiguration(Configuration):
     @property
     def path(self) -> str:
         return self._path
+
+    @path.setter
+    def path(self, path):
+        self._path = path
 
     @property
     def frequency(self) -> int:

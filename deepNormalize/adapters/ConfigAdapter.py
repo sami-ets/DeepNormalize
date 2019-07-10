@@ -14,14 +14,25 @@
 #  limitations under the License.
 #  ==============================================================================
 
-from enum import Enum
+import copy
+
+from samitorch.configs.configurations import Configuration
 
 
-class Optimizers(Enum):
-    SGD = "SGD"
-    Adam = "Adam"
-    Adagrad = "Adagrad"
+class ConfigAdapter(object):
 
+    def __init__(self, config: Configuration):
+        self._config = config
 
-class Metrics(Enum):
-    Dice = "Dice"
+    def adapt(self, model_position: int, criterion_position:int):
+        config = copy.copy(self._config)
+
+        config.criterion = self._config.criterion[criterion_position]
+
+        config.metric = self._config.metric[criterion_position]
+
+        config.model = self._config.model[model_position]
+
+        config.optimizer = self._config.optimizer[model_position]
+
+        return config

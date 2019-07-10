@@ -17,7 +17,6 @@
 import yaml
 import logging
 
-from ignite.metrics.accuracy import Accuracy
 from samitorch.configs.configurations import Configuration
 from samitorch.factories.parsers import AbstractConfigurationParserFactory
 from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration

@@ -29,200 +29,238 @@ try:
 except ImportError:
     raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
-from samitorch.metrics.gauges import RunningAverageGauge
 from samitorch.training.trainer import Trainer
 from samitorch.utils.utils import to_onehot
+from samitorch.metrics.gauges import RunningAverageGauge
 
 from deepNormalize.utils.logger import Logger
 from tests.models.model_helper_test import ModelHelper
+from deepNormalize.training.model_trainer import ModelTrainer
+from deepNormalize.adapters.ConfigAdapter import ConfigAdapter
+
+X = 0
+Y = 1
 
 
 class DeepNormalizeTrainer(Trainer):
-    NORMALIZER = 0
-    SEGMENTER = 1
-    DISCRIMINATOR = 2
     REAL_LABEL = 1
     FAKE_LABEL = 0
-    DICE_LOSS = 0
-    CROSS_ENTROPY = 1
-    DICE_METRIC = 0
-    DISCRIMINATOR_ACCURACY = 1
 
     def __init__(self, config, callbacks):
         super(DeepNormalizeTrainer, self).__init__(config, callbacks)
+        adapter = ConfigAdapter(config)
 
-        self._segmenter_training_dice_score = RunningAverageGauge()
-        self._segmenter_training_dice_loss = RunningAverageGauge()
-        self._discriminator_training_accuracy = RunningAverageGauge()
-        self._discriminator_training_loss = RunningAverageGauge()
-        self._discriminator_on_normalized_data_training_training_loss = RunningAverageGauge()
-        self._normalizer_training_loss = RunningAverageGauge()
-        self._total_training_loss = RunningAverageGauge()
+        preprocessor_config = adapter.adapt(model_position=0, criterion_position=0)
+        segmenter_config = adapter.adapt(model_position=1, criterion_position=0)
+        discriminator_config = adapter.adapt(model_position=2, criterion_position=1)
 
-        self._segmenter_validation_dice_score = RunningAverageGauge()
-        self._segmenter_validation_dice_loss = RunningAverageGauge()
-        self._discriminator_validation_accuracy = RunningAverageGauge()
-        self._discriminator_validation_loss = RunningAverageGauge()
-        self._normalizer_validation_loss = RunningAverageGauge()
-        self._total_validation_loss = RunningAverageGauge()
+        self._preprocessor_trainer = ModelTrainer(preprocessor_config, callbacks, "Preprocessor")
+        self._segmenter_trainer = ModelTrainer(segmenter_config, callbacks, "Segmenter")
+        self._discriminator_trainer = ModelTrainer(discriminator_config, callbacks, "Discriminator")
 
-        self._setup()
-        self._distributed = None
+        self._total_loss = RunningAverageGauge()
+        self._D_X_n_loss = RunningAverageGauge()
+
+        self._global_step = 0
 
         if self.config.running_config.local_rank == 0:
-            self._logger = Logger(self.config.logger_config)
+            self._logger = Logger(self.config.logger_config, "DeepNormalizeTrainer")
 
     def train(self):
-        for iteration in range(self.config.max_epoch):
-            for i, sample in enumerate(self.config.dataloader, 0):
-                X, y = self.prepare_batch(batch=sample, input_device=torch.device('cpu'),
-                                          output_device=self.config.running_config.device)
+        self._logger.info("Beginning training ...")
+        for epoch in range(self.config.max_epoch):
+            self._train_epoch(epoch)
 
-                self._at_iteration_begin()
+    def _train_epoch(self, epoch_num: int, **kwargs):
+        for iteration, (batch_d0, batch_d1) in enumerate(zip(self.config.dataloader[0], self.config.dataloader[1]), 0):
+            batch = self._concatenate_data(batch_d0, batch_d1)
 
-                # Generate normalized data and DO detach (so gradients ARE NOT calculated for generator and segmenter).
-                X_n = self.config.model[self.NORMALIZER](X).detach()
-                self._enable_gradients(self.config.model[self.DISCRIMINATOR])
-                self._disable_gradients(self.config.model[self.NORMALIZER])
-                self._disable_gradients(self.config.model[self.SEGMENTER])
+            self._at_iteration_begin()
 
-                loss_D = self._train_discriminator(X, X_n, debug=self.config.debug)
+            current_batch = self._prepare_batch(batch={"X": batch[X], "y": batch[Y]}, input_device=torch.device('cpu'),
+                                                output_device=self.config.running_config.device)
 
-                self._disable_gradients(self.config.model[self.DISCRIMINATOR])
-                self._enable_gradients(self.config.model[self.NORMALIZER])
-                self._enable_gradients(self.config.model[self.SEGMENTER])
+            # Generate normalized data and DO detach (so gradients ARE NOT calculated for generator and segmenter).
+            X_n = self._preprocessor_trainer.predict_batch(current_batch, detach=True)
 
-                # Train segmenter. Must do inference on Normalizer again since that part of the graph has been
-                # previously detached.
-                X_n = self.config.model[self.NORMALIZER](X)
-                self._disable_gradients(self.config.model[self.NORMALIZER])
-                X_s = self.config.model[self.SEGMENTER](X_n)
-                loss_S_X_n = self._train_segmenter(X_s, y, debug=self.config.debug)
-                self.config.metric[self.DICE_METRIC].update((X_s, y))
-                self._segmenter_training_dice_score.update(self.config.metric[self.DICE_METRIC].compute())
+            self._discriminator_trainer.enable_gradients()
+            self._preprocessor_trainer.disable_gradients()
+            self._segmenter_trainer.disable_gradients()
 
-                # Try to fool the discriminator with Normalized data as "real" data.
-                loss_D_X_n = self._evaluate_discriminator_error_on_normalized_data(X_n)
+            loss_D_X = self._train_discriminator(current_batch["X"], X_n, debug=self.config.debug)
 
-                self._enable_gradients(self.config.model[self.NORMALIZER])
-                self._disable_gradients(self.config.model[self.SEGMENTER])
-                self._disable_gradients(self.config.model[self.DISCRIMINATOR])
+            self._discriminator_trainer.disable_gradients()
+            self._preprocessor_trainer.enable_gradients()
+            self._segmenter_trainer.enable_gradients()
 
-                total_error = self._train_normalizer(loss_S_X_n, loss_D_X_n, debug=self.config.debug)
+            # Train segmenter. Must do inference on Normalizer again since that part of the graph has been
+            # previously detached.
+            X_n = self._preprocessor_trainer.predict_batch(current_batch, detach=False)
+            self._preprocessor_trainer.disable_gradients()
+            loss_S_X_n, X_s = self._train_segmenter(X_n, current_batch["y"], debug=self.config.debug)
 
-                # Re-enable all parts of the graph.
-                [self._enable_gradients(model) for model in self.config.model]
+            # Try to fool the discriminator with Normalized data as "real" data.
+            loss_D_X_n = self._evaluate_discriminator_error_on_normalized_data(X_n)
 
-                if i % self.config.logger_config.log_after_iterations == 0:
-                    # Average loss and accuracy across processes for logging
-                    if self._distributed:
-                        loss_D = self._reduce_tensor(loss_D.data)
-                        loss_S_X_n = self._reduce_tensor(loss_S_X_n.data)
-                        loss_D_X_n = self._reduce_tensor(loss_D_X_n.data)
+            self._preprocessor_trainer.enable_gradients()
+            self._segmenter_trainer.disable_gradients()
+            self._discriminator_trainer.disable_gradients()
 
-                    self._discriminator_training_loss.update(loss_D.item())
-                    self._segmenter_training_dice_loss.update(loss_S_X_n.item())
-                    self._discriminator_on_normalized_data_training_training_loss.update(loss_D_X_n.item())
-                    self._total_training_loss.update(total_error.item())
+            total_error = self._train_normalizer(loss_S_X_n, loss_D_X_n, debug=self.config.debug)
 
-                    torch.cuda.synchronize()
+            # Re-enable all parts of the graph.
+            self._at_iteration_end()
 
-                    if self.config.running_config.local_rank == 0:
-                        self._logger.log_images(X, y, X_n,
-                                                torch.argmax(torch.nn.functional.softmax(X_s, dim=1), dim=1,
-                                                             keepdim=True),
-                                                iteration)
+            if iteration % self.config.logger_config.frequency == 0:
+                dsc = self._segmenter_trainer.config.metric.compute().cuda()
+                acc = torch.Tensor([self._discriminator_trainer.config.metric.compute()]).cuda()
 
-                        self._logger.log_stats("training", {
-                            "alpha": 0,
-                            "lambda": self.config.variables.lambda_,
-                            "segmenter_loss": loss_S_X_n,
-                            "discriminator_loss_D_X_n": loss_D_X_n,
-                            "discriminator_loss_D": loss_D,
-                            "learning_rate": self.config.optimizer[0].param_groups[0]['lr'],
-                            "dice_score": self._segmenter_training_dice_score.average,
-                        }, iteration)
+                # Average loss and accuracy across processes for logging
+                if self.config.running_config.is_distributed:
+                    loss_D_X = self._reduce_tensor(loss_D_X.data)
+                    loss_S_X_n = self._reduce_tensor(loss_S_X_n.data)
+                    loss_D_X_n = self._reduce_tensor(loss_D_X_n.data)
+                    total_error = self._reduce_tensor(total_error.data)
+                    dsc = self._reduce_tensor(dsc.data)
+                    acc = self._reduce_tensor(acc.data)
 
-                        self._logger.info(
-                            "Discriminator loss: {}, Discriminator loss on normalized data: {}, Normalizer loss: {}, Total loss: {}".format(
-                                self._discriminator_training_loss.average,
-                                self._discriminator_on_normalized_data_training_training_loss.average,
-                                self._normalizer_training_loss.average,
-                                self._total_training_loss.average))
+                self._discriminator_trainer.training_loss.update(loss_D_X.item(), current_batch["X"].size(0))
+                self._segmenter_trainer.training_loss.update(loss_S_X_n.item(), current_batch["X"].size(0))
 
-    def train_epoch(self, epoch_num: int, **kwargs):
-        pass
+                self._discriminator_trainer.training_metric.update(acc.item(), current_batch["X"].size(0))
+                self._segmenter_trainer.training_metric.update(dsc.item(), current_batch["X"].size(0))
+
+                self._total_loss.update(total_error.item(), current_batch["X"].size(0))
+                self._D_X_n_loss.update(loss_D_X_n.item(), current_batch["X"].size(0))
+
+                torch.cuda.synchronize()
+
+                if self.config.running_config.local_rank == 0:
+                    self._logger.log_images(current_batch["X"], current_batch["y"], X_n,
+                                            torch.argmax(torch.nn.functional.softmax(X_s, dim=1), dim=1,
+                                                         keepdim=True), step=self._global_step)
+
+                    self._logger.log_stats("training", {
+                        "alpha": 0,
+                        "lambda": self.config.variables.lambda_,
+                        "segmenter_loss": loss_S_X_n,
+                        "discriminator_loss_D_X_n": loss_D_X_n,
+                        "discriminator_loss_D_X": loss_D_X,
+                        "discriminator_metric": acc.item(),
+                        "learning_rate": self.config.optimizer[0].param_groups[0]['lr'],
+                        "segmenter_metric": self._segmenter_trainer.training_metric.average,
+                    }, iteration)
+
+                    self._logger.info(
+                        "Discriminator loss: {}, Discriminator loss on normalized data: {}, Total loss: {}, Segmenter loss: {}, Segmenter Dice Score: {}".format(
+                            self._discriminator_trainer.training_loss.average,
+                            self._D_X_n_loss.average,
+                            self._total_loss.average,
+                            self._segmenter_trainer.training_loss.average,
+                            self._segmenter_trainer.training_metric.average))
+
+                    self._global_step += 1
+
+        self._at_epoch_end(epoch_num)
 
     def train_batch(self, data_dict: dict, fold=0, **kwargs):
         pass
 
     @staticmethod
-    def prepare_batch(batch: tuple, input_device: torch.device, output_device: torch.device):
-        X, y = batch
-        return X.to(device=output_device), y.squeeze(1).to(device=output_device).long()
+    def _concatenate_data(data_d0, data_d1):
+        return torch.cat([data_d0[0], data_d1[0]], dim=0), torch.cat([data_d0[1], data_d1[1]], dim=0)
 
-    def validate_epoch(self, epoch_num: int, **kwargs):
-        pass
+    @staticmethod
+    def _prepare_batch(batch: dict, input_device: torch.device, output_device: torch.device):
+        X, y = batch["X"], batch["y"]
+        return {"X": X.to(device=output_device), "y": y.squeeze(1).to(device=output_device).long()}
+
+    def _validate_epoch(self, epoch_num: int, **kwargs):
+        if self.config.running_config.local_rank == 0:
+            self._logger.info("Validating...")
+
+        with torch.no_grad():
+            for i, (batch_d0, batch_d1) in enumerate(zip(self.config.dataloader[0].get_validation_dataloader(),
+                                                         self.config.dataloader[1].get_validation_dataloader()), 0):
+                batch = self._concatenate_data(batch_d0, batch_d1)
+                current_batch = self._prepare_batch(batch={"X": batch[X], "y": batch[Y]},
+                                                    input_device=torch.device('cpu'),
+                                                    output_device=self.config.running_config.device)
+                out = self._validate_batch(current_batch)
+
+                self._segmenter_trainer.validation_loss.update(out["out_segmenter"]["loss"].item(),
+                                                               current_batch["X"].size(0))
+
+                self._segmenter_trainer.config.metric.update((out["out_segmenter"]["output"], current_batch["y"]))
+
+                self._discriminator_trainer.validation_loss.update(out["out_discriminator"]["loss"].item(),
+                                                                   current_batch["X"].size(0))
+
+            self._segmenter_trainer.validation_metric.update(self._segmenter_trainer.config.metric.compute(),
+                                                             current_batch["X"].size(0))
+            self._discriminator_trainer.validation_metric.update(self._discriminator_trainer.config.metric.compute(),
+                                                                 current_batch["X"].size(0))
+            self._segmenter_trainer.config.metric.reset()
+            self._discriminator_trainer.config.metric.reset()
+
+            if self.config.running_config.local_rank == 0:
+                self._logger.log_validation_stats("validation", {
+                    "segmenter_loss": self._segmenter_trainer.validation_loss.average,
+                    "segmenter_metric": self._segmenter_trainer.validation_metric.average,
+                    "discriminator_loss_D_X_n": self._discriminator_trainer.validation_loss.average,
+                    "discriminator_metric": self._discriminator_trainer.validation_metric.average,
+
+                }, epoch_num)
+
+                self._segmenter_trainer._logger.info(
+                    "Validation Epoch: {}, Segmenter validation dice loss: {}, Segmenter validation dice score: {}".format(
+                        epoch_num,
+                        self._segmenter_trainer.validation_loss.average,
+                        self._segmenter_trainer.validation_metric.average))
+                self._discriminator_trainer._logger.info(
+                    "Validation Epoch: {}, Discriminator D_X_n validation CE loss: {}, Discriminator accuracy: {}".format(
+                        epoch_num,
+                        self._discriminator_trainer.validation_loss.average,
+                        self._discriminator_trainer.validation_metric.average))
+
+    def _validate_batch(self, data_dict: dict):
+        out_segmenter = self._validate_segmenter(data_dict)
+
+        out_discriminator = self._validate_discriminator(data_dict)
+
+        return {"out_segmenter": out_segmenter, "out_discriminator": out_discriminator}
+
+    def _validate_segmenter(self, data_dict: dict):
+        X_n = self._preprocessor_trainer.predict_batch(data_dict)
+        X_s = self._segmenter_trainer.predict_batch({"X": X_n, "y": data_dict["y"]})
+
+        loss_S_X_n = self._segmenter_trainer.config.criterion(torch.nn.functional.softmax(X_s, dim=1),
+                                                              to_onehot(data_dict["y"], num_classes=4))
+
+        if self.config.running_config.is_distributed:
+            loss_S_X_n = self._reduce_tensor(loss_S_X_n.data)
+
+        return {"loss": loss_S_X_n, "output": X_s}
+
+    def _validate_discriminator(self, data_dict: dict):
+        X_n = self._preprocessor_trainer.predict_batch(data_dict)
+
+        y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.FAKE_LABEL, dtype=torch.long,
+                                    device=self.config.running_config.device)
+
+        pred_X_n = self._discriminator_trainer.predict_batch({"X": X_n, "y": y})
+
+        loss_D_X_n = self._discriminator_trainer.config.criterion(pred_X_n, y)
+
+        if self.config.running_config.is_distributed:
+            loss_D_X_n = self._reduce_tensor(loss_D_X_n.data)
+
+        self._discriminator_trainer.config.metric.update((pred_X_n, y))
+
+        return {"loss": loss_D_X_n, "output": pred_X_n}
 
     def finalize(self, *args, **kwargs):
         pass
-
-    def _setup(self, *args, **kwargs):
-        self._distributed = False
-
-        if 'WORLD_SIZE' in os.environ:
-            self._distributed = int(os.environ['WORLD_SIZE']) > 1
-
-        self._gpu = 0
-        self._world_size = 1
-
-        if self._distributed:
-            self._gpu = self.config.running_config.local_rank
-            torch.cuda.set_device(self._gpu)
-            torch.distributed.init_process_group(backend='nccl',
-                                                 init_method='env://')
-            self._world_size = torch.distributed.get_world_size()
-
-        assert torch.backends.cudnn.enabled, "Amp requires CuDNN backend to be enabled."
-
-        if self.config.running_config.sync_batch_norm:
-            import apex
-            print("Using apex synced BN.")
-            self._config.models = [apex.parallel.convert_syncbn_model(model) for model in self._config.model]
-
-        # Transfer models on CUDA device.
-        [model.cuda() for model in self.config.model]
-
-        # Scale learning rate based on global batch size
-        for optim in self.config.optimizer:
-            optim.param_groups[0]["lr"] = optim.param_groups[0]["lr"] * float(
-                self.config.dataloader.batch_size * self._world_size) / 64.
-
-        # Initialize Amp.
-        for i, (model, optimizer) in enumerate(zip(self.config.model, self.config.optimizer)):
-            self.config.model[i], self.config.optimizer[i] = amp.initialize(model, optimizer,
-                                                                            opt_level=self.config.running_config.opt_level,
-                                                                            keep_batchnorm_fp32=self.config.running_config.keep_batch_norm_fp32,
-                                                                            loss_scale=self.config.running_config.loss_scale)
-
-        # For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
-        # This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
-        # before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
-        # the types of model's parameters in a way that disrupts or destroys DDP's allreduce hooks.
-        if self._distributed:
-            # By default, apex.parallel.DistributedDataParallel overlaps communication with
-            # computation in the backward pass.
-            # model = DDP(model)
-            # delay_allreduce delays all communication to the end of the backward pass.
-            # for i, model in enumerate(self.config.model):
-            #     model_ = DDP(model, delay_allreduce=True)
-            #     self.config.model[i] = model_
-            self.config.model = [DDP(model, delay_allreduce=True) for model in self.config.model]
-
-        # for i, criterion in enumerate(self.config.criterion):
-        #     criterion_ = criterion.cuda()
-        #     self.config.criterion[i] = criterion_
-        self.config.criterion = [criterion.cuda() for criterion in self.config.criterion]
 
     def _at_training_begin(self, *args, **kwargs):
         pass
@@ -233,20 +271,17 @@ class DeepNormalizeTrainer(Trainer):
     def _at_epoch_begin(self, *args, **kwargs):
         pass
 
-    def _at_epoch_end(self, *args, **kwargs):
-        pass
+    def _at_epoch_end(self, epoch_num: int, *args, **kwargs):
+        self._validate_epoch(epoch_num)
 
     def _at_iteration_begin(self):
-        [model.train() for model in self.config.model]
-        [optimizer.zero_grad() for optimizer in self.config.optimizer]
+        self._preprocessor_trainer.at_iteration_begin()
+        self._segmenter_trainer.at_iteration_begin()
 
-    @staticmethod
-    def _disable_gradients(model):
-        for p in model.parameters(): p.requires_grad = False
-
-    @staticmethod
-    def _enable_gradients(model):
-        for p in model.parameters(): p.requires_grad = True
+    def _at_iteration_end(self):
+        self._preprocessor_trainer.at_iteration_end()
+        self._segmenter_trainer.at_iteration_end()
+        self._discriminator_trainer.at_iteration_end()
 
     @staticmethod
     def _reduce_tensor(tensor):
@@ -257,11 +292,11 @@ class DeepNormalizeTrainer(Trainer):
 
     def _train_discriminator(self, X, X_n, debug=False):
         if debug:
-            params_discriminator = [np for np in self.config.model[self.DISCRIMINATOR].named_parameters() if
+            params_discriminator = [np for np in self._discriminator_trainer.config.model.named_parameters() if
                                     np[1].requires_grad]
-            params_segmenter = [np for np in self.config.model[self.SEGMENTER].named_parameters() if
+            params_segmenter = [np for np in self._segmenter_trainer.config.model.named_parameters() if
                                 np[1].requires_grad]
-            params_normalizer = [np for np in self.config.model[self.NORMALIZER].named_parameters() if
+            params_normalizer = [np for np in self._preprocessor_trainer.config.model.named_parameters() if
                                  np[1].requires_grad]
             initial_params_discriminator = [(name, p.clone()) for (name, p) in params_discriminator]
             initial_params_segmenter = [(name, p.clone()) for (name, p) in params_segmenter]
@@ -273,89 +308,100 @@ class DeepNormalizeTrainer(Trainer):
             ModelHelper().assert_model_params_not_changed(initial_params_normalizer, params_normalizer)
             ModelHelper().assert_model_params_not_changed(initial_params_segmenter, params_segmenter)
             ModelHelper().assert_model_params_changed(initial_params_discriminator, params_discriminator)
-            ModelHelper().assert_model_grads_are_none(self.config.model[self.NORMALIZER].named_parameters())
-            ModelHelper().assert_model_grads_are_none(self.config.model[self.SEGMENTER].named_parameters())
-            ModelHelper().assert_model_grads_are_not_none(self.config.model[self.DISCRIMINATOR].named_parameters())
+            ModelHelper().assert_model_grads_are_none(
+                self._preprocessor_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_not_none(
+                self._segmenter_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_none(
+                self._discriminator_trainer.config.model.named_parameters())
 
         else:
             loss_D = self._train_discriminator_subroutine(X, X_n)
 
-        self.config.optimizer[self.DISCRIMINATOR].zero_grad()
+        self._discriminator_trainer.config.optimizer.zero_grad()
 
         return loss_D
 
     def _train_discriminator_subroutine(self, X, X_n):
-        pred_X = self.config.model[self.DISCRIMINATOR](X)
+        pred_X = self._discriminator_trainer.predict_batch({"X": X})
+
         y = torch.Tensor().new_full(size=(X.size(0),), fill_value=self.REAL_LABEL, dtype=torch.long,
                                     device=self.config.running_config.device)
-        loss_X = self.config.criterion[self.CROSS_ENTROPY](pred_X.squeeze(1), y)
+        loss_D_X = self._discriminator_trainer.evaluate_loss({"X": pred_X, "y": y})
 
-        with amp.scale_loss(loss_X, self.config.optimizer[self.DISCRIMINATOR]):
-            loss_X.backward()
+        with amp.scale_loss(loss_D_X, self._discriminator_trainer.config.optimizer):
+            loss_D_X.backward()
 
-        pred_X_n = self.config.model[self.DISCRIMINATOR](X_n)
+        pred_X_n = self._discriminator_trainer.predict_batch({"X": X_n})
         y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.FAKE_LABEL, dtype=torch.long,
                                     device=self.config.running_config.device)
-        loss_X_n = self.config.criterion[self.CROSS_ENTROPY](pred_X_n, y)
+        loss_D_X_n = self._discriminator_trainer.evaluate_loss({"X": pred_X_n, "y": y})
 
-        with amp.scale_loss(loss_X_n, self.config.optimizer[self.DISCRIMINATOR]):
-            loss_X_n.backward()
+        with amp.scale_loss(loss_D_X_n, self._discriminator_trainer.config.optimizer):
+            loss_D_X_n.backward()
 
-        self.config.optimizer[self.DISCRIMINATOR].step()
-
-        return loss_X_n
-
-    def _evaluate_discriminator_error_on_normalized_data(self, X_n):
-        pred_X_n = self.config.model[self.DISCRIMINATOR](X_n)
-        y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.REAL_LABEL, dtype=torch.long,
-                                    device=self.config.running_config.device)
-        loss_D_X_n = self.config.criterion[self.CROSS_ENTROPY](pred_X_n, y)
+        self._discriminator_trainer.config.optimizer.step()
+        self._discriminator_trainer.config.metric.update((pred_X_n, y))
 
         return loss_D_X_n
 
-    def _train_segmenter(self, X_s, y, debug=False):
+    def _evaluate_discriminator_error_on_normalized_data(self, X_n):
+        pred_X_n = self._discriminator_trainer.predict_batch({"X": X_n})
+        y = torch.Tensor().new_full(size=(X_n.size(0),), fill_value=self.REAL_LABEL, dtype=torch.long,
+                                    device=self.config.running_config.device)
+        loss_D_X_n = self._discriminator_trainer.config.criterion(pred_X_n, y)
+
+        return loss_D_X_n
+
+    def _train_segmenter(self, X_n, y, debug=False):
         if debug:
-            params_discriminator = [np for np in self.config.model[self.DISCRIMINATOR].named_parameters() if
+            params_discriminator = [np for np in self._discriminator_trainer.config.model.named_parameters() if
                                     np[1].requires_grad]
-            params_segmenter = [np for np in self.config.model[self.SEGMENTER].named_parameters() if
+            params_segmenter = [np for np in self._segmenter_trainer.config.model.named_parameters() if
                                 np[1].requires_grad]
-            params_normalizer = [np for np in self.config.model[self.NORMALIZER].named_parameters() if
+            params_normalizer = [np for np in self._preprocessor_trainer.config.model.named_parameters() if
                                  np[1].requires_grad]
             initial_params_discriminator = [(name, p.clone()) for (name, p) in params_discriminator]
             initial_params_segmenter = [(name, p.clone()) for (name, p) in params_segmenter]
             initial_params_normalizer = [(name, p.clone()) for (name, p) in params_normalizer]
 
-            loss_S_X_n = self._train_segmenter_subroutine(X_s, y)
+            loss_S_X_n, X_s = self._train_segmenter_subroutine(X_n, y)
 
             # Analyze behavior of networks parameters.
             ModelHelper().assert_model_params_not_changed(initial_params_discriminator, params_discriminator)
             ModelHelper().assert_model_params_changed(initial_params_segmenter, params_segmenter)
             ModelHelper().assert_model_params_not_changed(initial_params_normalizer, params_normalizer)
-            ModelHelper().assert_model_grads_are_none(self.config.model[self.NORMALIZER].named_parameters())
-            ModelHelper().assert_model_grads_are_not_none(self.config.model[self.SEGMENTER].named_parameters())
-            ModelHelper().assert_model_grads_are_none(self.config.model[self.DISCRIMINATOR].named_parameters())
+            ModelHelper().assert_model_grads_are_none(
+                self._preprocessor_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_not_none(
+                self._segmenter_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_none(
+                self._discriminator_trainer.config.model.named_parameters())
 
         else:
-            loss_S_X_n = self._train_segmenter_subroutine(X_s, y)
+            loss_S_X_n, X_s = self._train_segmenter_subroutine(X_n, y)
 
-        return loss_S_X_n
+        return loss_S_X_n, X_s
 
-    def _train_segmenter_subroutine(self, X_s, y):
-        loss_S_X_s = self.config.criterion[self.DICE_LOSS](torch.nn.functional.softmax(X_s, dim=1),
-                                                           to_onehot(y, num_classes=4))
-        with amp.scale_loss(loss_S_X_s, self.config.optimizer[self.SEGMENTER]):
+    def _train_segmenter_subroutine(self, X_n, y):
+        X_s = self._segmenter_trainer.predict_batch({"X": X_n})
+        loss_S_X_s = self._segmenter_trainer.config.criterion(torch.nn.functional.softmax(X_s, dim=1),
+                                                              to_onehot(y, num_classes=4))
+        with amp.scale_loss(loss_S_X_s, self._segmenter_trainer.config.optimizer):
             loss_S_X_s.backward(retain_graph=True)  # Retain graph in VRAM for future error addition.
-        self.config.optimizer[self.SEGMENTER].step()
+        self._segmenter_trainer.config.optimizer.step()
 
-        return loss_S_X_s
+        self._segmenter_trainer.config.metric.update((X_s, y))
+
+        return loss_S_X_s, X_s
 
     def _train_normalizer(self, loss_S_X_n, loss_D_X_n, debug=False):
         if debug:
-            params_discriminator = [np for np in self.config.model[self.DISCRIMINATOR].named_parameters() if
+            params_discriminator = [np for np in self._discriminator_trainer.config.model.named_parameters() if
                                     np[1].requires_grad]
-            params_segmenter = [np for np in self.config.model[self.SEGMENTER].named_parameters() if
+            params_segmenter = [np for np in self._segmenter_trainer.config.model.named_parameters() if
                                 np[1].requires_grad]
-            params_normalizer = [np for np in self.config.model[self.NORMALIZER].named_parameters() if
+            params_normalizer = [np for np in self._preprocessor_trainer.config.model.named_parameters() if
                                  np[1].requires_grad]
             initial_params_discriminator = [(name, p.clone()) for (name, p) in params_discriminator]
             initial_params_segmenter = [(name, p.clone()) for (name, p) in params_segmenter]
@@ -367,10 +413,13 @@ class DeepNormalizeTrainer(Trainer):
             ModelHelper().assert_model_params_not_changed(initial_params_discriminator, params_discriminator)
             ModelHelper().assert_model_params_not_changed(initial_params_segmenter, params_segmenter)
             ModelHelper().assert_model_params_changed(initial_params_normalizer, params_normalizer)
+            ModelHelper().assert_model_grads_are_none(
+                self._preprocessor_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_not_none(
+                self._segmenter_trainer.config.model.named_parameters())
+            ModelHelper().assert_model_grads_are_none(
+                self._discriminator_trainer.config.model.named_parameters())
 
-            ModelHelper().assert_model_grads_are_not_none(self.config.model[self.NORMALIZER].named_parameters())
-            ModelHelper().assert_model_grads_are_not_none(self.config.model[self.SEGMENTER].named_parameters())
-            ModelHelper().assert_model_grads_are_none(self.config.model[self.DISCRIMINATOR].named_parameters())
         else:
             total_error = self._train_normalizer_subroutine(loss_S_X_n, loss_D_X_n)
 
@@ -379,8 +428,11 @@ class DeepNormalizeTrainer(Trainer):
     def _train_normalizer_subroutine(self, loss_S_X_s, loss_D_X_n):
         # Compute total error on Normalizer and apply gradients on Normalizer.
         total_error = loss_S_X_s + self.config.variables.lambda_ * loss_D_X_n
-        with amp.scale_loss(total_error, self.config.optimizer[self.NORMALIZER]):
+        with amp.scale_loss(total_error, self._preprocessor_trainer.config.optimizer):
             total_error.backward()
-        self.config.optimizer[self.NORMALIZER].step()
+        self._preprocessor_trainer.config.optimizer.step()
 
         return total_error
+
+    def _setup(self, *args, **kwargs):
+        pass
