@@ -64,7 +64,7 @@ dataset:
 
 training:
   debug: False
-  batch_size: 24
+  batch_size: 16
   checkpoint_every: 50
   max_epochs: 100
   criterions:
@@ -102,4 +102,4 @@ visdom:
 
 logger:
   path: "/tmp/ml/tests"
-  log_after_iterations: 20
+  log_after_iterations: 50

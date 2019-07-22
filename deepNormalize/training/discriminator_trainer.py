@@ -45,7 +45,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
                                            dtype=torch.long,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(pred_G_X.x.detach(), pred_G_X.dataset_id)
+        loss_D_G_X = self.evaluate_loss(pred_G_X.x.detach(), pred_G_X.dataset_id.long())
 
         loss_D = (loss_D_X + loss_D_G_X) / 2.0
 
@@ -76,5 +76,6 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         return loss_D, pred_X, pred_G_X
 
     def at_epoch_begin(self, epoch_num: torch.Tensor):
+        super(DiscriminatorTrainer, self).at_epoch_begin()
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())

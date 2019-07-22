@@ -54,6 +54,7 @@ class DeepNormalizeTrainer(Trainer):
         self._generator_trainer = GeneratorTrainer(generator_config, callbacks, self._discriminator_trainer,
                                                    "Generator")
         self._segmenter_trainer = SegmenterTrainer(segmenter_config, callbacks, "Segmenter")
+
         self._input_images_plot = ImagesPlot(self._config.visdom, "Input Image")
 
         self._with_segmentation = False
@@ -71,7 +72,6 @@ class DeepNormalizeTrainer(Trainer):
 
     def train(self):
         for epoch in range(self._config.max_epoch):
-            self._epoch = self._epoch
             self._train_epoch(epoch)
             self._validate_epoch(epoch)
 
@@ -110,32 +110,30 @@ class DeepNormalizeTrainer(Trainer):
                     loss_D = self._reduce_tensor(loss_D.data)
                     acc = self._reduce_tensor(acc.data)
 
-                self._generator_trainer.update_loss_gauge(loss_D_G_X_as_X.item(), batch.x.size(0))
-                self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                    [self._generator_trainer.training_loss_gauge.average]))
-
-                self._discriminator_trainer.update_loss_gauge(loss_D.item(), batch.x.size(0))
-                self._discriminator_trainer.update_metric_gauge(acc.item(), batch.x.size(0))
-                self._discriminator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                    [self._discriminator_trainer.training_loss_gauge.average]))
-                self._discriminator_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
-                    [self._discriminator_trainer.training_metric_gauge.average]))
-
-                if self._with_segmentation:
-                    self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
-                    self._segmenter_trainer.update_loss_gauge(loss_S_G_X.item(), batch.x.size(0))
-                    self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                        [self._segmenter_trainer.training_loss_gauge.average]))
-                    self._segmenter_trainer.update_metric_plot(self.global_step,
-                                                               self._segmenter_trainer.training_metric_gauge.average, )
-
                 torch.cuda.synchronize()
 
                 if self._config.running_config.local_rank == 0:
+                    self._generator_trainer.update_loss_gauge(loss_D_G_X_as_X.item(), batch.x.size(0))
+                    self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+                        [self._generator_trainer.training_loss_gauge.average]))
+
+                    self._discriminator_trainer.update_loss_gauge(loss_D.item(), batch.x.size(0))
+                    self._discriminator_trainer.update_metric_gauge(acc.item(), batch.x.size(0))
+                    self._discriminator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+                        [self._discriminator_trainer.training_loss_gauge.average]))
+                    self._discriminator_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
+                        [self._discriminator_trainer.training_metric_gauge.average]))
+
                     if self._with_segmentation:
+                        self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
+                        self._segmenter_trainer.update_loss_gauge(loss_S_G_X.item(), batch.x.size(0))
+                        self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+                            [self._segmenter_trainer.training_loss_gauge.average]))
+                        self._segmenter_trainer.update_metric_plot(self.global_step,
+                                                                   self._segmenter_trainer.training_metric_gauge.average, )
                         self._segmenter_trainer.update_image_plot(segmented_batch.x.cpu().data)
-                    else:
-                        self._generator_trainer.update_image_plot(generated_batch.x.cpu().data)
+
+                    self._generator_trainer.update_image_plot(generated_batch.x.cpu().data)
 
                     self.LOGGER.info(
                         "Epoch: {} Step: {}, Discriminator loss: {}, Generator loss: {} Segmenter loss: {}, Segmenter Dice Score: {}".format(
@@ -145,6 +143,10 @@ class DeepNormalizeTrainer(Trainer):
                             self._generator_trainer.training_loss_gauge.average,
                             self._segmenter_trainer.training_loss_gauge.average,
                             self._segmenter_trainer.training_metric_gauge.average))
+
+            del batch
+            del generated_batch
+            del segmented_batch
 
             self.global_step += 1
 
@@ -163,6 +165,8 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter_trainer.disable_gradients()
 
             loss_D_G_X_as_X, generated_batch = self._generator_trainer.train_batch(batch)
+
+            self._discriminator_trainer.reset_optimizer()
 
             loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.train_batch(batch, generated_batch)
 
@@ -200,9 +204,7 @@ class DeepNormalizeTrainer(Trainer):
             return loss_D, loss_D_G_X_as_X, custom_loss, loss_S_G_X, generated_batch, segmented_batch
 
     def _validate_epoch(self, epoch_num: int):
-        self._discriminator_trainer.at_validation_begin()
-        self._generator_trainer.at_validation_begin()
-        self._segmenter_trainer.at_validation_begin()
+        self._at_validation_begin()
 
         if self._config.running_config.local_rank == 0:
             self.LOGGER.info("Validating...")
@@ -248,12 +250,20 @@ class DeepNormalizeTrainer(Trainer):
 
             if self._config.running_config.local_rank == 0:
                 self.LOGGER.info(
-                    "Epoch: {} Discriminator loss: {} Generator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
+                    "Validation Epoch: {} Discriminator loss: {} Generator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
                         epoch_num,
                         self._discriminator_trainer.validation_loss_gauge.average,
                         self._generator_trainer.validation_loss_gauge.average,
                         self._segmenter_trainer.validation_loss_gauge.average,
                         self._segmenter_trainer.validation_metric_gauge.average))
+
+        del batch
+        del generated_batch
+        del loss_D
+        del loss_D_G_X_as_X
+        if self._with_segmentation:
+            del segmented_batch
+            del loss_S_G_X
 
         self._at_validation_end()
 
@@ -277,6 +287,11 @@ class DeepNormalizeTrainer(Trainer):
         self._discriminator_trainer.training_metric_gauge.reset()
         self._segmenter_trainer.training_metric_gauge.reset()
         self._epoch += 1
+
+    def _at_validation_begin(self):
+        self._generator_trainer.at_validation_begin()
+        self._discriminator_trainer.at_validation_begin()
+        self._segmenter_trainer.at_validation_begin()
 
     def _at_validation_end(self):
         self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(

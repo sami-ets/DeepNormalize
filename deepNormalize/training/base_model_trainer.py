@@ -50,7 +50,7 @@ class DeepNormalizeModelTrainer(ModelTrainer):
         # Scale learning rate based on global batch size
         if self._config.running_config.loss_scale is not "dynamic":
             self._config.optimizer.param_groups[0]["lr"] = self._config.optimizer.param_groups[0]["lr"] * float(
-                self._config.dataloader.batch_size * self._config.running_config.world_size) / float(
+                (self._config.dataloader[0].batch_size * len(self._config.dataloader)) * self._config.running_config.world_size) / float(
                 self._config.running_config.loss_scale)
 
         # Initialize Amp.

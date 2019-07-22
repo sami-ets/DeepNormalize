@@ -30,7 +30,8 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     dataset_config, model_config, training_config, variables, logger_config, visdom_config = init.create_configs()
 
-    visdom = Visdom(server=visdom_config.server, port=visdom_config.port, env="DeepNormalize")
+    visdom = Visdom(server=visdom_config.server, port=visdom_config.port,
+                    env="DeepNormalize_test_gpu_{}".format(running_config.local_rank))
 
     init.init_process_group(running_config)
 

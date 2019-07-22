@@ -70,5 +70,6 @@ class SegmenterTrainer(DeepNormalizeModelTrainer):
         return loss_S_G_X, segmented_batch
 
     def at_epoch_begin(self, epoch_num: torch.Tensor):
+        super(SegmenterTrainer, self).at_epoch_begin()
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())

@@ -58,12 +58,18 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch)
 
         # Generate random integers between 0 and 1, meaning it's coming from a real domain.
-        y = torch.Tensor().new_tensor(data=np.random.randint(low=0, high=2, size=(generated_batch.x.size(0),)),
-                                      dtype=torch.int8,
-                                      device=self._config.running_config.device)
+        # y = torch.Tensor().new_tensor(data=np.random.randint(low=0, high=2, size=(generated_batch.x.size(0),)),
+        #                               dtype=torch.int8,
+        #                               device=self._config.running_config.device)
+        y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
+                                    fill_value=2,
+                                    dtype=torch.int8,
+                                    device=self._config.running_config.device)
         pred_D_G_X.dataset_id = y
 
-        loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(pred_D_G_X.x, pred_D_G_X.dataset_id.long())
+        loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(
+            1.0 - pred_D_G_X.x,
+            pred_D_G_X.dataset_id.long())
 
         return loss_D_G_X_as_X
 
@@ -72,5 +78,6 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         self._generated_images_plot.update(self._slicer.get_slice(SliceType.AXIAL, image))
 
     def at_epoch_begin(self, epoch_num: torch.Tensor):
+        super(GeneratorTrainer, self).at_epoch_begin()
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())

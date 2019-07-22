@@ -62,7 +62,7 @@ class Initializer(object):
                                      ignore_index=dice_metric["ignore_index"],
                                      average=dice_metric["average"],
                                      reduction=dice_metric["reduction"])
-        accuracy = factory.create_metric(Metrics.TopKCategoricalAccuracy, k=3)
+        accuracy = factory.create_metric(Metrics.Accuracy)
         metrics = [dice, accuracy]
         return metrics
 
