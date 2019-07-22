@@ -15,16 +15,22 @@
 # ==============================================================================
 
 import argparse
+import logging
 
+from visdom import Visdom
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.initializer import Initializer
 from deepNormalize.config.configurations import RunningConfiguration, DeepNormalizeTrainerConfig
 
 
 def main(config_path: str, running_config: RunningConfiguration):
+    logging.basicConfig(level=logging.INFO)
+
     init = Initializer(config_path)
 
-    dataset_config, model_config, training_config, variables, logger_config = init.create_configs()
+    dataset_config, model_config, training_config, variables, logger_config, visdom_config = init.create_configs()
+
+    visdom = Visdom(server=visdom_config.server, port=visdom_config.port, env="DeepNormalize")
 
     init.init_process_group(running_config)
 
@@ -41,8 +47,6 @@ def main(config_path: str, running_config: RunningConfiguration):
     dataloaders = init.create_dataloader(datasets, training_config.batch_size, running_config.num_workers,
                                          dataset_config, is_distributed=running_config.is_distributed)
 
-    logger_config = init.create_log_folder(logger_config)
-
     train_config = DeepNormalizeTrainerConfig(checkpoint_every=training_config.checkpoint_every,
                                               max_epoch=training_config.max_iterations,
                                               criterion=criterions,
@@ -53,7 +57,8 @@ def main(config_path: str, running_config: RunningConfiguration):
                                               running_config=running_config,
                                               variables=variables,
                                               logger_config=logger_config,
-                                              debug=training_config.debug)
+                                              debug=training_config.debug,
+                                              visdom=visdom)
 
     trainer = DeepNormalizeTrainer(train_config, None)
 

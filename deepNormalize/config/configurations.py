@@ -312,6 +312,7 @@ class VariableConfiguration(Configuration):
     def __init__(self, config: dict):
         super(VariableConfiguration, self).__init__()
         self._lambda = config["lambda"]
+        self._alpha = config["alpha"]
 
     @property
     def lambda_(self) -> float:
@@ -323,6 +324,24 @@ class VariableConfiguration(Configuration):
         """
         return self._lambda
 
+    @lambda_.setter
+    def lambda_(self, lambda_):
+        self._lambda = lambda_
+
+    @property
+    def alpha_(self) -> float:
+        """
+        The autoencoder variable factor.
+
+        Returns:
+            float: The alpha variable.
+        """
+        return self._alpha
+
+    @alpha_.setter
+    def alpha_(self, alpha_):
+        self._alpha = alpha_
+
 
 class DeepNormalizeTrainerConfig(TrainerConfiguration):
     def __init__(self, checkpoint_every: int, max_epoch: int, criterion: Union[List[torch.nn.Module], torch.nn.Module],
@@ -331,12 +350,14 @@ class DeepNormalizeTrainerConfig(TrainerConfiguration):
                  optimizer: Union[List[torch.nn.Module], torch.nn.Module],
                  dataloader: Union[List[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
                  running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration,
-                 debug: bool) -> None:
+                 debug: bool,
+                 visdom) -> None:
         super(DeepNormalizeTrainerConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
                                                          optimizer, dataloader, running_config)
         self._variables = variables
         self._logger_config = logger_config
         self._debug = debug
+        self._visdom = visdom
 
     @property
     def variables(self):
@@ -349,6 +370,10 @@ class DeepNormalizeTrainerConfig(TrainerConfiguration):
     @property
     def debug(self):
         return self._debug
+
+    @property
+    def visdom(self):
+        return self._visdom
 
 
 class LoggerConfiguration(Configuration):
@@ -369,3 +394,19 @@ class LoggerConfiguration(Configuration):
     @property
     def frequency(self) -> int:
         return self._frequency
+
+
+class VisdomConfiguration(Configuration):
+
+    def __init__(self, config: dict):
+        super(VisdomConfiguration, self).__init__()
+        self._server = config["server"]
+        self._port = config["port"]
+
+    @property
+    def server(self):
+        return self._server
+
+    @property
+    def port(self):
+        return self._port

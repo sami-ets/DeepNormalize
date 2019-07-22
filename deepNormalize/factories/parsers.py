@@ -22,7 +22,7 @@ from samitorch.factories.parsers import AbstractConfigurationParserFactory
 from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration
 
 from deepNormalize.config.configurations import DeepNormalizeDatasetConfiguration, DeepNormalizeTrainingConfiguration, \
-    VariableConfiguration, LoggerConfiguration
+    VariableConfiguration, LoggerConfiguration, VisdomConfiguration
 
 
 class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
@@ -128,6 +128,25 @@ class LoggerConfigurationParserFactory(AbstractConfigurationParserFactory):
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
                 config = LoggerConfiguration(config["logger"])
+                return config
+            except yaml.YAMLError as e:
+                logging.error(
+                    "Unable to read the config file: {} with error {}".format(path, e))
+
+    def register(self, model_type: str, configuration_class):
+        pass
+
+
+class VisdomConfigurationParserFactory(AbstractConfigurationParserFactory):
+
+    def __init__(self):
+        pass
+
+    def parse(self, path: str):
+        with open(path, 'r') as config_file:
+            try:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+                config = VisdomConfiguration(config["visdom"])
                 return config
             except yaml.YAMLError as e:
                 logging.error(

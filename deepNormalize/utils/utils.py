@@ -17,6 +17,8 @@
 import numpy as np
 import copy
 
+from samitorch.inputs.batch import Batch
+
 
 def split_dataset(dataset, split):
     validation_dataset = copy.copy(dataset)
@@ -45,3 +47,7 @@ def split_dataset(dataset, split):
 
 def build_configurations(config, num):
     pass
+
+
+def concat_batches(batch_0, batch_1):
+    return Batch(batch_0.samples + batch_1.samples)

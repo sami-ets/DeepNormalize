@@ -11,7 +11,7 @@ models:
     pooling_type: "MaxPool3d"
     num_groups: 8
     padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-    activation: "ReLU"
+    activation: "LeakyReLU"
     interpolation: True
     scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
   segmenter:
@@ -26,14 +26,14 @@ models:
     pooling_type: "MaxPool3d"
     num_groups: 8
     padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-    activation: "ReLU"
+    activation: "LeakyReLU"
     interpolation: True
     scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
   discriminator:
     name: "ResNet18"
     type: "ResNet3D"
     in_channels: 1
-    out_channels: 2
+    out_channels: 3
     num_groups: 8
     conv_groups: 1
     width_per_group: 64
@@ -64,7 +64,7 @@ dataset:
 
 training:
   debug: False
-  batch_size: 12
+  batch_size: 24
   checkpoint_every: 50
   max_epochs: 100
   criterions:
@@ -89,12 +89,16 @@ training:
       momentum: 0.9
     discriminator:
       type: "SGD"
-      lr: 0.0001
+      lr: 0.00001
       momentum: 0.9
 
 variables:
   lambda: 0.5
   alpha: 1.0
+
+visdom:
+  server: "10.0.3.9"
+  port: "8097"
 
 logger:
   path: "/tmp/ml/tests"

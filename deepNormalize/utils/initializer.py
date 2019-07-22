@@ -22,6 +22,7 @@ from samitorch.factories.enums import *
 from samitorch.inputs.datasets import NiftiPatchDataset
 from samitorch.inputs.transformers import ToNDTensor
 from samitorch.inputs.dataloaders import DataLoader
+from deepNormalize.inputs.utils import sample_collate
 from torchvision.transforms import Compose
 from torch.utils.data import ConcatDataset
 from deepNormalize.factories.parsers import *
@@ -48,8 +49,8 @@ class Initializer(object):
         training_config = TrainingConfigurationParserFactory().parse(self._path)
         variable_config = VariableConfigurationParserFactory().parse(self._path)
         logger_config = LoggerConfigurationParserFactory().parse(self._path)
-
-        return datasets_configs, model_config, training_config, variable_config, logger_config
+        visdom_config = visdom_config = VisdomConfigurationParserFactory().parse(self._path)
+        return datasets_configs, model_config, training_config, variable_config, logger_config, visdom_config
 
     def create_metrics(self, training_config):
         dice_metric = training_config.metrics["dice"]
@@ -57,11 +58,11 @@ class Initializer(object):
         factory = MetricsFactory()
 
         dice = factory.create_metric(Metrics.Dice,
-                                              num_classes=dice_metric["num_classes"],
-                                              ignore_index=dice_metric["ignore_index"],
-                                              average=dice_metric["average"],
-                                              reduction=dice_metric["reduction"])
-        accuracy = factory.create_metric(Metrics.TopKCategoricalAccuracy, k=2)
+                                     num_classes=dice_metric["num_classes"],
+                                     ignore_index=dice_metric["ignore_index"],
+                                     average=dice_metric["average"],
+                                     reduction=dice_metric["reduction"])
+        accuracy = factory.create_metric(Metrics.TopKCategoricalAccuracy, k=3)
         metrics = [dice, accuracy]
         return metrics
 
@@ -96,12 +97,14 @@ class Initializer(object):
     def create_dataset(self, dataset_config):
         dataset_iSEG = NiftiPatchDataset(source_dir=dataset_config[0].path + "/Training/Source",
                                          target_dir=dataset_config[0].path + "/Training/Target",
+                                         dataset_id=0,
                                          transform=Compose([ToNDTensor()]),
                                          patch_shape=dataset_config[0].training_patch_size,
                                          step=dataset_config[0].training_patch_step)
 
         dataset_MRBrainS = NiftiPatchDataset(source_dir=dataset_config[1].path + "/TrainingData/Source",
                                              target_dir=dataset_config[1].path + "/TrainingData/Target",
+                                             dataset_id=1,
                                              transform=Compose([ToNDTensor()]),
                                              patch_shape=dataset_config[1].training_patch_size,
                                              step=dataset_config[1].training_patch_step)
@@ -141,7 +144,8 @@ class Initializer(object):
                 dataloaders.append(DataLoader(dataset, shuffle=True, validation_split=config.validation_split,
                                               num_workers=num_workers,
                                               batch_size=batch_size,
-                                              samplers=(train_sampler, valid_sampler)))
+                                              samplers=(train_sampler, valid_sampler),
+                                              collate_fn=sample_collate))
             return dataloaders
 
         else:
@@ -152,12 +156,6 @@ class Initializer(object):
             for dataset, config in zip(datasets, dataset_configs):
                 dataloaders.append(DataLoader(dataset, shuffle=True, validation_split=config.validation_split,
                                               num_workers=num_workers,
-                                              batch_size=batch_size))
+                                              batch_size=batch_size,
+                                              collate_fn=sample_collate))
             return dataloaders
-
-    def create_log_folder(self, config):
-        config_ = copy.copy(config)
-        log_path = os.path.join(config.path, datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-        os.makedirs(log_path)
-        config_.path = log_path
-        return config_

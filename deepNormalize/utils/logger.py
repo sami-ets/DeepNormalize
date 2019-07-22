@@ -28,6 +28,7 @@ class Logger(object):
 
     def __init__(self, config: LoggerConfiguration, class_name: str):
         self._config = config
+        self._log_path = self._create_folder()
         self._writer = SummaryWriter(self._config.path)
         self._logger = logging.getLogger(class_name)
         self._logger.setLevel(logging.INFO)
@@ -52,6 +53,18 @@ class Logger(object):
             for tag, image in self._transform_images(name, batch):
                 self._writer.add_image(tag, image, global_step=step, dataformats='HW')
 
+    def log_generated_images(self, inputs: torch.Tensor, targets: torch.Tensor, normalized: torch.Tensor,
+                             step: int) -> None:
+        sources = {
+            'inputs': inputs.detach().cpu().numpy(),
+            'targets': targets.detach().cpu().numpy(),
+            'normalized': normalized.detach().cpu().numpy(),
+        }
+
+        for name, batch in sources.items():
+            for tag, image in self._transform_images(name, batch):
+                self._writer.add_image(tag, image, global_step=step, dataformats='HW')
+
     def log_gradients(self, model: torch.nn.Module, step: int) -> None:
         for name, value in model.named_parameters():
             if value.grad is not None:
@@ -67,8 +80,21 @@ class Logger(object):
             f'{phase} Lambda': values["lambda"],
             f'{phase} Segmenter Dice Loss': values["segmenter_loss"],
             f'{phase} Segmenter Dice Metric': values["segmenter_metric"],
-            f'{phase} Discriminator D_X_n Cross Entropy Loss': values["discriminator_loss_D_X_n"],
+            f'{phase} Discriminator Cross Entropy Loss': values["discriminator_loss"],
             f'{phase} Discriminator Accuracy': values["discriminator_metric"],
+            f'{phase} Learning rate': values["learning_rate"]
+        }
+
+        for tag, value in tag_value.items():
+            self._writer.add_scalar(tag, value, step)
+
+    def log_generated_stats(self, phase, values: dict, step: int) -> None:
+        tag_value = {
+            f'{phase} Alpha': values["alpha"],
+            f'{phase} Lambda': values["lambda"],
+            f'{phase} Discriminator Cross Entropy Loss': values["discriminator_loss"],
+            f'{phase} Discriminator Accuracy': values["discriminator_metric"],
+            f'{phase} Generator Cross Entropy Loss': values["generator_loss"],
             f'{phase} Learning rate': values["learning_rate"]
         }
 
@@ -79,7 +105,7 @@ class Logger(object):
         tag_value = {
             f'{phase} Segmenter Dice Loss': values["segmenter_loss"],
             f'{phase} Segmenter Dice Metric': values["segmenter_metric"],
-            f'{phase} Discriminator D_X_n Cross Entropy Loss': values["discriminator_loss_D_X_n"],
+            f'{phase} Discriminator Cross Entropy Loss': values["discriminator_loss"],
             f'{phase} Discriminator Accuracy Metric': values["discriminator_metric"],
         }
 
