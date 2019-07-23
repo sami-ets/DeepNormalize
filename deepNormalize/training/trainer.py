@@ -58,8 +58,8 @@ class DeepNormalizeTrainer(Trainer):
 
         self._input_images_plot = ImagesPlot(self._config.visdom, "Input Image")
         self._class_pie_plot = PiePlot(self._config.visdom,
-                                       torch.Tensor().new_zeros(size=(2,)),
-                                       ["Real", "Fake"],
+                                       torch.Tensor().new_zeros(size=(3,)),
+                                       ["ISEG", "MRBrainS", "Fake"],
                                        "Predicted classes")
 
         self._with_segmentation = False
@@ -175,7 +175,7 @@ class DeepNormalizeTrainer(Trainer):
 
             loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.train_batch(batch, generated_batch)
 
-            count = self.count(torch.argmax(torch.cat((pred_D_X.x, pred_D_G_X.x), dim=0), dim=1), 2)
+            count = self.count(torch.argmax(torch.cat((pred_D_X.x, pred_D_G_X.x), dim=0), dim=1), 3)
 
             self._class_pie_plot.update(sizes=count)
             self._discriminator_trainer.update_metric(torch.cat((pred_D_X.x, pred_D_G_X.x)),

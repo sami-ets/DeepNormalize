@@ -59,14 +59,10 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         # Generate random integers between 0 and 1, meaning it's coming from a real domain.
         y = torch.Tensor().new_tensor(
-            data=np.zeros(shape=(generated_batch.x.size(0), )),
-            # data=np.random.choice(a=1, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
+            data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
             dtype=torch.int8,
             device=self._config.running_config.device)
-        # y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
-        #                             fill_value=2,
-        #                             dtype=torch.int8,
-        #                             device=self._config.running_config.device)
+
         pred_D_G_X.dataset_id = y
 
         loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(

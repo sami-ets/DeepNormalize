@@ -42,11 +42,10 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         pred_X.to_device('cpu')
 
         pred_G_X = self.predict(generated_batch)
-        # choices = np.random.choice(a=pred_G_X.x.size(0), size=(int(pred_G_X.x.size(0)), ), replace=True)
-        # pred_G_X.x = pred_G_X.x[choices]
-
-        fake_ids = torch.Tensor().new_full(size=(int(generated_batch.x.size(0)), ),
-                                           fill_value=1,
+        choices = np.random.choice(a=pred_G_X.x.size(0), size=(int(pred_G_X.x.size(0)/2), ), replace=True)
+        pred_G_X.x = pred_G_X.x[choices]
+        fake_ids = torch.Tensor().new_full(size=(int(generated_batch.x.size(0) / 2),),
+                                           fill_value=2,
                                            dtype=torch.int8,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
@@ -69,6 +68,8 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         pred_X.to_device('cpu')
 
         pred_G_X = self.predict(generated_batch)
+        choices = np.random.choice(a=pred_G_X.x.size(0), size=(int(pred_G_X.x.size(0) / 2),), replace=True)
+        pred_G_X.x = pred_G_X.x[choices]
         fake_ids = torch.Tensor().new_full(size=(batch.x.size(0),),
                                            fill_value=2,
                                            dtype=torch.int8,
