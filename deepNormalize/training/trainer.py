@@ -29,6 +29,7 @@ from deepNormalize.utils.utils import concat_batches
 from deepNormalize.training.generator_trainer import GeneratorTrainer
 from deepNormalize.training.discriminator_trainer import DiscriminatorTrainer
 from deepNormalize.training.segmenter_trainer import SegmenterTrainer
+from deepNormalize.logger.plots import PiePlot
 
 try:
     from apex.parallel import DistributedDataParallel as DDP
@@ -56,6 +57,10 @@ class DeepNormalizeTrainer(Trainer):
         self._segmenter_trainer = SegmenterTrainer(segmenter_config, callbacks, "Segmenter")
 
         self._input_images_plot = ImagesPlot(self._config.visdom, "Input Image")
+        self._class_pie_plot = PiePlot(self._config.visdom,
+                                       torch.Tensor().new_zeros(size=(2,)),
+                                       ["Real", "Fake"],
+                                       "Predicted classes")
 
         self._with_segmentation = False
         self._slicer = AdaptedImageSlicer()
@@ -170,6 +175,9 @@ class DeepNormalizeTrainer(Trainer):
 
             loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.train_batch(batch, generated_batch)
 
+            count = self.count(torch.argmax(torch.cat((pred_D_X.x, pred_D_G_X.x), dim=0), dim=1), 2)
+
+            self._class_pie_plot.update(sizes=count)
             self._discriminator_trainer.update_metric(torch.cat((pred_D_X.x, pred_D_G_X.x)),
                                                       torch.cat(
                                                           (pred_D_X.dataset_id.long(),
@@ -189,7 +197,11 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator_trainer.enable_gradients()
             self._segmenter_trainer.disable_gradients()
 
-            custom_loss, loss_D_G_X_as_X = self._train_generator_with_segmentation(batch, loss_S_G_X)
+            self._generator_trainer.reset_optimizer()
+            self._discriminator_trainer.reset_optimizer()
+            self._segmenter_trainer.reset_optimizer()
+
+            custom_loss, loss_D_G_X_as_X = self._generator_trainer.train_generator_with_segmentation(batch, loss_S_G_X)
 
             pred_D_X = self._discriminator_trainer.predict(batch)
             pred_D_G_X = self._discriminator_trainer.predict(generated_batch)
@@ -199,7 +211,7 @@ class DeepNormalizeTrainer(Trainer):
                                                           (pred_D_X.dataset_id.long(),
                                                            pred_D_G_X.dataset_id.long())))
 
-            self._segmenter_trainer.update_metric(segmented_batch.x, batch.y.long())
+            self._segmenter_trainer.update_metric(segmented_batch.x, torch.squeeze(batch.y, dim=1).long())
 
             return loss_D, loss_D_G_X_as_X, custom_loss, loss_S_G_X, generated_batch, segmented_batch
 
@@ -280,12 +292,6 @@ class DeepNormalizeTrainer(Trainer):
         self._segmenter_trainer.at_epoch_begin(self.epoch)
 
     def _at_epoch_end(self):
-        self._generator_trainer.training_loss_gauge.reset()
-        self._discriminator_trainer.training_loss_gauge.reset()
-        self._segmenter_trainer.training_loss_gauge.reset()
-        self._generator_trainer.training_metric_gauge.reset()
-        self._discriminator_trainer.training_metric_gauge.reset()
-        self._segmenter_trainer.training_metric_gauge.reset()
         self._epoch += 1
 
     def _at_validation_begin(self):
@@ -342,20 +348,14 @@ class DeepNormalizeTrainer(Trainer):
         rt /= int(os.environ['WORLD_SIZE'])
         return rt
 
-    def _train_generator_with_segmentation(self, batch, loss_S_G_X):
-        generated_batch = self._generator_trainer.predict(batch)
-
-        loss_D_G_X_as_X = self._generator_trainer.evaluate_discriminator_error_on_normalized_data(generated_batch)
-
-        custom_loss = self._config.variables.alpha_ * loss_S_G_X + self._config.variables.lambda_ * loss_D_G_X_as_X
-
-        with amp.scale_loss(custom_loss, self._generator_trainer._config.optimizer) as scaled_loss:
-            scaled_loss.backward()
-
-        self._generator_trainer.step()
-
-        return custom_loss, loss_D_G_X_as_X
-
     def update_image_plot(self, image):
         image = torch.nn.functional.interpolate(image, scale_factor=5, mode="trilinear", align_corners=True)
         self._input_images_plot.update(self._slicer.get_slice(SliceType.AXIAL, image))
+
+    def count(self, tensor, n_classes):
+        count = torch.Tensor().new_zeros(size=(n_classes,))
+
+        for i in range(n_classes):
+            count[i] = torch.sum(tensor == i).int()
+
+        return count

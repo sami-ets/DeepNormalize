@@ -104,7 +104,7 @@ class Initializer(object):
 
         dataset_MRBrainS = NiftiPatchDataset(source_dir=dataset_config[1].path + "/TrainingData/Source",
                                              target_dir=dataset_config[1].path + "/TrainingData/Target",
-                                             dataset_id=1,
+                                             dataset_id=0,
                                              transform=Compose([ToNDTensor()]),
                                              patch_shape=dataset_config[1].training_patch_size,
                                              step=dataset_config[1].training_patch_step)

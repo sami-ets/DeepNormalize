@@ -33,7 +33,7 @@ models:
     name: "ResNet18"
     type: "ResNet3D"
     in_channels: 1
-    out_channels: 3
+    out_channels: 2
     num_groups: 8
     conv_groups: 1
     width_per_group: 64
@@ -69,7 +69,7 @@ training:
   max_epochs: 100
   criterions:
     - "DiceLoss"
-    - "Cross_Entropy"
+    - "NLLLoss"
   metrics:
     dice:
       num_classes: 4

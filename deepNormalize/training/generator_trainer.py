@@ -40,38 +40,55 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         self._generated_images_plot = ImagesPlot(self._visdom, "Adapted Images")
         self._slicer = AdaptedImageSlicer()
 
-    def train_batch(self, batch: Batch, retain_graph=False):
+    def train_batch(self, batch: Batch, detach=False):
         # Generate normalized data.
-        generated_batch = self.predict(batch, detach=retain_graph)
+        generated_batch = self.predict(batch, detach=detach)
 
         # Loss measures generator's ability to fool the discriminator.
         loss_D_G_X_as_X = self.evaluate_discriminator_error_on_normalized_data(generated_batch)
 
         with amp.scale_loss(loss_D_G_X_as_X, self._config.optimizer) as scaled_loss:
-            scaled_loss.backward(retain_graph=retain_graph)
+            scaled_loss.backward(retain_graph=detach)
 
         self.step()
 
         return loss_D_G_X_as_X, generated_batch
 
-    def evaluate_discriminator_error_on_normalized_data(self, generated_batch):
-        pred_D_G_X = self._discriminator_trainer.predict(generated_batch)
+    def evaluate_discriminator_error_on_normalized_data(self, generated_batch, detach=False):
+        pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
         # Generate random integers between 0 and 1, meaning it's coming from a real domain.
-        # y = torch.Tensor().new_tensor(data=np.random.randint(low=0, high=2, size=(generated_batch.x.size(0),)),
-        #                               dtype=torch.int8,
-        #                               device=self._config.running_config.device)
-        y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
-                                    fill_value=2,
-                                    dtype=torch.int8,
-                                    device=self._config.running_config.device)
+        y = torch.Tensor().new_tensor(
+            data=np.zeros(shape=(generated_batch.x.size(0), )),
+            # data=np.random.choice(a=1, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
+            dtype=torch.int8,
+            device=self._config.running_config.device)
+        # y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
+        #                             fill_value=2,
+        #                             dtype=torch.int8,
+        #                             device=self._config.running_config.device)
         pred_D_G_X.dataset_id = y
 
         loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(
-            1.0 - pred_D_G_X.x,
+            torch.nn.functional.log_softmax(pred_D_G_X.x, dim=1),
             pred_D_G_X.dataset_id.long())
 
-        return loss_D_G_X_as_X
+        pred_D_G_X.to_device('cpu')
+
+        return -loss_D_G_X_as_X
+
+    def train_generator_with_segmentation(self, batch, loss_S_G_X):
+        generated_batch = self.predict(batch)
+        loss_D_G_X_as_X = self.evaluate_discriminator_error_on_normalized_data(generated_batch)
+
+        custom_loss = self._config.variables.alpha_ * loss_S_G_X.item() + self._config.variables.lambda_ * loss_D_G_X_as_X
+
+        with amp.scale_loss(custom_loss, self._config.optimizer) as scaled_loss:
+            scaled_loss.backward()
+
+        self.step()
+
+        return custom_loss, loss_D_G_X_as_X
 
     def update_image_plot(self, image):
         image = torch.nn.functional.interpolate(image, scale_factor=5, mode="trilinear", align_corners=True)

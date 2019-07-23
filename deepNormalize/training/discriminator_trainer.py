@@ -15,6 +15,7 @@
 #  ==============================================================================
 
 import torch
+import numpy as np
 
 from deepNormalize.training.base_model_trainer import DeepNormalizeModelTrainer
 
@@ -37,17 +38,23 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
     def train_batch(self, batch: Batch, generated_batch: Batch):
         # Measure discriminator's ability to classify real from generated samples
         pred_X = self.predict(batch)
-        loss_D_X = self.evaluate_loss(pred_X.x, batch.dataset_id.long())
+        loss_D_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_X.x, dim=1), batch.dataset_id.long())
+        pred_X.to_device('cpu')
 
         pred_G_X = self.predict(generated_batch)
-        fake_ids = torch.Tensor().new_full(size=(batch.x.size(0),),
-                                           fill_value=2,
-                                           dtype=torch.long,
+        # choices = np.random.choice(a=pred_G_X.x.size(0), size=(int(pred_G_X.x.size(0)), ), replace=True)
+        # pred_G_X.x = pred_G_X.x[choices]
+
+        fake_ids = torch.Tensor().new_full(size=(int(generated_batch.x.size(0)), ),
+                                           fill_value=1,
+                                           dtype=torch.int8,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(pred_G_X.x.detach(), pred_G_X.dataset_id.long())
+        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_G_X.x.detach(), dim=1),
+                                        pred_G_X.dataset_id.long())
+        pred_G_X.to_device('cpu')
 
-        loss_D = (loss_D_X + loss_D_G_X) / 2.0
+        loss_D = ((loss_D_X + loss_D_G_X) / 2.0)
 
         with amp.scale_loss(loss_D, self._config.optimizer) as scaled_loss:
             scaled_loss.backward()
@@ -59,14 +66,17 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
     def validate_batch(self, batch: Batch, generated_batch: Batch):
         pred_X = self.predict(batch)
         loss_D_X = self.evaluate_loss(pred_X.x, batch.dataset_id.long())
+        pred_X.to_device('cpu')
 
         pred_G_X = self.predict(generated_batch)
         fake_ids = torch.Tensor().new_full(size=(batch.x.size(0),),
                                            fill_value=2,
-                                           dtype=torch.long,
+                                           dtype=torch.int8,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(pred_G_X.x.detach(), pred_G_X.dataset_id)
+        loss_D_G_X = self.evaluate_loss(torch.nn.functional.softmax(pred_G_X.x.detach(), dim=1),
+                                        pred_G_X.dataset_id.long())
+        pred_G_X.to_device('cpu')
 
         loss_D = (loss_D_X + loss_D_G_X) / 2.0
 

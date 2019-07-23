@@ -19,6 +19,7 @@ import torch
 from samitorch.utils.utils import to_onehot
 from samitorch.logger.plots import ImagesPlot
 from samitorch.inputs.batch import Batch
+from samitorch.utils.utils import to_onehot
 
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.logger.image_slicer import SegmentationSlicer
@@ -45,9 +46,9 @@ class SegmenterTrainer(DeepNormalizeModelTrainer):
         segmented_batch = self.predict(batch)
 
         # Loss measures generator's ability to fool the discriminator.
-        loss_S_G_X = self.evaluate_loss(segmented_batch.x, segmented_batch.y)
+        loss_S_G_X = self.evaluate_loss(segmented_batch.x, to_onehot(torch.squeeze(batch.y, dim=1).long(), num_classes=4))
 
-        with amp.scale_loss(loss_S_G_X, self.config.optimizer) as scaled_loss:
+        with amp.scale_loss(loss_S_G_X, self._config.optimizer) as scaled_loss:
             scaled_loss.backward()
 
         self.step()
@@ -62,7 +63,7 @@ class SegmenterTrainer(DeepNormalizeModelTrainer):
         segmented_batch = self.predict(batch)
 
         loss_S_G_X = self.evaluate_loss(torch.nn.functional.softmax(segmented_batch.x, dim=1),
-                                        to_onehot(batch.y, num_classes=4))
+                                        to_onehot(torch.squeeze(batch.y, dim=1).long(), num_classes=4))
 
         if self._config.running_config.is_distributed:
             loss_S_G_X = self.reduce_tensor(loss_S_G_X.data)
