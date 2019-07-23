@@ -58,7 +58,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
         y = torch.Tensor().new_tensor(
-            data=np.zeros(shape=(generated_batch.x.size(0), )),
+            data=np.zeros(shape=(generated_batch.x.size(0),)),
             dtype=torch.int8,
             device=self._config.running_config.device)
         pred_D_G_X.dataset_id = y
