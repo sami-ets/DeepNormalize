@@ -17,17 +17,16 @@
 from samitorch.training.training_strategies import TrainingStrategy
 
 
-class SegmentationFocusedStrategy(TrainingStrategy):
-
+class GANStrategy(TrainingStrategy):
     def __init__(self, trainer):
-        super(SegmentationFocusedStrategy, self).__init__(trainer)
+        super(GANStrategy, self).__init__(trainer)
 
     def __call__(self, epoch_num: int):
-        if epoch_num < 10:
-            self._trainer.config.variables.lambda_ = 0.0
+        if 0 <= epoch_num < 15:
+            self._trainer.with_segmentation = False
 
         else:
-            self._trainer.config.variables.lambda_ = 1.0
+            self._trainer.with_segmentation = True
 
 
 class AutoEncoderStrategy(TrainingStrategy):
@@ -35,8 +34,8 @@ class AutoEncoderStrategy(TrainingStrategy):
         super(AutoEncoderStrategy, self).__init__(trainer)
 
     def __call__(self, epoch_num: int):
-        if epoch_num < 10:
-            self._trainer.with_segmentation = False
+        if 0 <= epoch_num < 5:
+            self._trainer.autoencoder = True
 
         else:
-            self._trainer.with_segmentation = True
+            self._trainer.autoencoder = False

@@ -18,7 +18,8 @@ import torch
 import numpy as np
 
 from samitorch.inputs.batch import Batch
-from samitorch.logger.plots import ImagesPlot
+from samitorch.logger.plots import ImagesPlot, LossPlot
+from samitorch.metrics.gauges import RunningAverageGauge
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.training.base_model_trainer import DeepNormalizeModelTrainer
@@ -38,6 +39,10 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         super(GeneratorTrainer, self).__init__(config, callbacks, class_name)
         self._discriminator_trainer = discriminator_trainer
         self._generated_images_plot = ImagesPlot(self._visdom, "Adapted Images")
+        self.mse_training_loss_plot = LossPlot(self._config.visdom, "MSE Training Loss")
+        self.mse_validation_loss_plot = LossPlot(self._config.visdom, "MSE Validation Loss")
+        self.mse_training_gauge = RunningAverageGauge()
+        self.mse_validation_gauge = RunningAverageGauge()
         self._slicer = AdaptedImageSlicer()
 
     def train_batch(self, batch: Batch, detach=False):
@@ -86,6 +91,23 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         return custom_loss, loss_D_G_X_as_X
 
+    def train_as_autoencoder(self, batch):
+        generated_batch = self.predict(batch)
+        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+
+        with amp.scale_loss(mse_loss, self._config.optimizer) as scaled_loss:
+            scaled_loss.backward()
+
+        self.step()
+
+        return mse_loss, generated_batch
+
+    def validate_batch(self, batch):
+        generated_batch = self.predict(batch)
+        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+
+        return mse_loss, generated_batch
+
     def update_image_plot(self, image):
         image = torch.nn.functional.interpolate(image, scale_factor=5, mode="trilinear", align_corners=True)
         self._generated_images_plot.update(self._slicer.get_slice(SliceType.AXIAL, image))
@@ -94,3 +116,15 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         super(GeneratorTrainer, self).at_epoch_begin()
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())
+
+    def update_mse_loss_gauge(self, loss, n_data, phase="training"):
+        if phase == "training":
+            self.mse_training_gauge.update(loss, n_data)
+        else:
+            self.mse_validation_gauge.update(loss, n_data)
+
+    def update_mse_loss_plot(self, loss, n_data, phase="training"):
+        if phase == "training":
+            self.mse_training_loss_plot.append(loss, n_data)
+        else:
+            self.mse_validation_loss_plot.append(loss, n_data)
