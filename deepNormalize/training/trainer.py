@@ -87,7 +87,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def train(self):
         for epoch in range(self._config.max_epoch):
-            #self._train_epoch(epoch)
+            self._train_epoch(epoch)
             self._validate_epoch(epoch)
 
     def _train_epoch(self, epoch_num: int):
@@ -263,20 +263,19 @@ class DeepNormalizeTrainer(Trainer):
                 if self._autoencoder:
                     mse_loss, generated_batch = self._generator_trainer.validate_batch(batch)
 
+                    self._generator_trainer.update_mse_loss_gauge(mse_loss.item(), batch.x.size(0), phase="validation")
+
                 elif self._with_segmentation:
                     loss_S_G_X, segmented_batch = self._segmenter_trainer.validate_batch(batch)
 
                     self._segmenter_trainer.validation_loss_gauge.update(loss_S_G_X.item(),
                                                                          batch.x.size(0))
-
                     self._segmenter_trainer.update_metric(segmented_batch.x, batch.y)
-
                     self._segmenter_trainer.update_metric_gauge(self._segmenter_trainer.compute_metric(),
                                                                 batch.x.size(0), phase="validation")
 
                 if not self._autoencoder:
                     loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.validate_batch(batch, generated_batch)
-
                     loss_D_G_X_as_X = self._generator_trainer.evaluate_discriminator_error_on_normalized_data(
                         generated_batch)
 
@@ -286,10 +285,8 @@ class DeepNormalizeTrainer(Trainer):
                                                               torch.cat(
                                                                   (pred_D_X.dataset_id.long(),
                                                                    pred_D_G_X.dataset_id.long())))
-
                     self._discriminator_trainer.update_metric_gauge(self._discriminator_trainer.compute_metric(),
                                                                     batch.x.size(0))
-
                     self._generator_trainer.validation_loss_gauge.update(loss_D_G_X_as_X.item(), batch.x.size(0))
 
             if self._config.running_config.local_rank == 0:
@@ -304,8 +301,11 @@ class DeepNormalizeTrainer(Trainer):
 
         del batch
         del generated_batch
-        del loss_D
-        del loss_D_G_X_as_X
+        if not self._autoencoder:
+            del loss_D
+            del loss_D_G_X_as_X
+            del pred_D_X
+            del pred_D_X
         if self._with_segmentation:
             del segmented_batch
             del loss_S_G_X
@@ -340,6 +340,8 @@ class DeepNormalizeTrainer(Trainer):
             [self._discriminator_trainer.validation_loss_gauge.average]))
         self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
             [self._segmenter_trainer.validation_loss_gauge.average]), phase="validation")
+        self._generator_trainer.update_mse_loss_plot(self.global_step, torch.Tensor().new(
+            [self._generator_trainer.mse_validation_gauge.average]), phase="validation")
         self._generator_trainer.validation_metric_gauge.reset()
         self._discriminator_trainer.validation_metric_gauge.reset()
         self._segmenter_trainer.validation_metric_gauge.reset()

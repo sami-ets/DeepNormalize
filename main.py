@@ -81,7 +81,7 @@ if __name__ == '__main__':
     parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
     parser.add_argument('--keep-batch-norm-fp32', type=str, default=None)
-    parser.add_argument('--loss-scale', type=str, default="dynamic")
+    parser.add_argument('--loss-scale', type=str, default="0.5")
     parser.add_argument('--num-gpus', type=int, default=1, help="The number of GPUs on the Node.")
     parser.add_argument('--is_distributed', action='store_true', default=False)
     args = parser.parse_args()

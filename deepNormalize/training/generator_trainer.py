@@ -55,6 +55,8 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         with amp.scale_loss(loss_D_G_X_as_X, self._config.optimizer) as scaled_loss:
             scaled_loss.backward(retain_graph=detach)
 
+        torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)
+
         self.step()
 
         return loss_D_G_X_as_X, generated_batch
@@ -87,6 +89,8 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         with amp.scale_loss(custom_loss, self._config.optimizer) as scaled_loss:
             scaled_loss.backward()
 
+        torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)
+
         self.step()
 
         return custom_loss, loss_D_G_X_as_X
@@ -97,6 +101,8 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         with amp.scale_loss(mse_loss, self._config.optimizer) as scaled_loss:
             scaled_loss.backward()
+
+        torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)
 
         self.step()
 
