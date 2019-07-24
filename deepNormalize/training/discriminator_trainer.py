@@ -77,11 +77,11 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
                                            dtype=torch.int8,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(torch.nn.functional.softmax(pred_G_X.x.detach(), dim=1),
+        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_G_X.x.detach(), dim=1),
                                         pred_G_X.dataset_id.long())
         pred_G_X.to_device('cpu')
 
-        loss_D = (loss_D_X + loss_D_G_X) / 2.0
+        loss_D = ((loss_D_X + loss_D_G_X) / 2.0)
 
         if self._config.running_config.is_distributed:
             loss_D = self.reduce_tensor(loss_D.data)
