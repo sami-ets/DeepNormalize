@@ -55,7 +55,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
 
         loss_D = ((loss_D_X + loss_D_G_X) / 2.0)
 
-        with amp.scale_loss(loss_D, self._config.optimizer) as scaled_loss:
+        with amp.scale_loss(loss_D, self._config.optimizer, loss_id=2) as scaled_loss:
             scaled_loss.backward()
 
         torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)

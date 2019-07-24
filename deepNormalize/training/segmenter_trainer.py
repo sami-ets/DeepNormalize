@@ -48,7 +48,7 @@ class SegmenterTrainer(DeepNormalizeModelTrainer):
         # Loss measures generator's ability to fool the discriminator.
         loss_S_G_X = self.evaluate_loss(segmented_batch.x, to_onehot(torch.squeeze(batch.y, dim=1).long(), num_classes=4))
 
-        with amp.scale_loss(loss_S_G_X, self._config.optimizer) as scaled_loss:
+        with amp.scale_loss(loss_S_G_X, self._config.optimizer, loss_id=3) as scaled_loss:
             scaled_loss.backward()
 
         self.step()

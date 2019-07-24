@@ -52,7 +52,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         # Loss measures generator's ability to fool the discriminator.
         loss_D_G_X_as_X = self.evaluate_discriminator_error_on_normalized_data(generated_batch)
 
-        with amp.scale_loss(loss_D_G_X_as_X, self._config.optimizer) as scaled_loss:
+        with amp.scale_loss(loss_D_G_X_as_X, self._config.optimizer, loss_id=1) as scaled_loss:
             scaled_loss.backward(retain_graph=detach)
 
         torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)
@@ -99,7 +99,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         generated_batch = self.predict(batch)
         mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
 
-        with amp.scale_loss(mse_loss, self._config.optimizer) as scaled_loss:
+        with amp.scale_loss(mse_loss, self._config.optimizer, loss_id=0) as scaled_loss:
             scaled_loss.backward()
 
         torch.nn.utils.clip_grad_norm_(amp.master_params(self._config.optimizer), max_norm=10)

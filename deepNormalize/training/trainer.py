@@ -66,7 +66,7 @@ class DeepNormalizeTrainer(Trainer):
         self._autoencoder = False
         self._slicer = AdaptedImageSlicer()
 
-        self._strategy = GANStrategy(self)
+        self._gan_strategy = GANStrategy(self)
         self._autoencoder_strategy = AutoEncoderStrategy(self)
 
     @property
@@ -145,20 +145,20 @@ class DeepNormalizeTrainer(Trainer):
                         self._generator_trainer.update_loss_gauge(loss_D_G_X_as_X.item(), batch.x.size(0))
                         self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
                             [self._generator_trainer.training_loss_gauge.average]))
-                        self._discriminator_trainer.update_metric_gauge(acc.item(), batch.x.size(0))
                         self._discriminator_trainer.update_loss_gauge(loss_D.item(), batch.x.size(0))
                         self._discriminator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
                             [self._discriminator_trainer.training_loss_gauge.average]))
+                        self._discriminator_trainer.update_metric_gauge(acc.item(), batch.x.size(0))
                         self._discriminator_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
                             [self._discriminator_trainer.training_metric_gauge.average]))
 
                         if self._with_segmentation:
-                            self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
                             self._segmenter_trainer.update_loss_gauge(loss_S_G_X.item(), batch.x.size(0))
                             self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
                                 [self._segmenter_trainer.training_loss_gauge.average]))
-                            self._segmenter_trainer.update_metric_plot(self.global_step,
-                                                                       self._segmenter_trainer.training_metric_gauge.average, )
+                            self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
+                            self._segmenter_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
+                                [self._segmenter_trainer.training_metric_gauge.average]))
                             self._segmenter_trainer.update_image_plot(segmented_batch.x.cpu().data)
 
                     self.LOGGER.info(
@@ -319,7 +319,7 @@ class DeepNormalizeTrainer(Trainer):
         return batch.update(batch, output_device)
 
     def _at_epoch_begin(self, epoch_num):
-        self._strategy(self.epoch.item())
+        self._gan_strategy(self.epoch.item())
         self._autoencoder_strategy(self.epoch.item())
         self._generator_trainer.at_epoch_begin(self.epoch)
         self._discriminator_trainer.at_epoch_begin(self.epoch)
@@ -334,13 +334,13 @@ class DeepNormalizeTrainer(Trainer):
         self._segmenter_trainer.at_validation_begin()
 
     def _at_validation_end(self):
-        self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+        self._generator_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
             [self._generator_trainer.validation_loss_gauge.average]), phase="validation")
-        self._discriminator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-            [self._discriminator_trainer.validation_loss_gauge.average]))
-        self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+        self._discriminator_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
+            [self._discriminator_trainer.validation_loss_gauge.average]), phase="validation")
+        self._segmenter_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
             [self._segmenter_trainer.validation_loss_gauge.average]), phase="validation")
-        self._generator_trainer.update_mse_loss_plot(self.global_step, torch.Tensor().new(
+        self._generator_trainer.update_mse_loss_plot(self.epoch, torch.Tensor().new(
             [self._generator_trainer.mse_validation_gauge.average]), phase="validation")
         self._generator_trainer.validation_metric_gauge.reset()
         self._discriminator_trainer.validation_metric_gauge.reset()

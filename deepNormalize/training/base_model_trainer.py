@@ -57,7 +57,8 @@ class DeepNormalizeModelTrainer(ModelTrainer):
         self._config.model, self._config.optimizer = amp.initialize(self._config.model, self._config.optimizer,
                                                                     opt_level=self._config.running_config.opt_level,
                                                                     keep_batchnorm_fp32=self._config.running_config.keep_batch_norm_fp32,
-                                                                    loss_scale=self._config.running_config.loss_scale)
+                                                                    loss_scale=self._config.running_config.loss_scale,
+                                                                    num_losses=4)
 
         torch.optim.lr_scheduler.ReduceLROnPlateau(self._config.optimizer, factor=0.1, patience=3, verbose=True)
 
