@@ -64,7 +64,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
     def evaluate_discriminator_error_on_normalized_data(self, generated_batch, detach=False):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
-        # Generate random integers between 0 and 1, meaning it's coming from a real domain.
+        # Generate random integers between 0 and 1, meaning it's coming from a real domain. Balanced (50% 0s, 50% 1s).
         y = torch.Tensor().new_tensor(
             data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
             dtype=torch.int8,
@@ -78,9 +78,9 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         pred_D_G_X.to_device('cpu')
 
-        return -loss_D_G_X_as_X
+        return loss_D_G_X_as_X
 
-    def train_generator_with_segmentation(self, batch, loss_S_G_X):
+    def train_batch_with_segmentation_loss(self, batch, loss_S_G_X):
         generated_batch = self.predict(batch)
         loss_D_G_X_as_X = self.evaluate_discriminator_error_on_normalized_data(generated_batch)
 
@@ -95,7 +95,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         return custom_loss, loss_D_G_X_as_X
 
-    def train_as_autoencoder(self, batch):
+    def train_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
         mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
 
@@ -108,7 +108,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         return mse_loss, generated_batch
 
-    def validate_batch(self, batch):
+    def validate_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
         mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
 

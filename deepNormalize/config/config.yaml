@@ -64,6 +64,10 @@ dataset:
 
 training:
   debug: False
+  pretrained: True
+  model_paths:
+    generator:
+      "data/models/autoencoder.pickle"
   batch_size: 16
   checkpoint_every: 50
   max_epochs: 100

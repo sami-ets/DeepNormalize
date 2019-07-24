@@ -35,7 +35,7 @@ class AutoEncoderStrategy(TrainingStrategy):
 
     def __call__(self, epoch_num: int):
         if 0 <= epoch_num < 5:
-            self._trainer.autoencoder = True
+            self._trainer.with_autoencoder = True
 
         else:
-            self._trainer.autoencoder = False
+            self._trainer.with_autoencoder = False

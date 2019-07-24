@@ -41,6 +41,8 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         loss_D_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_X.x, dim=1), batch.dataset_id.long())
         pred_X.to_device('cpu')
 
+        # Predict images from inputs with Generator. Choose randomly 16 images (to balance with 16 from domain_0,
+        # 16 from domain_1). Tag images with fake ID (K+1 class).
         pred_G_X = self.predict(generated_batch)
         choices = np.random.choice(a=pred_G_X.x.size(0), size=(int(pred_G_X.x.size(0) / 2),), replace=True)
         pred_G_X.x = pred_G_X.x[choices]

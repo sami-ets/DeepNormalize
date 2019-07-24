@@ -221,6 +221,7 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
     def __init__(self, config: dict):
         super(DeepNormalizeTrainingConfiguration, self).__init__(config)
         self._debug = config["debug"]
+        self._pretrained = config["pretrained"]
         self._batch_size = config["batch_size"]
         self._checkpoint_every = config["checkpoint_every"]
         self._criterions = config["criterions"]
@@ -305,6 +306,10 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
             bool: If model is in debug mode.
         """
         return self._debug
+
+    @property
+    def pretrained(self) -> bool:
+        return self._pretrained
 
 
 class VariableConfiguration(Configuration):
