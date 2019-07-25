@@ -222,11 +222,16 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         super(DeepNormalizeTrainingConfiguration, self).__init__(config)
         self._debug = config["debug"]
         self._batch_size = config["batch_size"]
+        self._checkpoint_every = config["checkpoint_every"]
         self._criterions = config["criterions"]
         self._metrics = config["metrics"]
         self._optimizers = config["optimizers"]
         self._max_epochs = config["max_epochs"]
 
+    @property
+    def checkpoint_every(self):
+        return self._checkpoint_every
+    
     @property
     def batch_size(self) -> int:
         """

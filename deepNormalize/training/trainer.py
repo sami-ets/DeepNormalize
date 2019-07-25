@@ -82,9 +82,13 @@ class DeepNormalizeTrainer(Trainer):
             if "segmenter" in self._config.pretraining_config.model_paths:
                 segmenter_epoch = self._segmenter_trainer.restore_from_checkpoint(
                     self._config.pretraining_config.model_paths["segmenter"])
+            # Get the highest epoch from checkpoints to restart training.
             epochs = np.array([generator_epoch, discriminator_epoch, segmenter_epoch])
             max_epoch = epochs.max()
             self._epoch = torch.Tensor().new([max_epoch])
+
+            # Use a barrier() to make sure that all processes have finished reading the checkpoints.
+            torch.distributed.barrier()
 
         self._slicer = AdaptedImageSlicer()
 

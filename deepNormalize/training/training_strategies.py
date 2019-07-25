@@ -14,12 +14,7 @@
 #  limitations under the License.
 #  ==============================================================================
 
-import abc
-
 from samitorch.training.training_strategies import TrainingStrategy
-from samitorch.utils.model_io import save
-from samitorch.training.model_trainer import ModelTrainer
-from datetime import datetime
 
 
 class GANStrategy(TrainingStrategy):

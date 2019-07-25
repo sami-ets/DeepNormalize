@@ -14,12 +14,10 @@
 #  limitations under the License.
 #  ==============================================================================
 import os
-import copy
-from datetime import datetime
 
 from samitorch.factories.factories import *
 from samitorch.factories.enums import *
-from samitorch.inputs.datasets import NiftiPatchDataset
+from samitorch.inputs.datasets import PatchDataset
 from samitorch.inputs.transformers import ToNDTensor
 from samitorch.inputs.dataloaders import DataLoader
 from deepNormalize.inputs.utils import sample_collate
@@ -96,19 +94,19 @@ class Initializer(object):
         return optimizers
 
     def create_dataset(self, dataset_config):
-        dataset_iSEG = NiftiPatchDataset(source_dir=dataset_config[0].path + "/Training/Source",
-                                         target_dir=dataset_config[0].path + "/Training/Target",
-                                         dataset_id=0,
-                                         transform=Compose([ToNDTensor()]),
-                                         patch_shape=dataset_config[0].training_patch_size,
-                                         step=dataset_config[0].training_patch_step)
+        dataset_iSEG = PatchDataset(source_dir=dataset_config[0].path + "/Training/Source",
+                                    target_dir=dataset_config[0].path + "/Training/Target",
+                                    dataset_id=0,
+                                    transform=Compose([ToNDTensor()]),
+                                    patch_shape=dataset_config[0].training_patch_size,
+                                    step=dataset_config[0].training_patch_step)
 
-        dataset_MRBrainS = NiftiPatchDataset(source_dir=dataset_config[1].path + "/TrainingData/Source",
-                                             target_dir=dataset_config[1].path + "/TrainingData/Target",
-                                             dataset_id=0,
-                                             transform=Compose([ToNDTensor()]),
-                                             patch_shape=dataset_config[1].training_patch_size,
-                                             step=dataset_config[1].training_patch_step)
+        dataset_MRBrainS = PatchDataset(source_dir=dataset_config[1].path + "/TrainingData/Source",
+                                        target_dir=dataset_config[1].path + "/TrainingData/Target",
+                                        dataset_id=0,
+                                        transform=Compose([ToNDTensor()]),
+                                        patch_shape=dataset_config[1].training_patch_size,
+                                        step=dataset_config[1].training_patch_step)
         return [dataset_iSEG, dataset_MRBrainS]
 
     def init_process_group(self, running_config):

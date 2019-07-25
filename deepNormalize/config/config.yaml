@@ -69,6 +69,7 @@ pretraining:
 
 training:
   debug: False
+  checkpoint_every: 0
   batch_size: 16
   max_epochs: 100
   criterions:

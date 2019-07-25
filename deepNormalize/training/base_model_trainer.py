@@ -81,5 +81,6 @@ class DeepNormalizeModelTrainer(ModelTrainer):
         checkpoint = load(checkpoint_path,
                           map_location=lambda storage, loc: storage.cuda(self._config.running_config.local_rank))
         self._config.model.load_state_dict(checkpoint["state_dict"])
+        self._config.optimizer.load_state_dict(checkpoint["optimizer"])
 
         return checkpoint["epoch"]
