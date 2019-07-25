@@ -14,13 +14,15 @@
 # limitations under the License.
 # ==============================================================================
 
-import torch
-import os
 import logging
 
+import torch
+import os
+import numpy as np
 from samitorch.training.trainer import Trainer
 from samitorch.inputs.batch import Batch
 from samitorch.logger.plots import ImagesPlot
+
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.adapters.ConfigAdapter import ConfigAdapter
@@ -37,7 +39,7 @@ try:
     from apex import amp, optimizers
     from apex.multi_tensor_apply import multi_tensor_applier
 except ImportError:
-    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
+    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this project.")
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -45,25 +47,45 @@ class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, config, callbacks):
         super(DeepNormalizeTrainer, self).__init__(config, callbacks)
-        adapter = ConfigAdapter(config)
 
+        # Adapt configurations so each ModelTrainer only get its own model, criterion and optimizer object.
+        adapter = ConfigAdapter(config)
         generator_config = adapter.adapt(model_position=0, criterion_position=0)
         segmenter_config = adapter.adapt(model_position=1, criterion_position=0)
         discriminator_config = adapter.adapt(model_position=2, criterion_position=1)
 
+        # Create instance of every model trainer.
         self._discriminator_trainer = DiscriminatorTrainer(discriminator_config, callbacks, "Discriminator")
         self._generator_trainer = GeneratorTrainer(generator_config, callbacks, self._discriminator_trainer,
                                                    "Generator")
         self._segmenter_trainer = SegmenterTrainer(segmenter_config, callbacks, "Segmenter")
 
+        # Various plots.
         self._input_images_plot = ImagesPlot(self._config.visdom, "Input Image")
         self._class_pie_plot = PiePlot(self._config.visdom,
                                        torch.Tensor().new_zeros(size=(3,)),
                                        ["ISEG", "MRBrainS", "Fake"],
                                        "Predicted classes")
 
+        # Define training behavior.
         self._with_segmentation = False
-        self._autoencoder = False
+        self._with_autoencoder = False
+
+        if self._config.pretraining_config.pretrained:
+            generator_epoch, discriminator_epoch, segmenter_epoch = 0, 0, 0
+            if "generator" in self._config.pretraining_config.model_paths:
+                generator_epoch = self._generator_trainer.restore_from_checkpoint(
+                    self._config.pretraining_config.model_paths["generator"])
+            if "discriminator" in self._config.pretraining_config.model_paths:
+                discriminator_epoch = self._discriminator_trainer.restore_from_checkpoint(
+                    self._config.pretraining_config.model_paths["discriminator"])
+            if "segmenter" in self._config.pretraining_config.model_paths:
+                segmenter_epoch = self._segmenter_trainer.restore_from_checkpoint(
+                    self._config.pretraining_config.model_paths["segmenter"])
+            epochs = np.array([generator_epoch, discriminator_epoch, segmenter_epoch])
+            max_epoch = epochs.max()
+            self._epoch = torch.Tensor().new([max_epoch])
+
         self._slicer = AdaptedImageSlicer()
 
         self._gan_strategy = GANStrategy(self)
@@ -78,12 +100,12 @@ class DeepNormalizeTrainer(Trainer):
         self._with_segmentation = with_segmentation
 
     @property
-    def autoencoder(self):
-        return self._autoencoder
+    def with_autoencoder(self):
+        return self._with_autoencoder
 
-    @autoencoder.setter
-    def autoencoder(self, autoencoder):
-        self._autoencoder = autoencoder
+    @with_autoencoder.setter
+    def with_autoencoder(self, with_autoencoder):
+        self._with_autoencoder = with_autoencoder
 
     def train(self):
         for epoch in range(self._config.max_epoch):
@@ -95,6 +117,7 @@ class DeepNormalizeTrainer(Trainer):
 
         for iteration, (batch_d0, batch_d1) in enumerate(zip(self._config.dataloader[0], self._config.dataloader[1]),
                                                          0):
+
             self._at_iteration_begin()
 
             # Make one big batch from both data loader.
@@ -116,7 +139,7 @@ class DeepNormalizeTrainer(Trainer):
                 if self._with_segmentation:
                     dsc = self._segmenter_trainer.compute_metric().cuda()
 
-                if not self._autoencoder:
+                if not self._with_autoencoder:
                     acc = torch.Tensor().new([self._discriminator_trainer.compute_metric()]).cuda()
 
                 # Average loss and accuracy across processes for logging
@@ -136,10 +159,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 if self._config.running_config.local_rank == 0:
 
-                    if self._autoencoder:
-                        self._generator_trainer.update_mse_loss_gauge(mse_loss.item(), batch.x.size(0))
-                        self._generator_trainer.update_mse_loss_plot(self.global_step, torch.Tensor().new(
-                            [self._generator_trainer.mse_training_gauge.average]))
+                    if self._with_autoencoder:
+                        self._generator_trainer.update_loss_gauge(mse_loss.item(), batch.x.size(0))
+                        self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
+                            [self._generator_trainer.training_loss_gauge.average]))
 
                     else:
                         self._generator_trainer.update_loss_gauge(loss_D_G_X_as_X.item(), batch.x.size(0))
@@ -159,7 +182,8 @@ class DeepNormalizeTrainer(Trainer):
                             self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
                             self._segmenter_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
                                 [self._segmenter_trainer.training_metric_gauge.average]))
-                            self._segmenter_trainer.update_image_plot(segmented_batch.x.cpu().data)
+                            self._segmenter_trainer.update_image_plot(
+                                torch.argmax(segmented_batch.x, dim=1, keepdim=True).float().cpu().data)
 
                     self.LOGGER.info(
                         "Epoch: {} Step: {}, Generator MSE Loss: {}, Discriminator loss: {}, Generator loss: {} Segmenter loss: {}, Segmenter Dice Score: {}".format(
@@ -175,25 +199,24 @@ class DeepNormalizeTrainer(Trainer):
             del generated_batch
             del segmented_batch
 
-            self.global_step += 1
-
             # Re-enable all parts of the graph.
             self._at_iteration_end()
         self._at_epoch_end()
 
     def _train_batch(self, batch: Batch):
+        # Loss variable declaration.
         loss_D = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
         custom_loss = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
         loss_D_G_X_as_X = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
         loss_S_G_X = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
         mse_loss = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
 
-        if self._autoencoder:
-            mse_loss, generated_batch = self._generator_trainer.train_as_autoencoder(batch)
+        if self._with_autoencoder:
+            mse_loss, generated_batch = self._generator_trainer.train_batch_as_autoencoder(batch)
 
             return loss_D, loss_D_G_X_as_X, custom_loss, loss_S_G_X, generated_batch, None, mse_loss
 
-        elif not self._with_segmentation:
+        if not self._with_segmentation:
             # Deactivate segmenter gradients.
             self._segmenter_trainer.disable_gradients()
 
@@ -229,7 +252,8 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator_trainer.reset_optimizer()
             self._segmenter_trainer.reset_optimizer()
 
-            custom_loss, loss_D_G_X_as_X = self._generator_trainer.train_generator_with_segmentation(batch, loss_S_G_X)
+            custom_loss, loss_D_G_X_as_X = self._generator_trainer.train_batch_with_segmentation_loss(batch,
+                                                                                                      loss_S_G_X)
 
             pred_D_X = self._discriminator_trainer.predict(batch)
             pred_D_G_X = self._discriminator_trainer.predict(generated_batch)
@@ -260,10 +284,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 generated_batch = self._generator_trainer.predict(batch)
 
-                if self._autoencoder:
-                    mse_loss, generated_batch = self._generator_trainer.validate_batch(batch)
+                if self._with_autoencoder:
+                    mse_loss, generated_batch = self._generator_trainer.validate_batch_as_autoencoder(batch)
 
-                    self._generator_trainer.update_mse_loss_gauge(mse_loss.item(), batch.x.size(0), phase="validation")
+                    self._generator_trainer.update_loss_gauge(mse_loss.item(), batch.x.size(0), phase="validation")
 
                 elif self._with_segmentation:
                     loss_S_G_X, segmented_batch = self._segmenter_trainer.validate_batch(batch)
@@ -274,7 +298,7 @@ class DeepNormalizeTrainer(Trainer):
                     self._segmenter_trainer.update_metric_gauge(self._segmenter_trainer.compute_metric(),
                                                                 batch.x.size(0), phase="validation")
 
-                if not self._autoencoder:
+                if not self._with_autoencoder:
                     loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.validate_batch(batch, generated_batch)
                     loss_D_G_X_as_X = self._generator_trainer.evaluate_discriminator_error_on_normalized_data(
                         generated_batch)
@@ -301,10 +325,9 @@ class DeepNormalizeTrainer(Trainer):
 
         del batch
         del generated_batch
-        if not self._autoencoder:
+        if not self._with_autoencoder:
             del loss_D
             del loss_D_G_X_as_X
-            del pred_D_X
             del pred_D_X
         if self._with_segmentation:
             del segmented_batch
@@ -326,6 +349,9 @@ class DeepNormalizeTrainer(Trainer):
         self._segmenter_trainer.at_epoch_begin(self.epoch)
 
     def _at_epoch_end(self):
+        self._generator_trainer.at_epoch_end()
+        self._discriminator_trainer.at_epoch_end()
+        self._segmenter_trainer.at_epoch_end()
         self._epoch += 1
 
     def _at_validation_begin(self):
@@ -340,8 +366,6 @@ class DeepNormalizeTrainer(Trainer):
             [self._discriminator_trainer.validation_loss_gauge.average]), phase="validation")
         self._segmenter_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
             [self._segmenter_trainer.validation_loss_gauge.average]), phase="validation")
-        self._generator_trainer.update_mse_loss_plot(self.epoch, torch.Tensor().new(
-            [self._generator_trainer.mse_validation_gauge.average]), phase="validation")
         self._generator_trainer.validation_metric_gauge.reset()
         self._discriminator_trainer.validation_metric_gauge.reset()
         self._segmenter_trainer.validation_metric_gauge.reset()
@@ -358,6 +382,7 @@ class DeepNormalizeTrainer(Trainer):
         self._generator_trainer.at_iteration_end()
         self._segmenter_trainer.at_iteration_end()
         self._discriminator_trainer.at_iteration_end()
+        self._global_step += 1
 
     def _validate_batch(self, batch: Batch, **kwargs):
         pass

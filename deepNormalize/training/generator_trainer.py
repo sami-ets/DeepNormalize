@@ -20,6 +20,7 @@ import numpy as np
 from samitorch.inputs.batch import Batch
 from samitorch.logger.plots import ImagesPlot, LossPlot
 from samitorch.metrics.gauges import RunningAverageGauge
+from samitorch.training.training_strategies import LossCheckpointStrategy
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.training.base_model_trainer import DeepNormalizeModelTrainer
@@ -37,6 +38,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
     def __init__(self, config, callbacks, discriminator_trainer, class_name):
         super(GeneratorTrainer, self).__init__(config, callbacks, class_name)
+        self._saving_strategy = LossCheckpointStrategy(self, "generator")
         self._discriminator_trainer = discriminator_trainer
         self._generated_images_plot = ImagesPlot(self._visdom, "Adapted Images")
         self.mse_training_loss_plot = LossPlot(self._config.visdom, "MSE Training Loss")
@@ -44,6 +46,10 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         self.mse_training_gauge = RunningAverageGauge()
         self.mse_validation_gauge = RunningAverageGauge()
         self._slicer = AdaptedImageSlicer()
+
+    @property
+    def saving_strategy(self):
+        return self._saving_strategy
 
     def train_batch(self, batch: Batch, detach=False):
         # Generate normalized data.
@@ -64,7 +70,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
     def evaluate_discriminator_error_on_normalized_data(self, generated_batch, detach=False):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
-        # Generate random integers between 0 and 1, meaning it's coming from a real domain.
+        # Generate random integers between 0 and 1, meaning it's coming from a real domain. Balanced (50% 0s, 50% 1s).
         y = torch.Tensor().new_tensor(
             data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
             dtype=torch.int8,
@@ -78,9 +84,9 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         pred_D_G_X.to_device('cpu')
 
-        return -loss_D_G_X_as_X
+        return loss_D_G_X_as_X
 
-    def train_generator_with_segmentation(self, batch, loss_S_G_X):
+    def train_batch_with_segmentation_loss(self, batch, loss_S_G_X):
         generated_batch = self.predict(batch)
         loss_D_G_X_as_X = self.evaluate_discriminator_error_on_normalized_data(generated_batch)
 
@@ -95,7 +101,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         return custom_loss, loss_D_G_X_as_X
 
-    def train_as_autoencoder(self, batch):
+    def train_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
         mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
 
@@ -108,7 +114,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
         return mse_loss, generated_batch
 
-    def validate_batch(self, batch):
+    def validate_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
         mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
 
@@ -123,14 +129,6 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())
 
-    def update_mse_loss_gauge(self, loss, n_data, phase="training"):
-        if phase == "training":
-            self.mse_training_gauge.update(loss, n_data)
-        else:
-            self.mse_validation_gauge.update(loss, n_data)
-
-    def update_mse_loss_plot(self, loss, n_data, phase="training"):
-        if phase == "training":
-            self.mse_training_loss_plot.append(loss, n_data)
-        else:
-            self.mse_validation_loss_plot.append(loss, n_data)
+    def at_epoch_end(self):
+        super(GeneratorTrainer, self).at_epoch_end()
+        self._saving_strategy(self.validation_loss_gauge.average)

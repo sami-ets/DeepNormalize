@@ -14,7 +14,12 @@
 #  limitations under the License.
 #  ==============================================================================
 
+import abc
+
 from samitorch.training.training_strategies import TrainingStrategy
+from samitorch.utils.model_io import save
+from samitorch.training.model_trainer import ModelTrainer
+from datetime import datetime
 
 
 class GANStrategy(TrainingStrategy):
@@ -35,7 +40,7 @@ class AutoEncoderStrategy(TrainingStrategy):
 
     def __call__(self, epoch_num: int):
         if 0 <= epoch_num < 5:
-            self._trainer.autoencoder = True
+            self._trainer.with_autoencoder = True
 
         else:
-            self._trainer.autoencoder = False
+            self._trainer.with_autoencoder = False
