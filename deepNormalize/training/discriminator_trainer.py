@@ -18,6 +18,7 @@ import torch
 import numpy as np
 
 from deepNormalize.training.base_model_trainer import DeepNormalizeModelTrainer
+from samitorch.training.training_strategies import LossCheckpointStrategy
 
 from samitorch.inputs.batch import Batch
 
@@ -34,6 +35,11 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
 
     def __init__(self, config, callbacks, class_name):
         super(DiscriminatorTrainer, self).__init__(config, callbacks, class_name)
+        self._saving_strategy = LossCheckpointStrategy(self, "discriminator")
+
+    @property
+    def saving_strategy(self):
+        return self._saving_strategy
 
     def train_batch(self, batch: Batch, generated_batch: Batch):
         # Measure discriminator's ability to classify real from generated samples
@@ -83,7 +89,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
                                         pred_G_X.dataset_id.long())
         pred_G_X.to_device('cpu')
 
-        loss_D =((loss_D_X + loss_D_G_X) / 2.0)
+        loss_D = ((loss_D_X + loss_D_G_X) / 2.0)
 
         if self._config.running_config.is_distributed:
             loss_D = self.reduce_tensor(loss_D.data)
@@ -94,3 +100,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         super(DiscriminatorTrainer, self).at_epoch_begin()
         self.update_learning_rate_plot(epoch_num,
                                        torch.Tensor().new([self._config.optimizer.param_groups[0]['lr']]).cpu())
+
+    def at_epoch_end(self):
+        super(DiscriminatorTrainer, self).at_epoch_end()
+        self._saving_strategy(self.validation_loss_gauge.average)

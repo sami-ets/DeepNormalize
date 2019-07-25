@@ -62,14 +62,14 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
 
+pretraining:
+  pretrained: False
+  model_paths:
+    generator: "data/models/generator.pickle"
+
 training:
   debug: False
-  pretrained: True
-  model_paths:
-    generator:
-      "data/models/autoencoder.pickle"
   batch_size: 16
-  checkpoint_every: 50
   max_epochs: 100
   criterions:
     - "DiceLoss"

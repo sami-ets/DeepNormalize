@@ -22,7 +22,7 @@ from samitorch.factories.parsers import AbstractConfigurationParserFactory
 from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration
 
 from deepNormalize.config.configurations import DeepNormalizeDatasetConfiguration, DeepNormalizeTrainingConfiguration, \
-    VariableConfiguration, LoggerConfiguration, VisdomConfiguration
+    VariableConfiguration, LoggerConfiguration, VisdomConfiguration, PretrainingConfiguration
 
 
 class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
@@ -90,6 +90,35 @@ class TrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
                 config = DeepNormalizeTrainingConfiguration(config["training"])
+                return config
+            except yaml.YAMLError as e:
+                logging.error(
+                    "Unable to read the config file: {} with error {}".format(path, e))
+
+    def register(self, model_type: str, configuration_class):
+        pass
+
+
+class PreTrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
+
+    def __init__(self):
+        pass
+
+    def parse(self, path: str):
+        """
+        Parse a training configuration file.
+
+        Args:
+          path (str): Configuration YAML file path.
+
+        Returns:
+          :obj:`samitorch.config.configurations.DatasetConfiguration`: An object containing dataset's properties.
+
+        """
+        with open(path, 'r') as config_file:
+            try:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+                config = PretrainingConfiguration(config["pretraining"])
                 return config
             except yaml.YAMLError as e:
                 logging.error(

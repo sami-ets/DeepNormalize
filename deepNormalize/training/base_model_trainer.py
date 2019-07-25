@@ -17,6 +17,7 @@
 import torch
 import torch.backends.cudnn as cudnn
 from samitorch.training.model_trainer import ModelTrainer
+from samitorch.utils.model_io import load
 
 cudnn.benchmark = True
 cudnn.enabled = True
@@ -45,12 +46,13 @@ class DeepNormalizeModelTrainer(ModelTrainer):
             self._config.model = apex.parallel.convert_syncbn_model(self._config.model)
 
         # Transfer models on CUDA device.
-        self._config.model.cuda()
+        self._config.model.cuda(self._config.running_config.local_rank)
 
         # Scale learning rate based on global batch size
         if self._config.running_config.loss_scale is not "dynamic":
             self._config.optimizer.param_groups[0]["lr"] = self._config.optimizer.param_groups[0]["lr"] * float(
-                (self._config.dataloader[0].batch_size * len(self._config.dataloader)) * self._config.running_config.world_size) / float(
+                (self._config.dataloader[0].batch_size * len(
+                    self._config.dataloader)) * self._config.running_config.world_size) / float(
                 self._config.running_config.loss_scale)
 
         # Initialize Amp.
@@ -72,6 +74,12 @@ class DeepNormalizeModelTrainer(ModelTrainer):
             # model = DDP(model)
             # delay_allreduce delays all communication to the end of the backward pass.
             self._config.model = DDP(self._config.model, delay_allreduce=True)
-            # self._config.model = [DDP(model, delay_allreduce=True) for model in self._config.model]
 
-        self._config.criterion = self._config.criterion.cuda()
+        self._config.criterion = self._config.criterion.cuda(self._config.running_config.local_rank)
+
+    def restore_from_checkpoint(self, checkpoint_path):
+        checkpoint = load(checkpoint_path,
+                          map_location=lambda storage, loc: storage.cuda(self._config.running_config.local_rank))
+        self._config.model.load_state_dict(checkpoint["state_dict"])
+
+        return checkpoint["epoch"]

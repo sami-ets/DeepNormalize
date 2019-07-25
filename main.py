@@ -28,7 +28,7 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     init = Initializer(config_path)
 
-    dataset_config, model_config, training_config, variables, logger_config, visdom_config = init.create_configs()
+    dataset_config, model_config, training_config, pretraining_config, variables, logger_config, visdom_config = init.create_configs()
 
     if running_config.is_distributed:
         visdom = Visdom(server=visdom_config.server, port=visdom_config.port,
@@ -64,6 +64,7 @@ def main(config_path: str, running_config: RunningConfiguration):
                                               variables=variables,
                                               logger_config=logger_config,
                                               debug=training_config.debug,
+                                              pretraining_config=pretraining_config,
                                               visdom=visdom)
 
     trainer = DeepNormalizeTrainer(train_config, None)

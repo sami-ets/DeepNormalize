@@ -221,9 +221,7 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
     def __init__(self, config: dict):
         super(DeepNormalizeTrainingConfiguration, self).__init__(config)
         self._debug = config["debug"]
-        self._pretrained = config["pretrained"]
         self._batch_size = config["batch_size"]
-        self._checkpoint_every = config["checkpoint_every"]
         self._criterions = config["criterions"]
         self._metrics = config["metrics"]
         self._optimizers = config["optimizers"]
@@ -248,16 +246,6 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
             int: The maximum number of epochs.
         """
         return self._max_epochs
-
-    @property
-    def checkpoint_every(self) -> int:
-        """
-        The frequency at which we want to save a checkpoint of the model.
-
-        Returns:
-            int: The frequency (in epoch).
-        """
-        return self._checkpoint_every
 
     @property
     def criterions(self) -> str:
@@ -307,9 +295,21 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         """
         return self._debug
 
+
+class PretrainingConfiguration(Configuration):
+
+    def __init__(self, config: dict):
+        super(PretrainingConfiguration, self).__init__()
+        self._pretrained = config["pretrained"]
+        self._model_paths = config["model_paths"]
+
     @property
     def pretrained(self) -> bool:
         return self._pretrained
+
+    @property
+    def model_paths(self):
+        return self._model_paths
 
 
 class VariableConfiguration(Configuration):
@@ -355,12 +355,14 @@ class DeepNormalizeTrainerConfig(TrainerConfiguration):
                  optimizer: Union[List[torch.nn.Module], torch.nn.Module],
                  dataloader: Union[List[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
                  running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration,
+                 pretraining_config: Configuration,
                  debug: bool,
                  visdom) -> None:
         super(DeepNormalizeTrainerConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
                                                          optimizer, dataloader, running_config)
         self._variables = variables
         self._logger_config = logger_config
+        self._pretraining_config = pretraining_config
         self._debug = debug
         self._visdom = visdom
 
@@ -371,6 +373,10 @@ class DeepNormalizeTrainerConfig(TrainerConfiguration):
     @property
     def logger_config(self):
         return self._logger_config
+
+    @property
+    def pretraining_config(self):
+        return self._pretraining_config
 
     @property
     def debug(self):
