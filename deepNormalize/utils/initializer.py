@@ -55,34 +55,34 @@ class Initializer(object):
         dice_metric = training_config.metrics["dice"]
         accuracy_metric = training_config.metrics["accuracy"]
         factory = MetricsFactory()
-
         dice = factory.create_metric(Metrics.Dice,
                                      num_classes=dice_metric["num_classes"],
                                      ignore_index=dice_metric["ignore_index"],
                                      average=dice_metric["average"],
                                      reduction=dice_metric["reduction"])
-        accuracy = factory.create_metric(Metrics.Accuracy)
+        accuracy = factory.create_metric(Metrics.Accuracy, is_multilabel=accuracy_metric["is_multilabel"])
         metrics = [dice, accuracy]
         return metrics
 
     def create_criterions(self, training_config):
-        criterion_segmenter = CriterionFactory().create_criterion(training_config.criterions[0])
-        criterion_discriminator = CriterionFactory().create_criterion(training_config.criterions[1])
-        criterions = [criterion_segmenter, criterion_discriminator]
+        criterion_generator = CriterionFactory().create_criterion(training_config.criterions[0])
+        criterion_segmenter = CriterionFactory().create_criterion(training_config.criterions[1])
+        criterion_discriminator = CriterionFactory().create_criterion(training_config.criterions[2])
+        criterions = [criterion_generator, criterion_segmenter, criterion_discriminator]
         return criterions
 
     def create_models(self, model_config):
-        preprocessor = ModelFactory().create_model(UNetModels.UNet3D, model_config[0])
+        generator = ModelFactory().create_model(UNetModels.UNet3D, model_config[0])
         segmenter = ModelFactory().create_model(UNetModels.UNet3D, model_config[1])
         discriminator = ModelFactory().create_model(ResNetModels.ResNet34, model_config[2])
-        models = [preprocessor, segmenter, discriminator]
+        models = [generator, segmenter, discriminator]
         return models
 
     def create_optimizers(self, training_config, models):
-        optimizer_preprocessor = OptimizerFactory().create_optimizer(
-            training_config.optimizers["preprocessor"]["type"],
+        optimizer_generator = OptimizerFactory().create_optimizer(
+            training_config.optimizers["generator"]["type"],
             models[0].parameters(),
-            lr=training_config.optimizers["preprocessor"]["lr"])
+            lr=training_config.optimizers["generator"]["lr"])
         optimizer_segmenter = OptimizerFactory().create_optimizer(training_config.optimizers["segmenter"]["type"],
                                                                   models[1].parameters(),
                                                                   lr=training_config.optimizers["segmenter"]["lr"])
@@ -90,7 +90,7 @@ class Initializer(object):
             training_config.optimizers["discriminator"]["type"],
             models[2].parameters(),
             lr=training_config.optimizers["discriminator"]["lr"])
-        optimizers = [optimizer_preprocessor, optimizer_segmenter, optimizer_discriminator]
+        optimizers = [optimizer_generator, optimizer_segmenter, optimizer_discriminator]
         return optimizers
 
     def create_dataset(self, dataset_config):

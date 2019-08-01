@@ -51,8 +51,8 @@ class DeepNormalizeTrainer(Trainer):
         # Adapt configurations so each ModelTrainer only get its own model, criterion and optimizer object.
         adapter = ConfigAdapter(config)
         generator_config = adapter.adapt(model_position=0, criterion_position=0)
-        segmenter_config = adapter.adapt(model_position=1, criterion_position=0)
-        discriminator_config = adapter.adapt(model_position=2, criterion_position=1)
+        segmenter_config = adapter.adapt(model_position=1, criterion_position=1)
+        discriminator_config = adapter.adapt(model_position=2, criterion_position=2)
 
         # Create instance of every model trainer.
         self._discriminator_trainer = DiscriminatorTrainer(discriminator_config, callbacks, "Discriminator")
@@ -190,12 +190,11 @@ class DeepNormalizeTrainer(Trainer):
                                 torch.argmax(segmented_batch.x, dim=1, keepdim=True).float().cpu().data)
 
                     self.LOGGER.info(
-                        "Epoch: {} Step: {}, Generator MSE Loss: {}, Discriminator loss: {}, Generator loss: {} Segmenter loss: {}, Segmenter Dice Score: {}".format(
+                        "Epoch: {} Step: {} Generator loss: {}Discriminator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
                             epoch_num,
                             iteration,
-                            self._generator_trainer.mse_training_gauge.average,
-                            self._discriminator_trainer.training_loss_gauge.average,
                             self._generator_trainer.training_loss_gauge.average,
+                            self._discriminator_trainer.training_loss_gauge.average,
                             self._segmenter_trainer.training_loss_gauge.average,
                             self._segmenter_trainer.training_metric_gauge.average))
 
@@ -319,11 +318,10 @@ class DeepNormalizeTrainer(Trainer):
 
             if self._config.running_config.local_rank == 0:
                 self.LOGGER.info(
-                    "Validation Epoch: {} Generator MSE Loss: {}, Discriminator loss: {} Generator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
+                    "Validation Epoch: {} Generator loss: {} Discriminator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
                         epoch_num,
-                        self._generator_trainer.mse_validation_gauge.average,
-                        self._discriminator_trainer.validation_loss_gauge.average,
                         self._generator_trainer.validation_loss_gauge.average,
+                        self._discriminator_trainer.validation_loss_gauge.average,
                         self._segmenter_trainer.validation_loss_gauge.average,
                         self._segmenter_trainer.validation_metric_gauge.average))
 
@@ -341,9 +339,9 @@ class DeepNormalizeTrainer(Trainer):
 
     @staticmethod
     def _prepare_batch(batch: Batch, input_device: torch.device, output_device: torch.device):
-        if not batch.x.device == input_device:
-            raise ValueError("Data must be in CPU Memory but is on {} device".format(batch.x.device))
-        return batch.update(batch, output_device)
+        if not batch.device == input_device:
+            raise ValueError("Data must be in CPU Memory but is on {} device".format(batch.device))
+        return batch.to_device(output_device)
 
     def _at_epoch_begin(self, epoch_num):
         self._gan_strategy(self.epoch.item())

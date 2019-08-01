@@ -15,6 +15,7 @@
 #  ==============================================================================
 
 import copy
+from typing import Union
 
 from samitorch.configs.configurations import Configuration
 
@@ -24,9 +25,12 @@ class ConfigAdapter(object):
     def __init__(self, config: Configuration):
         self._config = config
 
-    def adapt(self, model_position: int, criterion_position: int):
+    def adapt(self, model_position: int, criterion_position: Union[int, list]):
         config = copy.copy(self._config)
-        config.criterion = self._config.criterion[criterion_position]
+        if isinstance(criterion_position, list):
+            config.criterion = self._config.criterion[[position for position in criterion_position]]
+        elif isinstance(criterion_position, int):
+            config.criterion = self._config.criterion[criterion_position]
         config.metric = self._config.metric[criterion_position]
         config.model = self._config.model[model_position]
         config.optimizer = self._config.optimizer[model_position]

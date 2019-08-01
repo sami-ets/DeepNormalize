@@ -42,7 +42,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         return self._saving_strategy
 
     def train_batch(self, batch: Batch, generated_batch: Batch):
-        # Measure discriminator's ability to classify real from generated samples
+        # Measure discriminator's ability to classify real from generated samples. 16 domain_0, 16 domain_1 samples.
         pred_X = self.predict(batch)
         loss_D_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_X.x, dim=1), batch.dataset_id.long())
         pred_X.to_device('cpu')
@@ -57,7 +57,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
                                            dtype=torch.int8,
                                            device=self._config.running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_G_X.x.detach(), dim=1),
+        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(1.0 - pred_G_X.x.detach(), dim=1),
                                         pred_G_X.dataset_id.long())
         pred_G_X.to_device('cpu')
 

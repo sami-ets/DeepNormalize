@@ -16,6 +16,7 @@
 
 import argparse
 import logging
+import torch
 
 from visdom import Visdom
 from deepNormalize.training.trainer import DeepNormalizeTrainer
@@ -25,6 +26,7 @@ from deepNormalize.config.configurations import RunningConfiguration, DeepNormal
 
 def main(config_path: str, running_config: RunningConfiguration):
     logging.basicConfig(level=logging.INFO)
+    torch.set_num_threads(4)
 
     init = Initializer(config_path)
 

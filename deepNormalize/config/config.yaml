@@ -1,5 +1,5 @@
 models:
-  preprocessor:
+  generator:
     name: "UNet3D"
     type: "UNet3D"
     feature_maps: 64
@@ -73,6 +73,7 @@ training:
   batch_size: 16
   max_epochs: 100
   criterions:
+    - "MSELoss"
     - "DiceLoss"
     - "NLLLoss"
   metrics:
@@ -84,7 +85,7 @@ training:
     accuracy:
       is_multilabel: False
   optimizers:
-    preprocessor:
+    generator:
       type: "SGD"
       lr: 0.001
       momentum: 0.9

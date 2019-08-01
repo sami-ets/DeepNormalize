@@ -15,7 +15,6 @@
 #  ==============================================================================
 
 import torch
-import numpy as np
 
 from samitorch.inputs.batch import Batch
 from samitorch.logger.plots import ImagesPlot, LossPlot
@@ -71,15 +70,18 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
         # Generate random integers between 0 and 1, meaning it's coming from a real domain. Balanced (50% 0s, 50% 1s).
-        y = torch.Tensor().new_tensor(
-            data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
-            dtype=torch.int8,
-            device=self._config.running_config.device)
-
+        # y = torch.Tensor().new_tensor(
+        #     data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
+        #     dtype=torch.int8,
+        #     device=self._config.running_config.device)
+        y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
+                                    fill_value=2,
+                                    dtype=torch.int8,
+                                    device=self._config.running_config.device)
         pred_D_G_X.dataset_id = y
 
         loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(
-            torch.nn.functional.log_softmax(pred_D_G_X.x, dim=1),
+            torch.nn.functional.log_softmax(1.0 - pred_D_G_X.x, dim=1),
             pred_D_G_X.dataset_id.long())
 
         pred_D_G_X.to_device('cpu')
@@ -103,7 +105,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
     def train_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
-        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+        mse_loss = self.evaluate_loss(generated_batch.x, batch.x)
 
         with amp.scale_loss(mse_loss, self._config.optimizer, loss_id=0) as scaled_loss:
             scaled_loss.backward()
@@ -116,7 +118,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
     def validate_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
-        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+        mse_loss = self.evaluate_loss(generated_batch.x, batch.x)
 
         return mse_loss, generated_batch
 

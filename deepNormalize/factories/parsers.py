@@ -31,7 +31,7 @@ class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
         with open(path, 'r') as config_file:
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-                unets = [UNetModelConfiguration(config["models"][element]) for element in ["preprocessor", "segmenter"]]
+                unets = [UNetModelConfiguration(config["models"][element]) for element in ["generator", "segmenter"]]
                 resnet = [ResNetModelConfiguration(config["models"]["discriminator"])]
                 return unets + resnet
             except yaml.YAMLError as e:
