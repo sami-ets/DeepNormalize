@@ -35,13 +35,13 @@ except ImportError:
 
 class GeneratorTrainer(DeepNormalizeModelTrainer):
 
-    def __init__(self, config, callbacks, discriminator_trainer, class_name):
-        super(GeneratorTrainer, self).__init__(config, callbacks, class_name)
-        self._saving_strategy = LossCheckpointStrategy(self, "generator")
+    def __init__(self, config, callbacks, discriminator_trainer, class_name, visdom, running_config):
+        super(GeneratorTrainer, self).__init__(config, callbacks, class_name, visdom, running_config)
+        self._saving_strategy = LossCheckpointStrategy(self, "generator", "saves/")
         self._discriminator_trainer = discriminator_trainer
         self._generated_images_plot = ImagesPlot(self._visdom, "Adapted Images")
-        self.mse_training_loss_plot = LossPlot(self._config.visdom, "MSE Training Loss")
-        self.mse_validation_loss_plot = LossPlot(self._config.visdom, "MSE Validation Loss")
+        self.mse_training_loss_plot = LossPlot(self._visdom, "MSE Training Loss")
+        self.mse_validation_loss_plot = LossPlot(self._visdom, "MSE Validation Loss")
         self.mse_training_gauge = RunningAverageGauge()
         self.mse_validation_gauge = RunningAverageGauge()
         self._slicer = AdaptedImageSlicer()
@@ -77,7 +77,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
                                     fill_value=2,
                                     dtype=torch.int8,
-                                    device=self._config.running_config.device)
+                                    device=self._running_config.device)
         pred_D_G_X.dataset_id = y
 
         loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(

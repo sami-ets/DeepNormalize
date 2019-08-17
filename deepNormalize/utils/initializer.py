@@ -14,14 +14,16 @@
 #  limitations under the License.
 #  ==============================================================================
 import os
+import torch
 
-from samitorch.factories.factories import *
-from samitorch.factories.enums import *
-from samitorch.inputs.datasets import PatchDataset
-from samitorch.inputs.transformers import ToNDTensor
-from samitorch.inputs.dataloaders import DataLoader
-from deepNormalize.inputs.utils import sample_collate
-from torchvision.transforms import Compose
+from samitorch.optimizers.optimizers import OptimizerFactory
+from samitorch.criterions.criterions import CriterionFactory
+from samitorch.metrics.metric import MetricsFactory, Metric
+from samitorch.models.unet3d import UNet3DModelFactory, UNetModel
+from samitorch.models.resnet3d import ResNet3DModelFactory, ResNetModel
+from samitorch.inputs.images import Modality
+from samitorch.inputs.datasets import PatchDatasetFactory
+from samitorch.inputs.utils import patch_collate
 from torch.utils.data import ConcatDataset
 from deepNormalize.factories.parsers import *
 from deepNormalize.utils.utils import split_dataset
@@ -55,59 +57,64 @@ class Initializer(object):
         dice_metric = training_config.metrics["dice"]
         accuracy_metric = training_config.metrics["accuracy"]
         factory = MetricsFactory()
-        dice = factory.create_metric(Metrics.Dice,
+        dice = factory.create_metric(Metric.Dice,
                                      num_classes=dice_metric["num_classes"],
                                      ignore_index=dice_metric["ignore_index"],
                                      average=dice_metric["average"],
                                      reduction=dice_metric["reduction"])
-        accuracy = factory.create_metric(Metrics.Accuracy, is_multilabel=accuracy_metric["is_multilabel"])
+        accuracy = factory.create_metric(Metric.Accuracy, is_multilabel=accuracy_metric["is_multilabel"])
         metrics = [dice, accuracy]
         return metrics
 
-    def create_criterions(self, training_config):
-        criterion_generator = CriterionFactory().create_criterion(training_config.criterions[0])
-        criterion_segmenter = CriterionFactory().create_criterion(training_config.criterions[1])
-        criterion_discriminator = CriterionFactory().create_criterion(training_config.criterions[2])
+    def create_criterions(self, model_config):
+        criterion_generator = CriterionFactory().create(model_config[0].criterion)
+        criterion_segmenter = CriterionFactory().create(model_config[1].criterion)
+        criterion_discriminator = CriterionFactory().create(model_config[2].criterion)
         criterions = [criterion_generator, criterion_segmenter, criterion_discriminator]
         return criterions
 
     def create_models(self, model_config):
-        generator = ModelFactory().create_model(UNetModels.UNet3D, model_config[0])
-        segmenter = ModelFactory().create_model(UNetModels.UNet3D, model_config[1])
-        discriminator = ModelFactory().create_model(ResNetModels.ResNet34, model_config[2])
+        generator = UNet3DModelFactory().create_model(UNetModel.UNet3D, model_config[0].model)
+        segmenter = UNet3DModelFactory().create_model(UNetModel.UNet3D, model_config[1].model)
+        discriminator = ResNet3DModelFactory().create_model(ResNetModel.ResNet34, model_config[2].model)
         models = [generator, segmenter, discriminator]
         return models
 
-    def create_optimizers(self, training_config, models):
-        optimizer_generator = OptimizerFactory().create_optimizer(
-            training_config.optimizers["generator"]["type"],
+    def create_optimizers(self, model_config, models):
+        optimizer_generator = OptimizerFactory().create(
+            model_config[0].optimizer.type,
             models[0].parameters(),
-            lr=training_config.optimizers["generator"]["lr"])
-        optimizer_segmenter = OptimizerFactory().create_optimizer(training_config.optimizers["segmenter"]["type"],
-                                                                  models[1].parameters(),
-                                                                  lr=training_config.optimizers["segmenter"]["lr"])
-        optimizer_discriminator = OptimizerFactory().create_optimizer(
-            training_config.optimizers["discriminator"]["type"],
-            models[2].parameters(),
-            lr=training_config.optimizers["discriminator"]["lr"])
+            lr=model_config[0].optimizer.lr)
+        optimizer_segmenter = OptimizerFactory().create(model_config[1].optimizer.type,
+                                                        models[1].parameters(),
+                                                        lr=model_config[1].optimizer.lr)
+        optimizer_discriminator = OptimizerFactory().create(
+            model_config[2].optimizer.type, models[2].parameters(),
+            lr=model_config[2].optimizer.lr)
         optimizers = [optimizer_generator, optimizer_segmenter, optimizer_discriminator]
         return optimizers
 
     def create_dataset(self, dataset_config):
-        dataset_iSEG = PatchDataset(source_dir=dataset_config[0].path + "/Training/Source",
-                                    target_dir=dataset_config[0].path + "/Training/Target",
-                                    dataset_id=0,
-                                    transform=Compose([ToNDTensor()]),
-                                    patch_shape=dataset_config[0].training_patch_size,
-                                    step=dataset_config[0].training_patch_step)
+        iSEG_train, iSEG_valid = PatchDatasetFactory.create_train_test(
+            source_dir=dataset_config[0].path + "/Training/Source",
+            target_dir=dataset_config[0].path + "/Training/Target",
+            dataset_id=0,
+            patch_size=dataset_config[0].training_patch_size,
+            step=dataset_config[0].training_patch_step,
+            modality=Modality.T1,
+            test_size=0.2,
+            keep_centered_on_foreground=True)
 
-        dataset_MRBrainS = PatchDataset(source_dir=dataset_config[1].path + "/TrainingData/Source",
-                                        target_dir=dataset_config[1].path + "/TrainingData/Target",
-                                        dataset_id=0,
-                                        transform=Compose([ToNDTensor()]),
-                                        patch_shape=dataset_config[1].training_patch_size,
-                                        step=dataset_config[1].training_patch_step)
-        return [dataset_iSEG, dataset_MRBrainS]
+        MRBrainS_train, MRBrains_valid = PatchDatasetFactory.create_train_test(
+            source_dir=dataset_config[1].path + "/TrainingData/Source",
+            target_dir=dataset_config[1].path + "/TrainingData/Target",
+            dataset_id=1,
+            patch_size=dataset_config[1].training_patch_size,
+            step=dataset_config[1].training_patch_step,
+            test_size=0.2,
+            keep_centered_on_foreground=True,
+            modality=Modality.T1)
+        return [iSEG_train, MRBrainS_train, iSEG_valid, MRBrains_valid]
 
     def init_process_group(self, running_config):
         if 'WORLD_SIZE' in os.environ:
@@ -129,22 +136,28 @@ class Initializer(object):
             "distributed" if running_config.is_distributed else "non-distributed",
             running_config.world_size))
 
-    def create_dataloader(self, datasets, batch_size, num_workers, dataset_configs, is_distributed):
+    def create_dataloader(self, train_datasets, valid_datasets, batch_size, num_workers, is_distributed):
         if is_distributed:
             self._logger.info("Initializing distributed Dataloader.")
 
             dataloaders = list()
 
-            for dataset, config in zip(datasets, dataset_configs):
-                train_dataset, valid_dataset = split_dataset(dataset, config.validation_split)
+            for train_dataset, valid_dataset in zip(train_datasets, valid_datasets):
                 train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
                 valid_sampler = torch.utils.data.distributed.DistributedSampler(valid_dataset)
 
-                dataloaders.append(DataLoader(dataset, shuffle=True, validation_split=config.validation_split,
-                                              num_workers=num_workers,
-                                              batch_size=batch_size,
-                                              samplers=(train_sampler, valid_sampler),
-                                              collate_fn=sample_collate))
+                dataloaders.append(torch.utils.data.DataLoader(dataset=train_dataset,
+                                                               batch_size=batch_size,
+                                                               shuffle=True,
+                                                               num_workers=num_workers,
+                                                               sampler=train_sampler,
+                                                               collate_fn=patch_collate))
+                dataloaders.append(torch.utils.data.DataLoader(dataset=valid_dataset,
+                                                               batch_size=batch_size,
+                                                               shuffle=True,
+                                                               num_workers=num_workers,
+                                                               sampler=valid_sampler,
+                                                               collate_fn=patch_collate))
             return dataloaders
 
         else:
@@ -152,9 +165,15 @@ class Initializer(object):
 
             dataloaders = list()
 
-            for dataset, config in zip(datasets, dataset_configs):
-                dataloaders.append(DataLoader(dataset, shuffle=True, validation_split=config.validation_split,
-                                              num_workers=num_workers,
-                                              batch_size=batch_size,
-                                              collate_fn=sample_collate))
+            for train_dataset, valid_dataset in zip(train_datasets, valid_datasets):
+                dataloaders.append(torch.utils.data.DataLoader(dataset=train_dataset,
+                                                               batch_size=batch_size,
+                                                               shuffle=True,
+                                                               num_workers=num_workers,
+                                                               collate_fn=patch_collate))
+                dataloaders.append(torch.utils.data.DataLoader(dataset=valid_dataset,
+                                                               batch_size=batch_size,
+                                                               shuffle=True,
+                                                               num_workers=num_workers,
+                                                               collate_fn=patch_collate))
             return dataloaders

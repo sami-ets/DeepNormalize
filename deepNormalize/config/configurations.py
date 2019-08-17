@@ -21,6 +21,17 @@ from samitorch.configs.configurations import DatasetConfiguration, TrainingConfi
 from samitorch.training.trainer_configuration import TrainerConfiguration
 
 
+class ModelConfiguration(Configuration):
+    """
+       A base class for storing a ModelTrainer configuration as an object.
+       """
+
+    def __init__(self, config):
+        super(ModelConfiguration, self).__init__()
+        for key in config:
+            setattr(self, key, config[key])
+
+
 class RunningConfiguration(Configuration):
     def __init__(self, config: dict):
         super(RunningConfiguration, self).__init__()
@@ -223,15 +234,13 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._debug = config["debug"]
         self._batch_size = config["batch_size"]
         self._checkpoint_every = config["checkpoint_every"]
-        self._criterions = config["criterions"]
         self._metrics = config["metrics"]
-        self._optimizers = config["optimizers"]
         self._max_epochs = config["max_epochs"]
 
     @property
     def checkpoint_every(self):
         return self._checkpoint_every
-    
+
     @property
     def batch_size(self) -> int:
         """
@@ -253,16 +262,6 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         return self._max_epochs
 
     @property
-    def criterions(self) -> str:
-        """
-        The criterion used for model optimization.
-
-        Returns:
-            str: A criterion used.
-        """
-        return self._criterions
-
-    @property
     def metrics(self) -> Union[list, str]:
         """
         The metrics used during learning.
@@ -277,20 +276,6 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
         self._metrics = metrics
 
     @property
-    def optimizers(self) -> Union[list, str]:
-        """
-        The optimizer used for learning.
-
-        Returns:
-            str_or_list: The optimizer used.
-        """
-        return self._optimizers
-
-    @optimizers.setter
-    def optimizers(self, optimizers):
-        self._optimizers = optimizers
-
-    @property
     def debug(self) -> bool:
         """
         Define if model is in debug mode. If so, run verifications.
@@ -299,6 +284,10 @@ class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
             bool: If model is in debug mode.
         """
         return self._debug
+
+    @property
+    def max_epochs(self):
+        return self._max_epochs
 
 
 class PretrainingConfiguration(Configuration):
@@ -353,43 +342,72 @@ class VariableConfiguration(Configuration):
         self._alpha = alpha_
 
 
-class DeepNormalizeTrainerConfig(TrainerConfiguration):
-    def __init__(self, checkpoint_every: int, max_epoch: int, criterion: Union[List[torch.nn.Module], torch.nn.Module],
-                 metric,
-                 model: Union[List[torch.nn.Module], torch.nn.Module],
-                 optimizer: Union[List[torch.nn.Module], torch.nn.Module],
-                 dataloader: Union[List[torch.utils.data.DataLoader], torch.utils.data.DataLoader],
-                 running_config: RunningConfiguration, variables: Configuration, logger_config: Configuration,
+class ModelTrainerConfig(Configuration):
+    def __init__(self,
+                 model: torch.nn.Module,
+                 variables: Configuration,
                  pretraining_config: Configuration,
-                 debug: bool,
-                 visdom) -> None:
-        super(DeepNormalizeTrainerConfig, self).__init__(checkpoint_every, max_epoch, criterion, metric, model,
-                                                         optimizer, dataloader, running_config)
+                 checkpoint_every: int,
+                 max_epoch: int,
+                 metric,
+                 optimizer,
+                 criterion
+                 ) -> None:
+        super(ModelTrainerConfig, self).__init__()
+        self._model = model
+
+        self._checkpoint_every = checkpoint_every
+        self._max_epoch = max_epoch
+        self._metric = metric
+        self._optimizer = optimizer
+        self._criterion = criterion
         self._variables = variables
-        self._logger_config = logger_config
+
         self._pretraining_config = pretraining_config
-        self._debug = debug
-        self._visdom = visdom
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, model):
+        self._model = model
+
+    @property
+    def checkpoint_every(self):
+        return self._checkpoint_every
+
+    @property
+    def max_epoch(self):
+        return self._max_epoch
+
+    @property
+    def metric(self):
+        return self._metric
+
+    @property
+    def optimizer(self):
+        return self._optimizer
+
+    @optimizer.setter
+    def optimizer(self, optimizer):
+        self._optimizer = optimizer
+
+    @property
+    def criterion(self):
+        return self._criterion
+
+    @criterion.setter
+    def criterion(self, criterion):
+        self._criterion = criterion
 
     @property
     def variables(self):
         return self._variables
 
     @property
-    def logger_config(self):
-        return self._logger_config
-
-    @property
     def pretraining_config(self):
         return self._pretraining_config
-
-    @property
-    def debug(self):
-        return self._debug
-
-    @property
-    def visdom(self):
-        return self._visdom
 
 
 class LoggerConfiguration(Configuration):
@@ -426,3 +444,47 @@ class VisdomConfiguration(Configuration):
     @property
     def port(self):
         return self._port
+
+
+class OptimizerConfiguration(Configuration):
+    def __init__(self, config: dict):
+        super(OptimizerConfiguration, self).__init__()
+        self._type = config["type"]
+        self._lr = config["lr"]
+
+        if self._type == "SGD":
+            self._momentum = config["momentum"]
+        else:
+            self._momentum = None
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def lr(self):
+        return self._lr
+
+    @property
+    def momentum(self):
+        return self._momentum
+
+
+class SchedulerConfiguration(Configuration):
+    def __init__(self, config: dict):
+        super(SchedulerConfiguration, self).__init__()
+        self._mode = config["mode"]
+        self._factor = config["factor"]
+        self._patience = config["patience"]
+
+    @property
+    def mode(self):
+        return self._mode
+
+    @property
+    def factor(self):
+        return self._factor
+
+    @property
+    def patience(self):
+        return self._patience

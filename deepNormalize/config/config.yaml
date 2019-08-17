@@ -1,5 +1,5 @@
 models:
-  generator:
+  Generator:
     name: "UNet3D"
     type: "UNet3D"
     feature_maps: 64
@@ -14,7 +14,16 @@ models:
     activation: "LeakyReLU"
     interpolation: True
     scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-  segmenter:
+    optimizer:
+      type: "SGD"
+      lr: 0.001
+      momentum: 0.9
+    scheduler:
+      mode: "min"
+      factor: 0.1
+      patience: 3
+    criterion: "MSELoss"
+  Segmenter:
     name: "UNet3D"
     type: "UNet3D"
     feature_maps: 64
@@ -29,7 +38,16 @@ models:
     activation: "LeakyReLU"
     interpolation: True
     scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-  discriminator:
+    optimizer:
+      type: "SGD"
+      lr: 0.001
+      momentum: 0.9
+    scheduler:
+      mode: "min"
+      factor: 0.1
+      patience: 3
+    criterion: "DiceLoss"
+  Discriminator:
     name: "ResNet18"
     type: "ResNet3D"
     in_channels: 1
@@ -41,6 +59,15 @@ models:
     activation: "ReLU"
     zero_init_residual: False
     replace_stride_with_dilation: !!null
+    optimizer:
+      type: "SGD"
+      lr: 0.001
+      momentum: 0.9
+    scheduler:
+      mode: "min"
+      factor: 0.1
+      patience: 3
+    criterion: "NLLLoss"
 
 dataset:
   iSEG:
@@ -65,17 +92,13 @@ dataset:
 pretraining:
   pretrained: False
   model_paths:
-    generator: "data/models/generator.pickle"
+    generator: "saves/generator-20190816-142637.tar"
 
 training:
   debug: False
   checkpoint_every: 0
   batch_size: 16
   max_epochs: 100
-  criterions:
-    - "MSELoss"
-    - "DiceLoss"
-    - "NLLLoss"
   metrics:
     dice:
       num_classes: 4
@@ -84,19 +107,6 @@ training:
       average: !!null
     accuracy:
       is_multilabel: False
-  optimizers:
-    generator:
-      type: "SGD"
-      lr: 0.001
-      momentum: 0.9
-    segmenter:
-      type: "SGD"
-      lr: 0.001
-      momentum: 0.9
-    discriminator:
-      type: "SGD"
-      lr: 0.00001
-      momentum: 0.9
 
 variables:
   lambda: 0.5

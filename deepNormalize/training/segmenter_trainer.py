@@ -35,9 +35,9 @@ except ImportError:
 
 class SegmenterTrainer(DeepNormalizeModelTrainer):
 
-    def __init__(self, config, callbacks, class_name):
-        super(SegmenterTrainer, self).__init__(config, callbacks, class_name)
-        self._saving_strategy = LossCheckpointStrategy(self, "segmenter")
+    def __init__(self, config, callbacks, class_name, visdom, running_config):
+        super(SegmenterTrainer, self).__init__(config, callbacks, class_name, visdom, running_config)
+        self._saving_strategy = LossCheckpointStrategy(self, "segmenter", "saves/")
         self._segmented_images_plot = ImagesPlot(self._visdom, "Segmented Images")
         self._slicer = SegmentationSlicer()
 
@@ -70,7 +70,7 @@ class SegmenterTrainer(DeepNormalizeModelTrainer):
         loss_S_G_X = self.evaluate_loss(torch.nn.functional.softmax(segmented_batch.x, dim=1),
                                         to_onehot(torch.squeeze(batch.y, dim=1).long(), num_classes=4))
 
-        if self._config.running_config.is_distributed:
+        if self._running_config.is_distributed:
             loss_S_G_X = self.reduce_tensor(loss_S_G_X.data)
 
         return loss_S_G_X, segmented_batch

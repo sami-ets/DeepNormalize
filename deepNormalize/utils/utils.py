@@ -17,7 +17,7 @@
 import numpy as np
 import copy
 
-from samitorch.inputs.batch import Batch
+from samitorch.inputs.batch import PatchBatch
 
 
 def split_dataset(dataset, split):
@@ -50,4 +50,4 @@ def build_configurations(config, num):
 
 
 def concat_batches(batch_0, batch_1):
-    return Batch(batch_0.samples + batch_1.samples)
+    return PatchBatch(batch_0.samples + batch_1.samples)

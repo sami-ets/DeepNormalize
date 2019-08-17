@@ -21,7 +21,7 @@ import torch
 from visdom import Visdom
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.initializer import Initializer
-from deepNormalize.config.configurations import RunningConfiguration, DeepNormalizeTrainerConfig
+from deepNormalize.config.configurations import RunningConfiguration, ModelTrainerConfig
 
 
 def main(config_path: str, running_config: RunningConfiguration):
@@ -44,32 +44,45 @@ def main(config_path: str, running_config: RunningConfiguration):
 
     metrics = init.create_metrics(training_config)
 
-    criterions = init.create_criterions(training_config)
-
     models = init.create_models(model_config)
 
-    optimizers = init.create_optimizers(training_config, models)
+    optimizers = init.create_optimizers(model_config, models)
+
+    criterions = init.create_criterions(model_config)
 
     datasets = init.create_dataset(dataset_config)
 
-    dataloaders = init.create_dataloader(datasets, training_config.batch_size, running_config.num_workers,
-                                         dataset_config, is_distributed=running_config.is_distributed)
+    dataloaders = init.create_dataloader(datasets[0:2], datasets[2:4], training_config.batch_size,
+                                         running_config.num_workers,
+                                         is_distributed=running_config.is_distributed)
 
-    train_config = DeepNormalizeTrainerConfig(checkpoint_every=training_config.checkpoint_every,
-                                              max_epoch=training_config.max_iterations,
-                                              criterion=criterions,
-                                              metric=metrics,
-                                              model=models,
-                                              optimizer=optimizers,
-                                              dataloader=dataloaders,
-                                              running_config=running_config,
-                                              variables=variables,
-                                              logger_config=logger_config,
-                                              debug=training_config.debug,
-                                              pretraining_config=pretraining_config,
-                                              visdom=visdom)
+    generator = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
+                                   max_epoch=training_config.max_iterations,
+                                   model=models[0],
+                                   variables=variables,
+                                   pretraining_config=pretraining_config,
+                                   optimizer=optimizers[0],
+                                   criterion=criterions[0],
+                                   metric=None)
+    segmenter = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
+                                   max_epoch=training_config.max_iterations,
+                                   model=models[1],
+                                   variables=variables,
+                                   pretraining_config=pretraining_config,
+                                   optimizer=optimizers[1],
+                                   metric=metrics[0],
+                                   criterion=criterions[1])
+    discriminator = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
+                                       max_epoch=training_config.max_iterations,
+                                       model=models[2],
+                                       variables=variables,
+                                       pretraining_config=pretraining_config,
+                                       optimizer=optimizers[2],
+                                       metric=metrics[1],
+                                       criterion=criterions[2])
 
-    trainer = DeepNormalizeTrainer(train_config, None)
+    trainer = DeepNormalizeTrainer([generator, segmenter, discriminator], None, visdom, running_config,
+                                   logger_config, pretraining_config, training_config, dataloaders)
 
     trainer.train()
 
@@ -79,7 +92,7 @@ if __name__ == '__main__':
     parser.add_argument("--config", help="Path to configuration file.")
     parser.add_argument("--opt-level", type=str, default="O2",
                         help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
-    parser.add_argument("--num-workers", default=2, type=int,
+    parser.add_argument("--num-workers", default=8, type=int,
                         help="Number of data loading workers for each dataloader object (default: 4)")
     parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
