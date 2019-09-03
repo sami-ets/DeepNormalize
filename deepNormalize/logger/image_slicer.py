@@ -45,13 +45,14 @@ class AdaptedImageSlicer(object):
     def __init__(self):
         pass
 
-    def get_slice(self, slice_type, adapted_image):
+    @staticmethod
+    def get_slice(slice_type, image):
         if slice_type == SliceType.SAGITAL:
-            slice = np.rot90(adapted_image[:, :, int(adapted_image.shape[0] / 2), :, :].transpose(2, 3).numpy(), 2)
+            slice = np.rot90(image[:, :, int(image.shape[2] / 2), :, :].transpose(2, 3), 2)
         elif slice_type == SliceType.CORONAL:
-            slice = np.rot90(adapted_image[:, :, :, int(adapted_image.shape[1] / 2), :].transpose(2, 3).numpy(), 2)
+            slice = np.rot90(image[:, :, :, int(image.shape[3] / 2), :].transpose(2, 3), 2)
         elif slice_type == SliceType.AXIAL:
-            slice = adapted_image[:, :, :, :, int(adapted_image.shape[2] / 2)].transpose(2, 3).numpy()
+            slice = image[:, :, :, :, int(image.shape[4] / 2)]
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 

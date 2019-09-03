@@ -14,3 +14,11 @@
 #  limitations under the License.
 #  ==============================================================================
 
+GENERATOR = 0
+SEGMENTER = 1
+DISCRIMINATOR = 2
+
+IMAGE_TARGET = 0
+DATASET_ID = 1
+
+EPSILON = 1e-15

@@ -25,8 +25,7 @@ from samitorch.inputs.images import Modality
 from samitorch.inputs.datasets import PatchDatasetFactory
 from samitorch.inputs.utils import patch_collate
 from torch.utils.data import ConcatDataset
-from deepNormalize.factories.parsers import *
-from deepNormalize.utils.utils import split_dataset
+from deepNormalize.config.parsers import *
 
 
 class Initializer(object):
@@ -44,7 +43,7 @@ class Initializer(object):
         self._logger.propagate = False
 
     def create_configs(self):
-        datasets_configs = DeepNormalizeDatasetConfigurationParserFactory().parse(self._path)
+        datasets_configs = DatasetConfigurationParser().parse(self._path)
         model_config = DeepNormalizeModelsParserFactory().parse(self._path)
         training_config = TrainingConfigurationParserFactory().parse(self._path)
         pretraining_config = PreTrainingConfigurationParserFactory().parse(self._path)

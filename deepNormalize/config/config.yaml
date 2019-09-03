@@ -2,72 +2,108 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    feature_maps: 64
-    in_channels: 1
-    out_channels: 1
-    num_levels: 4
-    conv_kernel_size: 3
-    pool_kernel_size: 2
-    pooling_type: "MaxPool3d"
-    num_groups: 8
-    padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-    activation: "LeakyReLU"
-    interpolation: True
-    scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    params:
+      feature_maps: 64
+      in_channels: 1
+      out_channels: 1
+      num_levels: 4
+      conv_kernel_size: 3
+      pool_kernel_size: 2
+      pooling_type: "MaxPool3d"
+      num_groups: 8
+      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      activation: "LeakyReLU"
+      interpolation: True
+      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "SGD"
-      lr: 0.001
-      momentum: 0.9
+      params:
+        lr: 0.001
+        momentum: 0.9
+        weight_decay: 0.1
     scheduler:
-      mode: "min"
-      factor: 0.1
-      patience: 3
-    criterion: "MSELoss"
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 3
+    criterion:
+      type: "MSELoss"
+      params:
+    metric:
+      type: "Accuracy"
+      params:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    feature_maps: 64
-    in_channels: 1
-    out_channels: 4
-    num_levels: 4
-    conv_kernel_size: 3
-    pool_kernel_size: 2
-    pooling_type: "MaxPool3d"
-    num_groups: 8
-    padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-    activation: "LeakyReLU"
-    interpolation: True
-    scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    params:
+      feature_maps: 64
+      in_channels: 1
+      out_channels: 4
+      num_levels: 4
+      conv_kernel_size: 3
+      pool_kernel_size: 2
+      pooling_type: "MaxPool3d"
+      num_groups: 8
+      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      activation: "LeakyReLU"
+      interpolation: True
+      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "SGD"
-      lr: 0.001
-      momentum: 0.9
+      params:
+        lr: 0.001
+        momentum: 0.9
+        weight_decay: 0.1
     scheduler:
-      mode: "min"
-      factor: 0.1
-      patience: 3
-    criterion: "DiceLoss"
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 3
+    criterion:
+      type: "DiceLoss"
+      params:
+        reduction: "mean"
+        ignore_index: 0
+    metric:
+      type: "Dice"
+      params:
+        num_classes: 4
+        reduction: "mean"
+        ignore_index: 0
+        average: !!null
   Discriminator:
-    name: "ResNet18"
-    type: "ResNet3D"
-    in_channels: 1
-    out_channels: 3
-    num_groups: 8
-    conv_groups: 1
-    width_per_group: 64
-    padding: !!null
-    activation: "ReLU"
-    zero_init_residual: False
-    replace_stride_with_dilation: !!null
+    name: "ResNet3D"
+    type: "ResNet18"
+    params:
+      in_channels: 1
+      out_channels: 3
+      num_groups: 8
+      conv_groups: 1
+      width_per_group: 64
+      padding: !!null
+      activation: "ReLU"
+      zero_init_residual: False
+      replace_stride_with_dilation: !!null
     optimizer:
       type: "SGD"
-      lr: 0.001
-      momentum: 0.9
+      params:
+        lr: 0.001
+        momentum: 0.9
+        weight_decay: 0.1
     scheduler:
-      mode: "min"
-      factor: 0.1
-      patience: 3
-    criterion: "NLLLoss"
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 3
+    criterion:
+      type: "CrossEntropyLoss"
+      params:
+    metric:
+      type: "Accuracy"
+      params:
 
 dataset:
   iSEG:
@@ -89,33 +125,22 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
 
-pretraining:
-  pretrained: False
-  model_paths:
-    generator: "saves/generator-20190816-142637.tar"
-
 training:
-  debug: False
-  checkpoint_every: 0
-  batch_size: 16
-  max_epochs: 100
-  metrics:
-    dice:
-      num_classes: 4
-      reduction: "mean"
-      ignore_index: 0
-      average: !!null
-    accuracy:
-      is_multilabel: False
-
-variables:
-  lambda: 0.5
-  alpha: 1.0
+  distributed: False
+  batch_size: 24
+  nb_epochs: 100
+  patience_discriminator: 5
+  patience_segmentation: 20
+  variables:
+    lambda: 0.5
+    alpha: 1.0
 
 visdom:
   server: "10.0.3.9"
   port: "8097"
+  env: "deepNormalize"
 
 logger:
   path: "/tmp/ml/tests"
   log_after_iterations: 50
+

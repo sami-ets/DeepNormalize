@@ -14,463 +14,229 @@
 # limitations under the License.
 # ==============================================================================
 
-import logging
-
-import torch
 import os
-import abc
+from typing import List
+
 import numpy as np
-from typing import List, Optional
-from samitorch.callbacks.callbacks import Callback
-from samitorch.inputs.batch import Batch
-from samitorch.logger.plots import ImagesPlot
+import torch
+from kerosene.config.trainers import RunConfiguration
+from kerosene.training.trainers import ModelTrainer
+from kerosene.training.trainers import Trainer
+from kerosene.utils.distributed import on_single_device
+from torch.utils.data import DataLoader
 
-from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.inputs.images import SliceType
-
-from deepNormalize.training.training_strategies import GANStrategy, AutoEncoderStrategy
-from deepNormalize.utils.utils import concat_batches
-from deepNormalize.training.generator_trainer import GeneratorTrainer
-from deepNormalize.training.discriminator_trainer import DiscriminatorTrainer
-from deepNormalize.training.segmenter_trainer import SegmenterTrainer
-from deepNormalize.logger.plots import PiePlot
-
-try:
-    from apex.parallel import DistributedDataParallel as DDP
-    from apex.fp16_utils import *
-    from apex import amp, optimizers
-    from apex.multi_tensor_apply import multi_tensor_applier
-except ImportError:
-    raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this project.")
-
-
-class Trainer(object):
-    def __init__(self, config: list, callbacks: Optional[List[Callback]]):
-        """Class initializer.
-
-        Args:
-            config (:obj:`samitorch.training.training_config.TrainingConfig`): A TrainingConfig containing training configuration.
-            callbacks (:obj:`list` of :obj:`Callback`): A list of Callback objects to register.
-        """
-        assert config is not None, "Training must at least have a list of one configuration."
-        self._config = config
-
-        if callbacks is not None:
-            self._callbacks = list()
-            for cbck in callbacks:
-                self._register_callback(cbck)
-
-        self._global_step = torch.Tensor().new_zeros((1,), dtype=torch.int64, device='cpu')
-        self._epoch = torch.Tensor().new_zeros((1,), dtype=torch.int64, device='cpu')
-
-    @property
-    def global_step(self):
-        """int: The current epoch count."""
-        return self._global_step
-
-    @global_step.setter
-    def global_step(self, global_step):
-        self._global_step = global_step
-
-    @property
-    def epoch(self):
-        """int: The current epoch count."""
-        return self._epoch
-
-    @epoch.setter
-    def epoch(self, epoch):
-        self._epoch = epoch
-
-    @property
-    def config(self):
-        """:obj:`list` of :obj:`TrainingConfig`: A list of registered training configuration, one per model."""
-        return self._config
-
-    @property
-    def callbacks(self):
-        """:obj:`list` of :obj:`Callback`: A list of registered callbacks."""
-        return self._callbacks
-
-    @abc.abstractmethod
-    def train(self):
-        """Main training loop.
-
-        Raises:
-            NotImplementedError: if not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _train_epoch(self, epoch_num: int, *args, **kwargs):
-        """Train a model for one epoch.
-
-        Args:
-            epoch_num (int): current epoch number.
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: if not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _train_batch(self, batch: Batch, *args, **kwargs):
-        """Function which handles prediction from batch, logging, loss calculation and optimizer step.
-
-        This function is needed for the framework to provide a generic trainer function which works with all kind of
-        networks and loss functions. The closure function must implement all steps from forwarding, over loss
-        calculation, metric calculation, logging, and the actual backpropagation. It is called with an empty
-        optimizer-dict to evaluate and should thus work with optional optimizers.
-
-        Args:
-            batch (:obj:`samitorch.inputs.batch.Batch`): Batch object containing the data.
-            *args (dict): additional arguments.
-            **kwargs (dict): additional keyword arguments.
-
-        Returns:
-            dict: Metric values (with same keys as input dict metrics).
-            dict: Loss values (with same keys as input dict criterions).
-            list: Arbitrary number of predictions.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @staticmethod
-    def _prepare_batch(batch: Batch, input_device: torch.device, output_device: torch.device):
-        """Converts a numpy batch of data and labels to suitable datatype and pushes them to correct devices
-
-        Args
-            batch (dict): dictionary containing the batch (must have keys 'data' and 'label'
-            input_device (:obj:`torch.device`): device for network inputs
-            output_device (:obj:`torch.device`): device for network outputs
-
-        Returns:
-            dict: dictionary containing all necessary data in right format and type and on the correct device
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _validate_epoch(self, epoch_num: int, *args, **kwargs):
-        """Run validation phase.
-
-         Args:
-            epoch_num (int): Current epoch number.
-            kwargs: keyword arguments
-
-        Raises:
-            NotImplementedError: if not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _validate_batch(self, batch: Batch, *args, **kwargs):
-        """ Run validation over a batch.
-
-        Args:
-            batch (:obj:`samitorch.inputs.batch.Batch`): An input Batch object,
-            **kwargs: additional keywords arguments.
-
-        Raises:
-            NotImplementedError: if not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _finalize(self, *args, **kwargs):
-        """Finalize all operations (e.g. save checkpoint, finalize Data Loaders and close logger if required).
-
-        Args:
-            *args: positional arguments
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: if not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _setup(self, *args, **kwargs):
-        """Defines the actual Trainer Setup.
-
-        Args:
-            *args: positional arguments
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _at_training_begin(self, *args, **kwargs):
-        """Defines the behaviour at beginnig of the training.
-
-        Args:
-            *args: positional arguments
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _at_training_end(self, *args, **kwargs):
-        """Defines the behaviour at the end of the training.
-
-        Args:
-            *args: positional arguments
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _at_epoch_begin(self, *args, **kwargs):
-        """Defines the behaviour at beginnig of each epoch.
-
-        Args:
-            *args: positional arguments
-            **kwargs (dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def _at_epoch_end(self, *args, **kwargs):
-        """
-        Defines the behaviour at the end of each epoch.
-
-        Args:
-            *args: positional arguments
-            **kwargs(dict): additional keyword arguments.
-
-        Raises:
-            NotImplementedError: If not overwritten by subclass.
-        """
-
-        raise NotImplementedError()
-
-    @staticmethod
-    def _is_better_val_scores(old_val_score: float, new_val_score: float, mode='highest'):
-        """Check whether the new val score is better than the old one with respect to the optimization goal.
-
-        Args:
-            old_val_score (float): old validation score
-            new_val_score (float): new validation score
-            mode (str): String to specify whether a higher or lower validation score is optimal;
-                must be in ['highest', 'lowest']
-
-        Returns:
-            bool: True if new score is better, False otherwise.
-        """
-
-        assert mode in ['highest', 'lowest'], "Invalid Comparison Mode"
-
-        if mode == 'highest':
-            return new_val_score > old_val_score
-        elif mode == 'lowest':
-            return new_val_score < old_val_score
-
-    def _register_callback(self, callback: Callback):
-        """Register Callback to Trainer.
-
-        Args:
-            callback (:class:`Callback`): the callback to register
-
-        Raises:
-            AssertionError: `callback` is not an instance of :class:`Callback` and has not both methods
-            ['at_epoch_begin', 'at_epoch_end'].
-        """
-
-        assertion_str = "Given callback is not valid; Must be instance of " \
-                        "Callback or provide functions " \
-                        "'at_epoch_begin' and 'at_epoch_end'"
-
-        assert \
-            isinstance(callback, Callback) \
-            or (hasattr(callback, "at_epoch_begin")
-                and hasattr(callback, "at_epoch_end")), assertion_str
-
-        self._callbacks.append(callback)
+from deepNormalize.logger.image_slicer import AdaptedImageSlicer
+from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 
 
 class DeepNormalizeTrainer(Trainer):
-    LOGGER = logging.getLogger("DeepNormalizeTrainer")
 
-    def __init__(self, config, callbacks, visdom, running_config, logger_config, pretraining_config, training_config,
-                 dataloaders):
-        super(DeepNormalizeTrainer, self).__init__(config, callbacks)
-        self._visdom = visdom
-        self._running_config = running_config
-        self._logger_config = logger_config
-        self._pretraining_config = pretraining_config
+    def __init__(self, training_config, model_trainers: List[ModelTrainer],
+                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration):
+        super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
+                                                   model_trainers, run_config)
+
         self._training_config = training_config
-        self._dataloaders = dataloaders
-
-        # Create instance of every model trainer.
-        self._discriminator_trainer = DiscriminatorTrainer(config[2], callbacks, "Discriminator", visdom,
-                                                           self._running_config)
-        self._generator_trainer = GeneratorTrainer(config[0], callbacks, self._discriminator_trainer,
-                                                   "Generator", visdom, self._running_config)
-        self._segmenter_trainer = SegmenterTrainer(config[1], callbacks, "Segmenter", visdom, self._running_config)
-
-        # Various plots.
-        self._input_images_plot = ImagesPlot(self._visdom, "Input Image")
-        self._class_pie_plot = PiePlot(self._visdom,
-                                       torch.Tensor().new_zeros(size=(3,)),
-                                       ["ISEG", "MRBrainS", "Fake"],
-                                       "Predicted classes")
-
-        # Define training behavior.
-        self._with_segmentation = False
-        self._with_autoencoder = False
-
-        if self._pretraining_config.pretrained:
-            generator_epoch, discriminator_epoch, segmenter_epoch = 0, 0, 0
-            if "generator" in self._pretraining_config.model_paths:
-                generator_epoch = self._generator_trainer.restore_from_checkpoint(
-                    self._pretraining_config.model_paths["generator"])
-            if "discriminator" in self._pretraining_config.model_paths:
-                discriminator_epoch = self._discriminator_trainer.restore_from_checkpoint(
-                    self._pretraining_config.model_paths["discriminator"])
-            if "segmenter" in self._pretraining_config.model_paths:
-                segmenter_epoch = self._segmenter_trainer.restore_from_checkpoint(
-                    self._pretraining_config.model_paths["segmenter"])
-            # Get the highest epoch from checkpoints to restart training.
-            epochs = np.array([generator_epoch, discriminator_epoch, segmenter_epoch])
-            max_epoch = epochs.max()
-            self._epoch = torch.Tensor().new([max_epoch])
-
-            # Use a barrier() to make sure that all processes have finished reading the checkpoints.
-            torch.distributed.barrier()
-
+        self._patience_discriminator = training_config.patience_discriminator
+        self._patience_segmentation = training_config.patience_segmentation
+        self._with_discriminator = None
+        self._with_segmentation = None
+        self._generator_should_be_autoencoder = None
         self._slicer = AdaptedImageSlicer()
+        self._generator = self._model_trainers[GENERATOR]
+        self._discriminator = self._model_trainers[DISCRIMINATOR]
+        self._segmenter = self._model_trainers[SEGMENTER]
 
-        self._gan_strategy = GANStrategy(self)
-        self._autoencoder_strategy = AutoEncoderStrategy(self)
+    def train_step(self, inputs, target):
+        disc_pred = None
+        # Autoencoder.
+        gen_pred = self._generator.forward(inputs)
 
-    @property
-    def with_segmentation(self):
-        return self._with_segmentation
+        if self._should_activate_autoencoder():
+            gen_loss = self._generator.compute_train_loss(gen_pred, target[IMAGE_TARGET])
+            gen_loss.backward()
 
-    @with_segmentation.setter
-    def with_segmentation(self, with_segmentation):
-        self._with_segmentation = with_segmentation
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
 
-    @property
-    def with_autoencoder(self):
-        return self._with_autoencoder
+            self._generator.step()
+            self._generator.zero_grad()
 
-    @with_autoencoder.setter
-    def with_autoencoder(self, with_autoencoder):
-        self._with_autoencoder = with_autoencoder
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target)
+            disc_loss.backward()
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._discriminator)
 
-    def train(self):
-        for epoch in range(self._training_config.max_epochs):
-            self._train_epoch(epoch)
-            self._validate_epoch(epoch)
+            self._discriminator.step()
+            self._discriminator.zero_grad()
 
-    def _train_epoch(self, epoch_num: int):
-        self._at_epoch_begin(epoch_num)
+        if self._should_activate_discriminator_loss():
+            loss_D_G_X_as_X = self.evaluate_loss_D_G_X_as_X(self._discriminator, gen_pred)
+            gen_loss = self._training_config.variables.lambda_ * loss_D_G_X_as_X
+            gen_loss.backward()
 
-        for iteration, (batch_d0, batch_d1) in enumerate(zip(self._dataloaders[0], self._dataloaders[1]),
-                                                         0):
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
 
-            self._at_iteration_begin()
+            self._generator.step()
+            self._generator.zero_grad()
 
-            # Make one big batch from both data loader.
-            batch = concat_batches(batch_d0, batch_d1)
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred, target)
+            disc_loss.backward()
 
-            batch = self._prepare_batch(batch=batch,
-                                        input_device=torch.device('cpu'),
-                                        output_device=self._running_config.device)
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._discriminator)
 
-            loss_D, loss_D_G_X_as_X, custom_loss, loss_S_G_X, generated_batch, segmented_batch, mse_loss = self._train_batch(
-                batch)
+            self._discriminator.step()
+            self._discriminator.zero_grad()
 
-            if iteration % self._logger_config.frequency == 0:
-                dsc = torch.Tensor().new_zeros(size=(1,)).cuda()
-                acc = torch.Tensor().new_zeros(size=(1,)).cuda()
+        if self._should_activate_segmentation():
+            seg_pred = self._segmenter.forward(gen_pred.detach())
+            seg_loss = self._segmenter.compute_train_loss(seg_pred, target[IMAGE_TARGET])
+            seg_loss.backward(retain_graph=True)
+            self._generator.optimizer.reset()
+            self._discriminator.optimizer.reset()
+            self._segmenter.optimizer.reset()
 
-                self.update_image_plot(batch.x.cpu().data)
+            loss_D_G_X_as_X = self.evaluate_loss_D_G_X_as_X(self._discriminator, gen_pred)
+            gen_loss = self._training_config.variables.lambda_ * loss_D_G_X_as_X
+            gen_loss.backward()
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._segmenter)
+                self.average_gradients(self._generator)
+            self._generator.step()
+            self._segmenter.step()
+            self._generator.zero_grad()
+            self._segmenter.zero_grad()
 
-                if self._with_segmentation:
-                    dsc = self._segmenter_trainer.compute_metric().cuda()
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred, target)
+            disc_loss.backward()
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._discriminator)
+            self._discriminator.step()
+            self._discriminator.zero_grad()
 
-                if not self._with_autoencoder:
-                    acc = torch.Tensor().new([self._discriminator_trainer.compute_metric()]).cuda()
+        if disc_pred is not None:
+            count = self.count(torch.argmax(disc_pred, dim=1), 3)
 
-                # Average loss and accuracy across processes for logging
-                if self._running_config.is_distributed:
-                    if self._with_segmentation:
-                        loss_S_G_X = self._reduce_tensor(loss_S_G_X.data)
-                        dsc = self._reduce_tensor(dsc.data)
+        if self.current_train_step % 100 == 0:
+            self._update_plots(inputs, gen_pred)
 
-                    loss_D_G_X_as_X = self._reduce_tensor(loss_D_G_X_as_X.data)
-                    loss_D = self._reduce_tensor(loss_D.data)
-                    mse_loss = self._reduce_tensor(mse_loss.data)
-                    acc = self._reduce_tensor(acc.data)
+        self.custom_variables["Pie Plot"] = count if count is not None else torch.Tensor().new_zeros((3,),
+                                                                                                     dtype=torch.int8,
+                                                                                                     device="cpu")
 
-                torch.cuda.synchronize()
+    def validate_step(self, inputs, target):
+        gen_pred = self._generator.forward(inputs)
 
-                self._generator_trainer.update_image_plot(generated_batch.x.cpu().data)
+        if self._should_activate_autoencoder():
+            self._generator.compute_valid_loss(gen_pred, target[IMAGE_TARGET])
+            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
-                if self._running_config.local_rank == 0:
+        if self._should_activate_discriminator_loss():
+            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
-                    if self._with_autoencoder:
-                        self._generator_trainer.update_loss_gauge(mse_loss.item(), batch.x.size(0))
-                        self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                            [self._generator_trainer.training_loss_gauge.average]))
+        if self._should_activate_segmentation():
+            seg_pred = self._segmenter.forward(gen_pred.detach())
+            self._segmenter.compute_valid_loss(seg_pred, target[IMAGE_TARGET])
 
-                    else:
-                        self._generator_trainer.update_loss_gauge(loss_D_G_X_as_X.item(), batch.x.size(0))
-                        self._generator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                            [self._generator_trainer.training_loss_gauge.average]))
-                        self._discriminator_trainer.update_loss_gauge(loss_D.item(), batch.x.size(0))
-                        self._discriminator_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                            [self._discriminator_trainer.training_loss_gauge.average]))
-                        self._discriminator_trainer.update_metric_gauge(acc.item(), batch.x.size(0))
-                        self._discriminator_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
-                            [self._discriminator_trainer.training_metric_gauge.average]))
+    def _update_plots(self, inputs, generator_predictions):
+        inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
+                                                 align_corners=True).cpu().numpy()
+        generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
+                                                                align_corners=True).cpu().detach().numpy()
 
-                        if self._with_segmentation:
-                            self._segmenter_trainer.update_loss_gauge(loss_S_G_X.item(), batch.x.size(0))
-                            self._segmenter_trainer.update_loss_plot(self.global_step, torch.Tensor().new(
-                                [self._segmenter_trainer.training_loss_gauge.average]))
-                            self._segmenter_trainer.update_metric_gauge(dsc.item(), batch.x.size(0))
-                            self._segmenter_trainer.update_metric_plot(self.global_step, torch.Tensor().new(
-                                [self._segmenter_trainer.training_metric_gauge.average]))
-                            self._segmenter_trainer.update_image_plot(
-                                torch.argmax(segmented_batch.x, dim=1, keepdim=True).float().cpu().data)
+        inputs = self._normalize(inputs)
+        generator_predictions = self._normalize(generator_predictions)
 
-                    self.LOGGER.info(
-                        "Epoch: {} Step: {} Generator loss: {}Discriminator loss: {} Segmenter loss: {} Segmenter Dice Score: {}".format(
-                            epoch_num,
-                            iteration,
-                            self._generator_trainer.training_loss_gauge.average,
-                            self._discriminator_trainer.training_loss_gauge.average,
-                            self._segmenter_trainer.training_loss_gauge.average,
-                            self._segmenter_trainer.training_metric_gauge.average))
+        self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
+        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
 
-            del batch
-            del generated_batch
-            del segmented_batch
+    def scheduler_step(self):
+        self._generator.scheduler_step()
 
-            # Re-enable all parts of the graph.
-            self._at_iteration_end()
-        self._at_epoch_end()
+        if self._should_activate_discriminator_loss():
+            self._discriminator.scheduler_step()
 
-    def _train_batch(self, batch: Batch):
+        if self._should_activate_segmentation():
+            self._segmenter.scheduler_step()
+
+    @staticmethod
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
+
+    @staticmethod
+    def average_gradients(model):
+        size = float(torch.distributed.get_world_size())
+        for param in model.parameters():
+            torch.distributed.all_reduce(param.grad.data, op=torch.distributed.ReduceOp.SUM)
+            param.grad.data /= size
+
+    @staticmethod
+    def merge_tensors(tensor_0, tensor_1):
+        return torch.cat((tensor_0, tensor_1), dim=0)
+
+    @staticmethod
+    def _reduce_tensor(tensor):
+        rt = tensor.clone()
+        torch.distributed.all_reduce(rt, op=torch.distributed.ReduceOp.SUM)
+        rt /= int(os.environ['WORLD_SIZE'])
+        return rt
+
+    def _should_activate_discriminator_loss(self):
+        return self._current_epoch >= self._patience_discriminator
+
+    def _should_activate_segmentation(self):
+        return self._current_epoch >= self._patience_segmentation
+
+    def _should_activate_autoencoder(self):
+        return self._current_epoch < self._patience_discriminator
+
+    def on_epoch_begin(self):
+        self._with_discriminator = self._should_activate_discriminator_loss()
+
+    def on_epoch_end(self):
+        pass
+
+    @staticmethod
+    def count(tensor, n_classes):
+        count = torch.Tensor().new_zeros(size=(n_classes,), device="cpu")
+
+        for i in range(n_classes):
+            count[i] = torch.sum(tensor == i).int()
+
+        return count
+
+    def evaluate_loss_D_G_X_as_X(self, inputs, detach=False):
+        pred_D_G_X = self._discriminator.forward(inputs, detach=detach)
+        y = torch.Tensor().new_full(size=(inputs.size(0),), fill_value=2, dtype=torch.long, device=inputs.device,
+                                    requires_grad=False)
+        ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype)
+        loss_D_G_X_as_X = self._discriminator.compute_train_loss(ones - pred_D_G_X, y)
+        return loss_D_G_X_as_X
+
+    def train_discriminator(self, inputs, gen_pred, target):
+        merged_inputs = self.merge_tensors(inputs, gen_pred)
+        pred = self._discriminator.forward(merged_inputs)
+        y_bad = torch.Tensor().new_full(size=(target[DATASET_ID].size(0),), fill_value=2, dtype=torch.long,
+                                        device=target[DATASET_ID].device, requires_grad=False)
+        merged_targets = self.merge_tensors(target[DATASET_ID], y_bad)
+        disc_loss = self._discriminator.compute_train_loss(pred, merged_targets)
+        self._discriminator.compute_train_metric(pred, merged_targets)
+        return disc_loss, pred
+
+    def validate_discriminator(self, inputs, gen_pred, target):
+        merged_inputs = self.merge_tensors(inputs, gen_pred)
+        pred = self._discriminator.forward(merged_inputs)
+        y_bad = torch.Tensor().new_full(size=(target[DATASET_ID].size(0),), fill_value=2, dtype=torch.long,
+                                        device=target[DATASET_ID].device, requires_grad=False)
+        merged_targets = self.merge_tensors(target[DATASET_ID], y_bad)
+        disc_loss = self._discriminator.compute_valid_loss(pred, merged_targets)
+        self._discriminator.compute_valid_metric(pred, merged_targets)
+        return disc_loss, pred
+
+    def train_step_(self, inputs, target):
         # Loss variable declaration.
         loss_D = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
         custom_loss = torch.Tensor().new_zeros((1,), dtype=torch.float32).cuda()
@@ -534,7 +300,7 @@ class DeepNormalizeTrainer(Trainer):
 
             return loss_D, loss_D_G_X_as_X, custom_loss, loss_S_G_X, generated_batch, segmented_batch, mse_loss
 
-    def _validate_epoch(self, epoch_num: int):
+    def _validate_epoch_(self, epoch_num: int):
         self._at_validation_begin()
 
         if self._running_config.local_rank == 0:
@@ -567,7 +333,7 @@ class DeepNormalizeTrainer(Trainer):
 
                 if not self._with_autoencoder:
                     loss_D, pred_D_X, pred_D_G_X = self._discriminator_trainer.validate_batch(batch, generated_batch)
-                    loss_D_G_X_as_X = self._generator_trainer.evaluate_discriminator_error_on_normalized_data(
+                    loss_D_G_X_as_X = self._generator_trainer.evaluate_loss_D_G_X_as_X(
                         generated_batch)
 
                     self._discriminator_trainer.validation_loss_gauge.update(loss_D.item(),
@@ -600,89 +366,3 @@ class DeepNormalizeTrainer(Trainer):
             del loss_S_G_X
 
         self._at_validation_end()
-
-    @staticmethod
-    def _prepare_batch(batch: Batch, input_device: torch.device, output_device: torch.device):
-        if not batch.device == input_device:
-            raise ValueError("Data must be in CPU Memory but is on {} device".format(batch.device))
-        return batch.to_device(output_device)
-
-    def _at_epoch_begin(self, epoch_num):
-        self._gan_strategy(self.epoch.item())
-        self._autoencoder_strategy(self.epoch.item())
-        self._generator_trainer.at_epoch_begin(self.epoch)
-        self._discriminator_trainer.at_epoch_begin(self.epoch)
-        self._segmenter_trainer.at_epoch_begin(self.epoch)
-
-    def _at_epoch_end(self):
-        self._generator_trainer.at_epoch_end()
-        self._discriminator_trainer.at_epoch_end()
-        self._segmenter_trainer.at_epoch_end()
-
-    def _at_validation_begin(self):
-        self._generator_trainer.at_validation_begin()
-        self._discriminator_trainer.at_validation_begin()
-        self._segmenter_trainer.at_validation_begin()
-
-    def _at_validation_end(self):
-        self._generator_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
-            [self._generator_trainer.validation_loss_gauge.average]), phase="validation")
-        self._discriminator_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
-            [self._discriminator_trainer.validation_loss_gauge.average]), phase="validation")
-        self._segmenter_trainer.update_loss_plot(self.epoch, torch.Tensor().new(
-            [self._segmenter_trainer.validation_loss_gauge.average]), phase="validation")
-        self._generator_trainer.validation_metric_gauge.reset()
-        self._discriminator_trainer.validation_metric_gauge.reset()
-        self._segmenter_trainer.validation_metric_gauge.reset()
-        self._generator_trainer.validation_loss_gauge.reset()
-        self._discriminator_trainer.validation_loss_gauge.reset()
-        self._segmenter_trainer.validation_loss_gauge.reset()
-        self._epoch += 1
-
-    def _at_iteration_begin(self):
-        self._generator_trainer.at_iteration_begin()
-        self._segmenter_trainer.at_iteration_begin()
-        self._discriminator_trainer.at_iteration_begin()
-
-    def _at_iteration_end(self):
-        self._generator_trainer.at_iteration_end()
-        self._segmenter_trainer.at_iteration_end()
-        self._discriminator_trainer.at_iteration_end()
-        self._global_step += 1
-
-    def _validate_batch(self, batch: Batch, **kwargs):
-        pass
-
-    def _finalize(self, *args, **kwargs):
-        pass
-
-    def _setup(self, *args, **kwargs):
-        pass
-
-    def finalize(self, *args, **kwargs):
-        pass
-
-    def _at_training_begin(self, *args, **kwargs):
-        pass
-
-    def _at_training_end(self, *args, **kwargs):
-        pass
-
-    @staticmethod
-    def _reduce_tensor(tensor):
-        rt = tensor.clone()
-        torch.distributed.all_reduce(rt, op=torch.distributed.ReduceOp.SUM)
-        rt /= int(os.environ['WORLD_SIZE'])
-        return rt
-
-    def update_image_plot(self, image):
-        image = torch.nn.functional.interpolate(image, scale_factor=5, mode="trilinear", align_corners=True)
-        self._input_images_plot.update(self._slicer.get_slice(SliceType.AXIAL, image))
-
-    def count(self, tensor, n_classes):
-        count = torch.Tensor().new_zeros(size=(n_classes,))
-
-        for i in range(n_classes):
-            count[i] = torch.sum(tensor == i).int()
-
-        return count

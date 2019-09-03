@@ -45,9 +45,5 @@ def split_dataset(dataset, split):
     return dataset, validation_dataset
 
 
-def build_configurations(config, num):
-    pass
-
-
 def concat_batches(batch_0, batch_1):
     return PatchBatch(batch_0.samples + batch_1.samples)

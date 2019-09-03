@@ -17,8 +17,7 @@
 import torch
 
 from typing import Union, List
-from samitorch.configs.configurations import DatasetConfiguration, TrainingConfiguration, Configuration
-from samitorch.training.trainer_configuration import TrainerConfiguration
+from samitorch.configs.configurations import Configuration
 
 
 class ModelConfiguration(Configuration):
@@ -154,17 +153,18 @@ class RunningConfiguration(Configuration):
         self._world_size = world_size
 
 
-class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
+class DatasetConfiguration(Configuration):
 
-    def __init__(self, config: dict):
-        super(DeepNormalizeDatasetConfiguration, self).__init__(config)
-
-        self._path = config["path"]
-        self._training_patch_size = config["training"]["patch_size"]
-        self._training_patch_step = config["training"]["step"]
-        self._validation_patch_size = config["validation"]["patch_size"]
-        self._validation_patch_step = config["validation"]["step"]
-        self._validation_split = config["validation_split"]
+    def __init__(self, dataset_name, path, validation_split, training_patch_size, training_patch_step,
+                 validation_patch_size, validation_patch_step):
+        super(DatasetConfiguration, self).__init__()
+        self._dataset_name = dataset_name
+        self._path = path
+        self._validation_split = validation_split
+        self._training_patch_size = training_patch_size
+        self._training_patch_step = training_patch_step
+        self._validation_patch_size = validation_patch_size
+        self._validation_patch_step = validation_patch_step
 
     @property
     def path(self):
@@ -226,8 +226,14 @@ class DeepNormalizeDatasetConfiguration(DatasetConfiguration):
         """
         return self._validation_patch_step
 
+    @classmethod
+    def from_dict(cls, dataset_name, config_dict):
+        return cls(dataset_name, config_dict["path"], config_dict["validation_split"],
+                   config_dict["training"]["patch_size"], config_dict["training"]["step"],
+                   config_dict["validation"]["patch_size"], config_dict["validation"]["step"])
 
-class DeepNormalizeTrainingConfiguration(TrainingConfiguration):
+
+class DeepNormalizeTrainingConfiguration(Configuration):
 
     def __init__(self, config: dict):
         super(DeepNormalizeTrainingConfiguration, self).__init__(config)

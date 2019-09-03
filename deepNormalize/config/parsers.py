@@ -14,64 +14,23 @@
 #  limitations under the License.
 #  ==============================================================================
 
-import yaml
 import logging
+from argparse import ArgumentParser
 
+import yaml
 from samitorch.configs.configurations import Configuration
-from samitorch.parsers.parsers import AbstractConfigurationParserFactory
-from samitorch.configs.configurations import UNetModelConfiguration, ResNetModelConfiguration
+from samitorch.inputs.images import Modality, ImageType
 
-from deepNormalize.config.configurations import DeepNormalizeDatasetConfiguration, DeepNormalizeTrainingConfiguration, \
-    VariableConfiguration, LoggerConfiguration, VisdomConfiguration, PretrainingConfiguration, OptimizerConfiguration, \
-    SchedulerConfiguration, ModelConfiguration
+from deepNormalize.config.configurations import DatasetConfiguration, DeepNormalizeTrainingConfiguration, \
+    VariableConfiguration, LoggerConfiguration, VisdomConfiguration, PretrainingConfiguration
 
 
-class DeepNormalizeModelsParserFactory(AbstractConfigurationParserFactory):
-
-    def parse(self, path: str):
-        with open(path, 'r') as config_file:
-            try:
-                config = yaml.load(config_file, Loader=yaml.FullLoader)
-                generator = UNetModelConfiguration(config["models"]["Generator"])
-                optimizer_g = OptimizerConfiguration(config["models"]["Generator"]["optimizer"])
-                scheduler_g = SchedulerConfiguration(config["models"]["Generator"]["scheduler"])
-                criterion_g = config["models"]["Generator"]["criterion"]
-                segmenter = UNetModelConfiguration(config["models"]["Segmenter"])
-                optimizer_s = OptimizerConfiguration(config["models"]["Segmenter"]["optimizer"])
-                scheduler_s = SchedulerConfiguration(config["models"]["Segmenter"]["scheduler"])
-                criterion_s = config["models"]["Segmenter"]["criterion"]
-                discriminator = ResNetModelConfiguration(config["models"]["Discriminator"])
-                optimizer_d = OptimizerConfiguration(config["models"]["Discriminator"]["optimizer"])
-                scheduler_d = SchedulerConfiguration(config["models"]["Discriminator"]["scheduler"])
-                criterion_d = config["models"]["Discriminator"]["criterion"]
-
-                generator_config = ModelConfiguration(config={"model": generator,
-                                                              "optimizer": optimizer_g,
-                                                              "scheduler": scheduler_g,
-                                                              "criterion": criterion_g})
-                segmenter_config = ModelConfiguration(config={"model": segmenter,
-                                                              "optimizer": optimizer_s,
-                                                              "scheduler": scheduler_s,
-                                                              "criterion": criterion_s})
-                discriminator_config = ModelConfiguration(config={"model": discriminator,
-                                                                  "optimizer": optimizer_d,
-                                                                  "scheduler": scheduler_d,
-                                                                  "criterion": criterion_d})
-
-                return [generator_config, segmenter_config, discriminator_config]
-            except yaml.YAMLError as e:
-                logging.error(
-                    "Unable to read the config file: {} with error {}".format(path, e))
-
-    def register(self, model_type: str, configuration_class):
-        pass
-
-
-class DeepNormalizeDatasetConfigurationParserFactory(AbstractConfigurationParserFactory):
+class DatasetConfigurationParser(object):
     def __init__(self) -> None:
         pass
 
-    def parse(self, path: str):
+    @staticmethod
+    def parse(path: str):
         """
         Parse a dataset configuration file.
 
@@ -85,17 +44,31 @@ class DeepNormalizeDatasetConfigurationParserFactory(AbstractConfigurationParser
         with open(path, 'r') as config_file:
             try:
                 config = yaml.load(config_file, Loader=yaml.FullLoader)
-                return [DeepNormalizeDatasetConfiguration(config["dataset"][element]) for element in
-                        ["iSEG", "MRBrainS"]]
+                dataset_configs = list(
+                    map(lambda dataset_name: DatasetConfiguration.from_dict(dataset_name,
+                                                                            config["dataset"][dataset_name]),
+                        config["dataset"]))
+                return dataset_configs
             except yaml.YAMLError as e:
                 logging.error(
                     "Unable to read the config file: {} with error {}".format(path, e))
+
+    @staticmethod
+    def parse_section(config_file_path, yml_tag):
+        with open(config_file_path, 'r') as config_file:
+            try:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+
+                return config[yml_tag]
+            except yaml.YAMLError as e:
+                DatasetConfigurationParser.LOGGER.warning(
+                    "Unable to read the training config file: {} with error {}".format(config_file_path, e))
 
     def register(self, model_type: str, configuration_class: Configuration):
         pass
 
 
-class TrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
+class TrainingConfigurationParserFactory(object):
 
     def __init__(self):
         pass
@@ -124,7 +97,7 @@ class TrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
         pass
 
 
-class PreTrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
+class PreTrainingConfigurationParserFactory(object):
 
     def __init__(self):
         pass
@@ -153,7 +126,7 @@ class PreTrainingConfigurationParserFactory(AbstractConfigurationParserFactory):
         pass
 
 
-class VariableConfigurationParserFactory(AbstractConfigurationParserFactory):
+class VariableConfigurationParserFactory(object):
 
     def __init__(self):
         pass
@@ -172,7 +145,7 @@ class VariableConfigurationParserFactory(AbstractConfigurationParserFactory):
         pass
 
 
-class LoggerConfigurationParserFactory(AbstractConfigurationParserFactory):
+class LoggerConfigurationParserFactory(object):
 
     def __init__(self):
         pass
@@ -191,7 +164,7 @@ class LoggerConfigurationParserFactory(AbstractConfigurationParserFactory):
         pass
 
 
-class VisdomConfigurationParserFactory(AbstractConfigurationParserFactory):
+class VisdomConfigurationParserFactory(object):
 
     def __init__(self):
         pass
@@ -208,3 +181,41 @@ class VisdomConfigurationParserFactory(AbstractConfigurationParserFactory):
 
     def register(self, model_type: str, configuration_class):
         pass
+
+
+class ArgsParserType(object):
+    MODEL_TRAINING = "training"
+    BRAIN_EXTRACTION = "brain_extraction"
+    PRE_PROCESSING_PIPELINE = "pre_processing"
+    PRE_TRAINED = "pre_trained"
+
+
+class ArgsParserFactory(object):
+
+    @staticmethod
+    def create_parser(parser_type):
+        parser = ArgumentParser(description='DeepNormalize Training')
+        parser.add_argument("--use_amp", dest="use_amp", action="store_true", default=True)
+        parser.add_argument("--amp-opt-level", dest="amp_opt_level", type=str, default="O1",
+                            help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
+        parser.add_argument("--num-workers", dest="num_workers", default=8, type=int,
+                            help="Number of data loading workers for each dataloader object (default: 4).")
+        parser.add_argument("--local_rank", dest="local_rank", default=0, type=int, help="The local_rank of the GPU.")
+
+        if parser_type is ArgsParserType.MODEL_TRAINING:
+            parser.add_argument("--modality", dest="modality", default="T1", type=str,
+                                help="The modality to be used (default: T1).")
+            parser.add_argument("--config-file", dest="config_file", required=True)
+        elif parser_type is ArgsParserType.BRAIN_EXTRACTION:
+            parser.add_argument("--root_dir", dest="root_dir", required=True)
+            parser.add_argument("--modality", dest="modality", required=True, choices=Modality.ALL)
+            parser.add_argument("--image_type", dest="image_type", required=True, choices=ImageType.ALL)
+        elif parser_type is ArgsParserType.PRE_PROCESSING_PIPELINE:
+            parser.add_argument("--root_dir", dest="root_dir", required=True)
+            parser.add_argument("--output_dir", dest="output_dir", required=True)
+            parser.add_argument("--input_modality", dest="input_modality", required=True, choices=Modality.ALL)
+            parser.add_argument("--output_modality", dest="output_modality", required=False, choices=Modality.ALL)
+        elif parser_type is ArgsParserType.PRE_TRAINED:
+            parser.add_argument("--modality", dest="modality", required=True, choices=Modality.ALL)
+            parser.add_argument("--config_file", dest="config_file", required=True)
+        return parser

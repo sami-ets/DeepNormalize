@@ -14,93 +14,102 @@
 # limitations under the License.
 # ==============================================================================
 
-import argparse
 import logging
+
 import torch
+import torch.backends.cudnn as cudnn
+from kerosene.config.parsers import YamlConfigurationParser
+from kerosene.config.trainers import RunConfiguration
+from kerosene.dataloaders.factories import DataloaderFactory
+from kerosene.events import Event
+from kerosene.events.handlers.console import ConsoleLogger
+from kerosene.events.handlers.visdom.config import VisdomConfiguration
+from kerosene.events.handlers.visdom.visdom import VisdomLogger
+from kerosene.events.preprocessors.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotType
+from kerosene.training.trainers import ModelTrainerFactory
+from samitorch.inputs.datasets import PatchDatasetFactory
+from samitorch.inputs.utils import patch_collate
+from torch.utils.data import DataLoader
 
-from visdom import Visdom
+from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
+from deepNormalize.events.preprocessor.console_preprocessor import PrintTrainLoss
+from deepNormalize.factories.CustomModelFactory import CustomModelFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
-from deepNormalize.utils.initializer import Initializer
-from deepNormalize.config.configurations import RunningConfiguration, ModelTrainerConfig
 
+ISEG_ID = 0
+MRBRAINS_ID = 1
 
-def main(config_path: str, running_config: RunningConfiguration):
-    logging.basicConfig(level=logging.INFO)
-    torch.set_num_threads(4)
-
-    init = Initializer(config_path)
-
-    dataset_config, model_config, training_config, pretraining_config, variables, logger_config, visdom_config = init.create_configs()
-
-    if running_config.is_distributed:
-        visdom = Visdom(server=visdom_config.server, port=visdom_config.port,
-                        env="DeepNormalize_Autoencoder_GPU_{}".format(running_config.local_rank))
-
-    else:
-        visdom = Visdom(server=visdom_config.server, port=visdom_config.port,
-                        env="DeepNormalize_Autoencoder")
-
-    init.init_process_group(running_config)
-
-    metrics = init.create_metrics(training_config)
-
-    models = init.create_models(model_config)
-
-    optimizers = init.create_optimizers(model_config, models)
-
-    criterions = init.create_criterions(model_config)
-
-    datasets = init.create_dataset(dataset_config)
-
-    dataloaders = init.create_dataloader(datasets[0:2], datasets[2:4], training_config.batch_size,
-                                         running_config.num_workers,
-                                         is_distributed=running_config.is_distributed)
-
-    generator = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
-                                   max_epoch=training_config.max_iterations,
-                                   model=models[0],
-                                   variables=variables,
-                                   pretraining_config=pretraining_config,
-                                   optimizer=optimizers[0],
-                                   criterion=criterions[0],
-                                   metric=None)
-    segmenter = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
-                                   max_epoch=training_config.max_iterations,
-                                   model=models[1],
-                                   variables=variables,
-                                   pretraining_config=pretraining_config,
-                                   optimizer=optimizers[1],
-                                   metric=metrics[0],
-                                   criterion=criterions[1])
-    discriminator = ModelTrainerConfig(checkpoint_every=training_config.checkpoint_every,
-                                       max_epoch=training_config.max_iterations,
-                                       model=models[2],
-                                       variables=variables,
-                                       pretraining_config=pretraining_config,
-                                       optimizer=optimizers[2],
-                                       metric=metrics[1],
-                                       criterion=criterions[2])
-
-    trainer = DeepNormalizeTrainer([generator, segmenter, discriminator], None, visdom, running_config,
-                                   logger_config, pretraining_config, training_config, dataloaders)
-
-    trainer.train()
-
+cudnn.benchmark = True
+cudnn.enabled = True
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='DeepNormalize Training with PyTorch and SAMITorch')
-    parser.add_argument("--config", help="Path to configuration file.")
-    parser.add_argument("--opt-level", type=str, default="O2",
-                        help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
-    parser.add_argument("--num-workers", default=8, type=int,
-                        help="Number of data loading workers for each dataloader object (default: 4)")
-    parser.add_argument("--local_rank", default=0, type=int)
-    parser.add_argument('--sync-batch-norm', action='store_true', default=None, help="Enabling APEX sync Batch Norm.")
-    parser.add_argument('--keep-batch-norm-fp32', type=str, default=None)
-    parser.add_argument('--loss-scale', type=str, default="dynamic")
-    parser.add_argument('--num-gpus', type=int, default=1, help="The number of GPUs on the Node.")
-    parser.add_argument('--is_distributed', action='store_true', default=False)
-    args = parser.parse_args()
-    running_config = RunningConfiguration(dict(vars(args)))
+    # Basic settings
+    logging.basicConfig(level=logging.INFO)
+    torch.set_num_threads(8)
+    args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
-    main(config_path=args.config, running_config=running_config)
+    # Create configurations.
+    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank)
+    model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
+    dataset_config = DatasetConfigurationParser().parse(args.config_file)
+
+    # Prepare the data.
+    iSEG_train, iSEG_valid = PatchDatasetFactory.create_train_test(
+        source_dir=dataset_config[0].path + "/Training/Source",
+        target_dir=dataset_config[0].path + "/Training/Target",
+        dataset_id=ISEG_ID,
+        patch_size=dataset_config[0].training_patch_size,
+        step=dataset_config[0].training_patch_step,
+        modality=args.modality,
+        test_size=dataset_config[0].validation_split,
+        keep_centered_on_foreground=True)
+
+    MRBrainS_train, MRBrains_valid = PatchDatasetFactory.create_train_test(
+        source_dir=dataset_config[1].path + "/TrainingData/Source",
+        target_dir=dataset_config[1].path + "/TrainingData/Target",
+        dataset_id=MRBRAINS_ID,
+        patch_size=dataset_config[1].training_patch_size,
+        step=dataset_config[1].training_patch_step,
+        test_size=dataset_config[1].validation_split,
+        keep_centered_on_foreground=True,
+        modality=args.modality)
+
+    # Concat datasets.
+    training_datasets = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
+    validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrains_valid))
+
+    # Initialize the model trainers
+    model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory())
+    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
+
+    # Create loaders.
+    train_loader, valid_loader = DataloaderFactory(training_datasets, validation_datasets).create(run_config,
+                                                                                                  training_config,
+                                                                                                  collate_fn=patch_collate)
+
+    # Initialize the loggers.
+    if run_config.local_rank == 0:
+        visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
+        console_logger = ConsoleLogger()
+
+    # Train with the training strategy.
+    if run_config.local_rank == 0:
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+            .with_event_handler(console_logger, Event.ON_BATCH_END) \
+            .with_event_handler(console_logger, Event.ON_100_TRAIN_STEPS, PrintTrainLoss()) \
+            .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotAllModelStateVariables()) \
+            .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotLR()) \
+            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
+                                PlotCustomVariables("Generated Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Generated Patches"}})) \
+            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
+                                PlotCustomVariables("Input Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Input Patches"}})) \
+            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
+                                PlotCustomVariables("Pie Plot", PlotType.PIE_PLOT, params={"opts": {
+                                    "title": "Classification hit per classes",
+                                    "legend": ["iSEG", "MRBrainS", "Fake Class"]}})) \
+            .train(training_config.nb_epochs)
+    else:
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+            .train(training_config.nb_epochs)
