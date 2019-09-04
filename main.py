@@ -15,6 +15,7 @@
 # ==============================================================================
 
 import logging
+import multiprocessing
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -23,7 +24,9 @@ from kerosene.config.trainers import RunConfiguration
 from kerosene.dataloaders.factories import DataloaderFactory
 from kerosene.events import Event
 from kerosene.events.handlers.console import ConsoleLogger
+from kerosene.events.handlers.checkpoints import ModelCheckpointIfBetter
 from kerosene.events.handlers.visdom.config import VisdomConfiguration
+from kerosene.events.handlers.visdom.data import VisdomData, PlotFrequency
 from kerosene.events.handlers.visdom.visdom import VisdomLogger
 from kerosene.events.preprocessors.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotType
 from kerosene.training.trainers import ModelTrainerFactory
@@ -45,13 +48,15 @@ cudnn.enabled = True
 if __name__ == '__main__':
     # Basic settings
     logging.basicConfig(level=logging.INFO)
-    torch.set_num_threads(8)
+    torch.set_num_threads(multiprocessing.cpu_count())
+    torch.set_num_interop_threads(multiprocessing.cpu_count())
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
     # Create configurations.
     run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
+    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
     iSEG_train, iSEG_valid = PatchDatasetFactory.create_train_test(
@@ -91,12 +96,14 @@ if __name__ == '__main__':
     if run_config.local_rank == 0:
         visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
         console_logger = ConsoleLogger()
+        visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
+                                 config_html))
 
     # Train with the training strategy.
     if run_config.local_rank == 0:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .with_event_handler(console_logger, Event.ON_BATCH_END) \
-            .with_event_handler(console_logger, Event.ON_100_TRAIN_STEPS, PrintTrainLoss()) \
+            .with_event_handler(console_logger, Event.ON_BATCH_END, PrintTrainLoss()) \
             .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotAllModelStateVariables()) \
             .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotLR()) \
             .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
@@ -106,10 +113,21 @@ if __name__ == '__main__':
                                 PlotCustomVariables("Input Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4, "opts": {"title": "Input Patches"}})) \
             .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
+                                PlotCustomVariables("Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
+                                                    params={
+                                                        "opts": {"title": "Generated Intensity Histogram",
+                                                                 "nbins": 50}})) \
+            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
+                                PlotCustomVariables("Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
+                                                    params={
+                                                        "opts": {"title": "Inputs Intensity Histogram", "nbins": 50}})) \
+            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
                                 PlotCustomVariables("Pie Plot", PlotType.PIE_PLOT, params={"opts": {
                                     "title": "Classification hit per classes",
                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}})) \
+            .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .train(training_config.nb_epochs)
+

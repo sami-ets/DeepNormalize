@@ -128,16 +128,16 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 100
-  patience_discriminator: 1
-  patience_segmentation: 1
+  patience_discriminator: 5
+  patience_segmentation: 20
   variables:
     lambda: 0.5
     alpha: 1.0
 
 visdom:
-  server: "10.0.3.9"
+  server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_home_02"
+  env: "deepNormalize_exp_school"
 
 logger:
   path: "/tmp/ml/tests"
