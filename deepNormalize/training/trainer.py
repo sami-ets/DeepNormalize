@@ -87,7 +87,8 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.step()
             self._generator.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred.detach()),
+                                                            target[DATASET_ID])
             disc_loss.backward()
 
             if not on_single_device(self._run_config.devices):
