@@ -1,4 +1,6 @@
-SAMITorch>=0.1.15
+SAMITorch>=0.2.6
+torch-kerosene>=0.0.83
 pytorch-ignite>=0.2.0
 PyYAML>=5.1
 pytorch-ignite>=0.2.0
+matplotlib>=3.1.1

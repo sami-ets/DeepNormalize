@@ -33,16 +33,16 @@ except ImportError:
 
 class DiscriminatorTrainer(DeepNormalizeModelTrainer):
 
-    def __init__(self, config, callbacks, class_name):
-        super(DiscriminatorTrainer, self).__init__(config, callbacks, class_name)
-        self._saving_strategy = LossCheckpointStrategy(self, "discriminator")
+    def __init__(self, config, callbacks, class_name, visdom, running_config):
+        super(DiscriminatorTrainer, self).__init__(config, callbacks, class_name, visdom, running_config)
+        self._saving_strategy = LossCheckpointStrategy(self, "discriminator", "saves/")
 
     @property
     def saving_strategy(self):
         return self._saving_strategy
 
     def train_batch(self, batch: Batch, generated_batch: Batch):
-        # Measure discriminator's ability to classify real from generated samples
+        # Measure discriminator's ability to classify real from generated samples. 16 domain_0, 16 domain_1 samples.
         pred_X = self.predict(batch)
         loss_D_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_X.x, dim=1), batch.dataset_id.long())
         pred_X.to_device('cpu')
@@ -55,9 +55,9 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         fake_ids = torch.Tensor().new_full(size=(int(generated_batch.x.size(0) / 2),),
                                            fill_value=2,
                                            dtype=torch.int8,
-                                           device=self._config.running_config.device)
+                                           device=self._running_config.device)
         pred_G_X.dataset_id = fake_ids
-        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_G_X.x.detach(), dim=1),
+        loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(1.0 - pred_G_X.x.detach(), dim=1),
                                         pred_G_X.dataset_id.long())
         pred_G_X.to_device('cpu')
 
@@ -83,7 +83,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
         fake_ids = torch.Tensor().new_full(size=(int(batch.x.size(0) / 2),),
                                            fill_value=2,
                                            dtype=torch.int8,
-                                           device=self._config.running_config.device)
+                                           device=self._running_config.device)
         pred_G_X.dataset_id = fake_ids
         loss_D_G_X = self.evaluate_loss(torch.nn.functional.log_softmax(pred_G_X.x.detach(), dim=1),
                                         pred_G_X.dataset_id.long())
@@ -91,7 +91,7 @@ class DiscriminatorTrainer(DeepNormalizeModelTrainer):
 
         loss_D = ((loss_D_X + loss_D_G_X) / 2.0)
 
-        if self._config.running_config.is_distributed:
+        if self._running_config.is_distributed:
             loss_D = self.reduce_tensor(loss_D.data)
 
         return loss_D, pred_X, pred_G_X

@@ -15,7 +15,6 @@
 #  ==============================================================================
 
 import torch
-import numpy as np
 
 from samitorch.inputs.batch import Batch
 from samitorch.logger.plots import ImagesPlot, LossPlot
@@ -36,13 +35,13 @@ except ImportError:
 
 class GeneratorTrainer(DeepNormalizeModelTrainer):
 
-    def __init__(self, config, callbacks, discriminator_trainer, class_name):
-        super(GeneratorTrainer, self).__init__(config, callbacks, class_name)
-        self._saving_strategy = LossCheckpointStrategy(self, "generator")
+    def __init__(self, config, callbacks, discriminator_trainer, class_name, visdom, running_config):
+        super(GeneratorTrainer, self).__init__(config, callbacks, class_name, visdom, running_config)
+        self._saving_strategy = LossCheckpointStrategy(self, "generator", "saves/")
         self._discriminator_trainer = discriminator_trainer
         self._generated_images_plot = ImagesPlot(self._visdom, "Adapted Images")
-        self.mse_training_loss_plot = LossPlot(self._config.visdom, "MSE Training Loss")
-        self.mse_validation_loss_plot = LossPlot(self._config.visdom, "MSE Validation Loss")
+        self.mse_training_loss_plot = LossPlot(self._visdom, "MSE Training Loss")
+        self.mse_validation_loss_plot = LossPlot(self._visdom, "MSE Validation Loss")
         self.mse_training_gauge = RunningAverageGauge()
         self.mse_validation_gauge = RunningAverageGauge()
         self._slicer = AdaptedImageSlicer()
@@ -71,15 +70,18 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
         pred_D_G_X = self._discriminator_trainer.predict(generated_batch, detach=detach)
 
         # Generate random integers between 0 and 1, meaning it's coming from a real domain. Balanced (50% 0s, 50% 1s).
-        y = torch.Tensor().new_tensor(
-            data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
-            dtype=torch.int8,
-            device=self._config.running_config.device)
-
+        # y = torch.Tensor().new_tensor(
+        #     data=np.random.choice(a=2, size=(generated_batch.x.size(0),), replace=True, p=[0.5, 0.5]),
+        #     dtype=torch.int8,
+        #     device=self._config.running_config.device)
+        y = torch.Tensor().new_full(size=(generated_batch.x.size(0),),
+                                    fill_value=2,
+                                    dtype=torch.int8,
+                                    device=self._running_config.device)
         pred_D_G_X.dataset_id = y
 
         loss_D_G_X_as_X = self._discriminator_trainer.evaluate_loss(
-            torch.nn.functional.log_softmax(pred_D_G_X.x, dim=1),
+            torch.nn.functional.log_softmax(1.0 - pred_D_G_X.x, dim=1),
             pred_D_G_X.dataset_id.long())
 
         pred_D_G_X.to_device('cpu')
@@ -103,7 +105,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
     def train_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
-        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+        mse_loss = self.evaluate_loss(generated_batch.x, batch.x)
 
         with amp.scale_loss(mse_loss, self._config.optimizer, loss_id=0) as scaled_loss:
             scaled_loss.backward()
@@ -116,7 +118,7 @@ class GeneratorTrainer(DeepNormalizeModelTrainer):
 
     def validate_batch_as_autoencoder(self, batch):
         generated_batch = self.predict(batch)
-        mse_loss = torch.nn.functional.mse_loss(generated_batch.x, batch.x)
+        mse_loss = self.evaluate_loss(generated_batch.x, batch.x)
 
         return mse_loss, generated_batch
 

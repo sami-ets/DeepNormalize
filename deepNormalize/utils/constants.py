@@ -14,21 +14,11 @@
 #  limitations under the License.
 #  ==============================================================================
 
-import copy
+GENERATOR = 0
+SEGMENTER = 1
+DISCRIMINATOR = 2
 
-from samitorch.configs.configurations import Configuration
+IMAGE_TARGET = 0
+DATASET_ID = 1
 
-
-class ConfigAdapter(object):
-
-    def __init__(self, config: Configuration):
-        self._config = config
-
-    def adapt(self, model_position: int, criterion_position: int):
-        config = copy.copy(self._config)
-        config.criterion = self._config.criterion[criterion_position]
-        config.metric = self._config.metric[criterion_position]
-        config.model = self._config.model[model_position]
-        config.optimizer = self._config.optimizer[model_position]
-
-        return config
+EPSILON = 1e-15

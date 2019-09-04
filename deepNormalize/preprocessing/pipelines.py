@@ -19,11 +19,15 @@ import nibabel as nib
 import os
 import argparse
 import re
+import logging
+
+from functools import reduce
 
 from torchvision.transforms import transforms
 
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
     ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti
+from samitorch.inputs.images import Modalities, Image
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -53,8 +57,9 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
     """
     A iSEG data pre-processing pipeline. Remap classes to a [0, 3] ordering.
     """
+    LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir):
+    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
         """
         Pre-processing pipeline constructor.
 
@@ -63,6 +68,11 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
         """
         self._root_dir = root_dir
         self._transforms = None
+        self._input_modality = input_modality
+        self._output_modality = output_modality if output_modality is not None else input_modality
+        self._output_dir = output_dir
+
+        self.LOGGER.info("Changing class IDs of {} images in {}".format(input_modality, root_dir))
 
     def run(self, prefix: str = "Preprocessed_"):
         """
@@ -81,8 +91,13 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
 
 
 class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
+    """
+       A MRBrainS data pre-processing pipeline. Resample images to a Template size.
+    """
 
-    def __init__(self, root_dir: str):
+    LOGGER = logging.getLogger("PreProcessingPipeline")
+
+    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
         """
         Pre-processing pipeline constructor.
 
@@ -91,6 +106,11 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
         """
         self._root_dir = root_dir
         self._transforms = None
+        self._input_modality = input_modality
+        self._output_modality = output_modality if output_modality is not None else input_modality
+        self._output_dir = output_dir
+
+        self.LOGGER.info("Resampling of {} images in {}".format(input_modality, root_dir))
 
     def _run_images_transforms(self, prefix: str = "Preprocessed_"):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
@@ -132,42 +152,57 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
         self._run_images_transforms(prefix=prefix)
 
 
-class T1AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
+class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
+    LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir: str):
+    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
         self._root_dir = root_dir
-        self._normalized_shape = self._compute_normalized_shape(root_dir)
+        self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
         self._transforms = None
+        self._input_modality = input_modality
+        self._output_modality = output_modality if output_modality is not None else input_modality
+        self._output_dir = output_dir
 
-    def run(self, regexes, prefix="Normalized_"):
+        self.LOGGER.info("Computing the normalized shape of {} images in {}".format(input_modality, root_dir))
+        self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
+        self._transforms = transforms.Compose([ToNumpyArray(),
+                                               CropToContent(),
+                                               PadToShape(self._normalized_shape)])
+
+    def run(self, prefix="Normalized_"):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
-            for regex in regexes:
-                images = list(filter(re.compile(regex).search, files))
-                for file in images:
+            for file in list(filter(lambda path: Image.is_(self._input_modality, path), files)):
+                try:
+                    match = re.search(
+                        self._root_dir + '/(?P<file_name>.*)',
+                        os.path.join(root, file))
+
+                    self.LOGGER.info("Processing: {}".format(file))
+
+                    transformed_image = self._transforms(os.path.join(root, file))
                     header = self._get_image_header(os.path.join(root, file))
-                    self._transforms = transforms.Compose([ToNumpyArray(),
-                                                           CropToContent(),
-                                                           PadToShape(self._normalized_shape),
-                                                           ToNifti1Image(header),
-                                                           NiftiToDisk(os.path.join(root, prefix + file))])
-                    self._transforms(os.path.join(root, file))
+                    transforms_ = transforms.Compose([ToNifti1Image(header),
+                                                      NiftiToDisk(os.path.join(root, prefix + file))])
+                    transforms_(transformed_image)
 
-    @staticmethod
-    def _compute_normalized_shape(root_dir):
-        x_values = []
-        y_values = []
-        z_values = []
+                except Exception as e:
+                    self.LOGGER.warning(e)
 
-        for root, dirs, files in os.walk(os.path.join(root_dir)):
-            for file in files:
-                x_min, x_max, y_min, y_max, z_min, z_max = CropToContent.extract_content_bounding_box_from(
-                    ToNumpyArray()(os.path.join(root, file)))
+    def compute_normalized_shape_from_images_in(self, root_dir):
+        image_shapes = []
 
-                x_values.append(x_max - x_min)
-                y_values.append(y_max - y_min)
-                z_values.append(z_max - z_min)
+        for root, dirs, files in os.walk(root_dir):
+            for file in list(filter(lambda path: Image.is_(self._input_modality, path), files)):
+                try:
+                    self.LOGGER.debug("Computing the bounding box of {}".format(file))
+                    c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
+                        ToNumpyArray()(os.path.join(root, file)))
+                    image_shapes.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
+                except Exception as e:
+                    self.LOGGER.warning(
+                        "Error while computing the content bounding box for {} wiith error {}".format(file, e))
 
-        return 1, max(x_values), max(y_values), max(z_values)
+        return reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), image_shapes)
 
 
 if __name__ == "__main__":
