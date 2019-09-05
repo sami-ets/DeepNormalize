@@ -187,7 +187,7 @@ class ArgsParserType(object):
     MODEL_TRAINING = "training"
     BRAIN_EXTRACTION = "brain_extraction"
     PRE_PROCESSING_PIPELINE = "pre_processing"
-    PRE_TRAINED = "pre_trainedd"
+    PRE_TRAINED = "pre_trained"
 
 
 class ArgsParserFactory(object):
@@ -196,7 +196,7 @@ class ArgsParserFactory(object):
     def create_parser(parser_type):
         parser = ArgumentParser(description='DeepNormalize Training')
         parser.add_argument("--use_amp", dest="use_amp", action="store_true", default=True)
-        parser.add_argument("--amp-opt-level", dest="amp_opt_level", type=str, default="O0",
+        parser.add_argument("--amp-opt-level", dest="amp_opt_level", type=str, default="O1",
                             help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
         parser.add_argument("--num-workers", dest="num_workers", default=8, type=int,
                             help="Number of data loading workers for each dataloader object (default: 4).")

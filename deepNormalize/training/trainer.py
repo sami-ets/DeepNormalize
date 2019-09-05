@@ -22,7 +22,7 @@ from kerosene.config.trainers import RunConfiguration
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
 from kerosene.utils.distributed import on_single_device
-from kerosene.utils.tensors import flatten
+from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
@@ -99,28 +99,29 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_segmentation():
             seg_pred = self._segmenter.forward(gen_pred.detach())
-            seg_loss = self._segmenter.compute_train_loss(seg_pred, target[IMAGE_TARGET])
-            seg_loss.backward(retain_graph=True)
-            self._generator.optimizer.reset()
-            self._discriminator.optimizer.reset()
-            self._segmenter.optimizer.reset()
+            seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                          to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
+                                                                    num_classes=4))
+            seg_loss.backward()
 
             loss_D_G_X_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred, torch.Tensor().new_full(size=(inputs.size(0),),
                                                                                               fill_value=2,
                                                                                               dtype=torch.long,
                                                                                               device=inputs.device,
                                                                                               requires_grad=False))
-            gen_loss = self._training_config.variables.lambda_ * loss_D_G_X_as_X
+            gen_loss = self._training_config.variables["lambda"] * (loss_D_G_X_as_X + seg_loss.loss.data)
             gen_loss.backward()
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._segmenter)
                 self.average_gradients(self._generator)
+
             self._generator.step()
             self._segmenter.step()
             self._generator.zero_grad()
             self._segmenter.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred.detach()),
+                                                            target[DATASET_ID])
             disc_loss.backward()
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._discriminator)
@@ -186,14 +187,14 @@ class DeepNormalizeTrainer(Trainer):
     def merge_tensors(tensor_0, tensor_1):
         return torch.cat((tensor_0, tensor_1), dim=0)
 
+    def _should_activate_autoencoder(self):
+        return self._current_epoch < self._patience_discriminator
+
     def _should_activate_discriminator_loss(self):
-        return self._current_epoch >= self._patience_discriminator
+        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
 
     def _should_activate_segmentation(self):
         return self._current_epoch >= self._patience_segmentation
-
-    def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
 
     def on_epoch_begin(self):
         self._with_discriminator = self._should_activate_discriminator_loss()
