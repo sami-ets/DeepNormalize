@@ -63,9 +63,9 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.step()
             self._generator.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred.detach()),
-                                                            target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
+
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._discriminator)
 
@@ -87,8 +87,7 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.step()
             self._generator.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred.detach()),
-                                                            target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
 
             if not on_single_device(self._run_config.devices):
@@ -120,8 +119,7 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.zero_grad()
             self._segmenter.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(self.merge_tensors(inputs, gen_pred.detach()),
-                                                            target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._discriminator)
@@ -215,13 +213,30 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X_as_X = self._discriminator.compute_train_loss(ones - pred_D_G_X, target)
         return loss_D_G_X_as_X
 
-    def train_discriminator(self, inputs, target):
-        pred = self._discriminator.forward(inputs)
-        y_bad = torch.Tensor().new_full(size=(target.size(0),), fill_value=2, dtype=torch.long,
+    def train_discriminator(self, inputs, gen_pred, target):
+        # Forward on real data.
+        pred_D_X = self._discriminator.forward(inputs)
+        loss_D_X = self._discriminator.compute_train_loss(torch.nn.functional.softmax(pred_D_X, dim=1), target)
+
+        # Forward on fake data.
+        pred_D_G_X = self._discriminator.forward(gen_pred)
+
+        # Choose randomly 6 images (to balance with real domains).
+        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
+        pred_D_G_X = pred_D_G_X[choices]
+
+        # Forge bad class (K+1) tensor.
+        y_bad = torch.Tensor().new_full(size=(target.size(0) // 2,), fill_value=2, dtype=torch.long,
                                         device=target.device, requires_grad=False)
-        merged_targets = self.merge_tensors(target, y_bad)
-        disc_loss = self._discriminator.compute_train_loss(pred, merged_targets)
-        self._discriminator.compute_train_metric(pred, merged_targets)
+
+        # Compute loss on fake predictions with bad class tensor.
+        loss_D_G_X = self._discriminator.compute_train_loss(torch.nn.functional.softmax(pred_D_G_X, dim=1), y_bad)
+
+        disc_loss = (loss_D_X + loss_D_G_X) * 0.5
+
+        pred = self.merge_tensors(pred_D_X, pred_D_G_X)
+        target = self.merge_tensors(target, y_bad)
+        self._discriminator.compute_train_metric(pred, target)
         return disc_loss, pred
 
     def validate_discriminator(self, inputs, target):
