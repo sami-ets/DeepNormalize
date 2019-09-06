@@ -18,7 +18,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0005
+        lr: 0.00005
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -126,13 +126,14 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 16
-  nb_epochs: 100
+  batch_size: 12
+  nb_epochs: 1
   patience_discriminator: 5
-  patience_segmentation: 20
+  patience_segmentation: 7
   variables:
     lambda: 0.5
     alpha: 1.0
+    train_discriminator_every_n_steps: 10
 
 visdom:
   server: "pldelisle.no-ip.info"

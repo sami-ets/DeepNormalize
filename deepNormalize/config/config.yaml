@@ -133,6 +133,7 @@ training:
   variables:
     lambda: 0.5
     alpha: 1.0
+    train_discriminator_every_n_steps: 10
 
 visdom:
   server: "10.0.3.9"
