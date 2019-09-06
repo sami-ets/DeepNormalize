@@ -36,7 +36,8 @@ from torch.utils.data import DataLoader
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.events.preprocessor.console_preprocessor import PrintTrainLoss
-from deepNormalize.factories.CustomModelFactory import CustomModelFactory
+from deepNormalize.factories.customModelFactory import CustomModelFactory
+from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 
 ISEG_ID = 0
@@ -84,7 +85,8 @@ if __name__ == '__main__':
     validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrains_valid))
 
     # Initialize the model trainers
-    model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory())
+    model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
+                                                criterion_factory=CustomCriterionFactory())
     model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
 
     # Create loaders.
@@ -130,4 +132,3 @@ if __name__ == '__main__':
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .train(training_config.nb_epochs)
-
