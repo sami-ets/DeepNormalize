@@ -16,7 +16,7 @@
 
 from kerosene.nn.criterions import CriterionFactory
 
-from deepNormalize.nn.criterion import MeanLoss
+from deepNormalize.nn.criterions import MeanLoss
 
 
 class CustomCriterionFactory(CriterionFactory):

@@ -28,16 +28,19 @@ from torch.utils.data import DataLoader
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
+from deepNormalize.config.configurations import DatasetConfiguration
 
 
 class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
-                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration):
+                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration,
+                 dataset_config: DatasetConfiguration):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    model_trainers, run_config)
 
         self._training_config = training_config
+        self._dataset_config = dataset_config
         self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
         self._with_discriminator = None
@@ -50,6 +53,8 @@ class DeepNormalizeTrainer(Trainer):
 
     def train_step(self, inputs, target):
         disc_pred = None
+        seg_pred = torch.Tensor().new_zeros(
+            size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
         gen_pred = self._generator.forward(inputs)
 
@@ -79,8 +84,8 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_discriminator_loss():
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._training_config.variables["lambda"] * self._discriminator.compute_train_loss(
-                    gen_pred, None)
+                gen_loss = self._training_config.variables["lambda"] * (-1.0 * self._discriminator.compute_train_loss(
+                    gen_pred, None))
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
@@ -107,17 +112,33 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
-            seg_loss.backward()
+            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
+                seg_loss.backward(retain_graph=True)
+            else:
+                seg_loss.backward()
 
             if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
                 self.average_gradients(self._segmenter)
 
             self._segmenter.step()
             self._segmenter.zero_grad()
 
+            disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = (self._training_config.variables["lambda"] * self._discriminator.compute_train_loss(
-                    gen_pred.detach(), None)) + (self._training_config.variables["alpha"] * seg_loss.loss.data)
+                disc_loss.backward(retain_graph=True)
+            else:
+                disc_loss.backward()
+
+            self._discriminator.step()
+            self._discriminator.zero_grad()
+
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._discriminator)
+
+            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
+                gen_loss = -1.0 * self._discriminator.compute_train_loss(gen_pred, None)
+                gen_loss = self._training_config.variables["lambda"] * disc_loss + gen_loss + seg_loss
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
@@ -125,15 +146,9 @@ class DeepNormalizeTrainer(Trainer):
 
                 self._generator.step()
                 self._generator.zero_grad()
-
-            disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
-            disc_loss.backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
-
-            self._discriminator.step()
-            self._discriminator.zero_grad()
+            else:
+                self._generator.step()
+                self._generator.zero_grad()
 
             for p in self._discriminator.parameters():
                 p.data.clamp_(-(self._training_config.variables["clip_value"]),
@@ -144,7 +159,7 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Pie Plot"] = count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs, gen_pred)
+            self._update_plots(inputs, gen_pred, seg_pred)
 
         self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu())
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu())
@@ -166,17 +181,22 @@ class DeepNormalizeTrainer(Trainer):
                                                          num_classes=4))
             self.validate_wasserstein_discriminator(inputs, gen_pred, target[DATASET_ID])
 
-    def _update_plots(self, inputs, generator_predictions):
+    def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).cpu().numpy()
         generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
                                                                 align_corners=True).cpu().detach().numpy()
+        segmenter_predictions = torch.nn.functional.interpolate(
+            torch.argmax(torch.nn.functional.softmax(segmenter_predictions, dim=1), dim=1, keepdim=True).float(),
+            scale_factor=5, mode="nearest").cpu().detach().numpy()
 
         inputs = self._normalize(inputs)
         generator_predictions = self._normalize(generator_predictions)
+        segmenter_predictions = self._normalize(segmenter_predictions)
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
         self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
+        self._custom_variables["Segmented Batch"] = self._slicer.get_slice(SliceType.AXIAL, segmenter_predictions)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
@@ -282,7 +302,6 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_train_loss(pred_D_G_X, None)
 
         disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X))  # 1/3 because fake images represents 1/3 of total count.
-
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
@@ -342,7 +361,6 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_valid_loss(pred_D_G_X, None)
 
         disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X))  # 1/3 because fake images represents 1/3 of total count.
-
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 

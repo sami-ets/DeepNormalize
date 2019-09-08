@@ -103,7 +103,8 @@ if __name__ == '__main__':
 
     # Train with the training strategy.
     if run_config.local_rank == 0:
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config,
+                                       dataset_config) \
             .with_event_handler(console_logger, Event.ON_BATCH_END) \
             .with_event_handler(console_logger, Event.ON_BATCH_END, PrintTrainLoss()) \
             .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotAllModelStateVariables()) \
@@ -114,6 +115,9 @@ if __name__ == '__main__':
             .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
                                 PlotCustomVariables("Input Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4, "opts": {"title": "Input Patches"}})) \
+            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
+                                PlotCustomVariables("Segmented Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Segmented Patches"}})) \
             .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
                                 PlotCustomVariables("Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                                     params={
@@ -130,5 +134,6 @@ if __name__ == '__main__':
             .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
     else:
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config,
+                                       dataset_config) \
             .train(training_config.nb_epochs)
