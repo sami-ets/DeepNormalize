@@ -84,18 +84,9 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
-  MRBrainS:
-    path: "data/MRBrainS_2013"
-    validation_split: 0.2
-    training:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
-    validation:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
 
 training:
-  batch_size: 8
+  batch_size: 24
   nb_epochs: 100
   patience_segmentation: 5
   variables:
@@ -108,7 +99,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_school_generator_segmenter"
+  env: "deepNormalize_exp_home_iseg_only"
 
 logger:
   path: "/tmp/ml/tests"

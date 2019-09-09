@@ -25,10 +25,10 @@ from kerosene.utils.distributed import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
+from deepNormalize.config.configurations import DatasetConfiguration
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, EPSILON
-from deepNormalize.config.configurations import DatasetConfiguration
+from deepNormalize.utils.constants import GENERATOR, SEGMENTER, IMAGE_TARGET, EPSILON
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -42,7 +42,6 @@ class DeepNormalizeTrainer(Trainer):
         self._training_config = training_config
         self._dataset_config = dataset_config
         self._patience_segmentation = training_config.patience_segmentation
-        self._generator_should_be_autoencoder = None
         self._slicer = AdaptedImageSlicer()
         self._generator = self._model_trainers[GENERATOR]
         self._segmenter = self._model_trainers[SEGMENTER]

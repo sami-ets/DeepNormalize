@@ -23,8 +23,8 @@ from kerosene.config.parsers import YamlConfigurationParser
 from kerosene.config.trainers import RunConfiguration
 from kerosene.dataloaders.factories import DataloaderFactory
 from kerosene.events import Event
-from kerosene.events.handlers.console import ConsoleLogger
 from kerosene.events.handlers.checkpoints import ModelCheckpointIfBetter
+from kerosene.events.handlers.console import ConsoleLogger
 from kerosene.events.handlers.visdom.config import VisdomConfiguration
 from kerosene.events.handlers.visdom.data import VisdomData, PlotFrequency
 from kerosene.events.handlers.visdom.visdom import VisdomLogger
@@ -32,12 +32,11 @@ from kerosene.events.preprocessors.visdom import PlotAllModelStateVariables, Plo
 from kerosene.training.trainers import ModelTrainerFactory
 from samitorch.inputs.datasets import PatchDatasetFactory
 from samitorch.inputs.utils import patch_collate
-from torch.utils.data import DataLoader
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.events.preprocessor.console_preprocessor import PrintTrainLoss
-from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
+from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 
 ISEG_ID = 0
@@ -70,29 +69,15 @@ if __name__ == '__main__':
         test_size=dataset_config[0].validation_split,
         keep_centered_on_foreground=True)
 
-    MRBrainS_train, MRBrains_valid = PatchDatasetFactory.create_train_test(
-        source_dir=dataset_config[1].path + "/TrainingData/Source",
-        target_dir=dataset_config[1].path + "/TrainingData/Target",
-        dataset_id=MRBRAINS_ID,
-        patch_size=dataset_config[1].training_patch_size,
-        step=dataset_config[1].training_patch_step,
-        test_size=dataset_config[1].validation_split,
-        keep_centered_on_foreground=True,
-        modality=args.modality)
-
-    # Concat datasets.
-    training_datasets = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
-    validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrains_valid))
-
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory())
     model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
 
     # Create loaders.
-    train_loader, valid_loader = DataloaderFactory(training_datasets, validation_datasets).create(run_config,
-                                                                                                  training_config,
-                                                                                                  collate_fn=patch_collate)
+    train_loader, valid_loader = DataloaderFactory(iSEG_train, iSEG_valid).create(run_config,
+                                                                                  training_config,
+                                                                                  collate_fn=patch_collate)
 
     # Initialize the loggers.
     if run_config.local_rank == 0:
