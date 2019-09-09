@@ -41,18 +41,18 @@ class SegmentationSlicer(object):
 
 
 class AdaptedImageSlicer(object):
+    DEFAULT_COLOR_MAP = plt.get_cmap('jet')
 
-    def __init__(self):
-        pass
+    def __init__(self, colormap=None):
+        self._colormap = colormap if colormap is not None else self.DEFAULT_COLOR_MAP
 
-    @staticmethod
-    def get_slice(slice_type, image):
+    def get_slice(self, slice_type, image):
         if slice_type == SliceType.SAGITAL:
-            slice = np.rot90(image[:, :, int(image.shape[2] / 2), :, :].transpose(2, 3), 2)
+            slice = self._colormap(np.rot90(image[:, :, int(image.shape[2] / 2), :, :].transpose(2, 3), 2))
         elif slice_type == SliceType.CORONAL:
-            slice = np.rot90(image[:, :, :, int(image.shape[3] / 2), :].transpose(2, 3), 2)
+            slice = self._colormap(np.rot90(image[:, :, :, int(image.shape[3] / 2), :].transpose(2, 3), 2))
         elif slice_type == SliceType.AXIAL:
-            slice = image[:, :, :, :, int(image.shape[4] / 2)]
+            slice = self._colormap(image[:, :, :, :, int(image.shape[4] / 2)])
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
