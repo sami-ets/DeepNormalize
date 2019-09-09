@@ -28,16 +28,16 @@ class SegmentationSlicer(object):
     def get_colored_slice(self, slice_type, seg_map):
         if slice_type == SliceType.SAGITAL:
             colored_slice = self._colormap(
-                np.rot90(seg_map[int(seg_map.shape[0] / 2), :, :].transpose(0, 1).numpy(), 2))
+                np.rot90(seg_map[:, :, int(seg_map.shape[2] / 2), :, :].squeeze(1), 2))
         elif slice_type == SliceType.CORONAL:
             colored_slice = self._colormap(
-                np.rot90(seg_map[:, int(seg_map.shape[1] / 2), :].transpose(0, 1).numpy(), 2))
+                np.rot90(seg_map[:, :, : int(seg_map.shape[3] / 2), :].squeeze(1), 2))
         elif slice_type == SliceType.AXIAL:
-            colored_slice = self._colormap(seg_map[:, :, int(seg_map.shape[2] / 2)].transpose(0, 1).numpy())
+            colored_slice = self._colormap(seg_map[:, :, :, :, int(seg_map.shape[2] / 2)]).squeeze(1)
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
-        return colored_slice
+        return np.transpose(np.uint8(colored_slice[:, :, :, :3]), axes=[0, 3, 1, 2])
 
 
 class AdaptedImageSlicer(object):
@@ -48,9 +48,9 @@ class AdaptedImageSlicer(object):
     @staticmethod
     def get_slice(slice_type, image):
         if slice_type == SliceType.SAGITAL:
-            slice = np.rot90(image[:, :, int(image.shape[2] / 2), :, :].transpose(2, 3), 2)
+            slice = np.rot90(image[:, :, int(image.shape[2] / 2), :, :], 2)
         elif slice_type == SliceType.CORONAL:
-            slice = np.rot90(image[:, :, :, int(image.shape[3] / 2), :].transpose(2, 3), 2)
+            slice = np.rot90(image[:, :, :, int(image.shape[3] / 2), :], 2)
         elif slice_type == SliceType.AXIAL:
             slice = image[:, :, :, :, int(image.shape[4] / 2)]
         else:

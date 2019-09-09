@@ -26,7 +26,7 @@ from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.logger.image_slicer import AdaptedImageSlicer
+from deepNormalize.logger.image_slicer import AdaptedImageSlicer, SegmentationSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 from deepNormalize.config.configurations import DatasetConfiguration
 
@@ -43,10 +43,8 @@ class DeepNormalizeTrainer(Trainer):
         self._dataset_config = dataset_config
         self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
-        self._with_discriminator = None
-        self._with_segmentation = None
-        self._generator_should_be_autoencoder = None
         self._slicer = AdaptedImageSlicer()
+        self._seg_slicer = SegmentationSlicer()
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
@@ -196,7 +194,8 @@ class DeepNormalizeTrainer(Trainer):
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
         self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
-        self._custom_variables["Segmented Batch"] = self._slicer.get_slice(SliceType.AXIAL, segmenter_predictions)
+        self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                                                       segmenter_predictions)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
