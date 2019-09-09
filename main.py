@@ -127,10 +127,6 @@ if __name__ == '__main__':
                                 PlotCustomVariables("Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                                     params={
                                                         "opts": {"title": "Inputs Intensity Histogram", "nbins": 50}})) \
-            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
-                                PlotCustomVariables("Pie Plot", PlotType.PIE_PLOT, params={"opts": {
-                                    "title": "Classification hit per classes",
-                                    "legend": ["iSEG", "MRBrainS", "Fake Class"]}})) \
             .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
     else:

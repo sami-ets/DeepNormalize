@@ -73,37 +73,6 @@ models:
         reduction: "mean"
         ignore_index: 0
         average: !!null
-  Discriminator:
-    name: "ResNet3D"
-    type: "ResNet18"
-    params:
-      in_channels: 1
-      out_channels: 3
-      num_groups: 8
-      conv_groups: 1
-      width_per_group: 64
-      padding: !!null
-      activation: "ReLU"
-      zero_init_residual: False
-      replace_stride_with_dilation: !!null
-    optimizer:
-      type: "FusedSGD"
-      params:
-        lr: 0.001
-        momentum: 0.9
-        weight_decay: 0.1
-    scheduler:
-      type: "ReduceLROnPlateau"
-      params:
-        mode: "min"
-        factor: 0.1
-        patience: 3
-    criterion:
-      type: "CrossEntropyLoss"
-      params:
-    metric:
-      type: "Accuracy"
-      params:
 
 dataset:
   iSEG:
@@ -128,19 +97,17 @@ dataset:
 training:
   batch_size: 12
   nb_epochs: 100
-  patience_discriminator: 5
-  patience_segmentation: 7
+  patience_segmentation: 3
   variables:
     lambda: 0.5
     alpha: 1.0
-    train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
     clip_value: 0.01
 
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_school"
+  env: "deepNormalize_exp_school_generator_segmenter"
 
 logger:
   path: "/tmp/ml/tests"
