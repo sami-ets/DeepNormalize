@@ -110,6 +110,9 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
+            self._segmenter.compute_train_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
+
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 seg_loss.backward(retain_graph=True)
             else:
@@ -177,6 +180,9 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
+            self._segmenter.compute_valid_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
+
             self.validate_wasserstein_discriminator(inputs, gen_pred, target[DATASET_ID])
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
