@@ -67,6 +67,8 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
+            self._segmenter.compute_train_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
             seg_loss.backward()
 
             if not on_single_device(self._run_config.devices):
@@ -96,6 +98,8 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
+            self._segmenter.compute_valid_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
