@@ -25,10 +25,10 @@ from kerosene.utils.distributed import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
+from deepNormalize.config.configurations import DatasetConfiguration
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
-from deepNormalize.config.configurations import DatasetConfiguration
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -43,9 +43,6 @@ class DeepNormalizeTrainer(Trainer):
         self._dataset_config = dataset_config
         self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
-        self._with_discriminator = None
-        self._with_segmentation = None
-        self._generator_should_be_autoencoder = None
         self._slicer = AdaptedImageSlicer()
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
@@ -117,8 +114,8 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
-            self._segmenter.compute_train_metric(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1),
-                                                 target[IMAGE_TARGET])
+            self._segmenter.compute_train_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 seg_loss.backward(retain_graph=True)
@@ -183,8 +180,8 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
-            self._segmenter.compute_valid_metric(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1),
-                                                 target[IMAGE_TARGET])
+            self._segmenter.compute_valid_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
@@ -238,7 +235,7 @@ class DeepNormalizeTrainer(Trainer):
         return self._current_epoch >= self._patience_segmentation
 
     def on_epoch_begin(self):
-        self._with_discriminator = self._should_activate_discriminator_loss()
+        pass
 
     def on_epoch_end(self):
         pass
