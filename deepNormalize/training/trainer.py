@@ -113,10 +113,13 @@ class DeepNormalizeTrainer(Trainer):
                               self._training_config.variables["clip_value"])
 
         if self._should_activate_segmentation():
-            seg_pred = self._segmenter.forward(gen_pred.detach())
+            seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
+            self._segmenter.compute_train_metric(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1),
+                                                 target[IMAGE_TARGET])
+
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 seg_loss.backward(retain_graph=True)
             else:
@@ -130,10 +133,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                disc_loss.backward(retain_graph=True)
-            else:
-                disc_loss.backward()
+            disc_loss.backward()
 
             self._discriminator.step()
             self._discriminator.zero_grad()
@@ -148,21 +148,15 @@ class DeepNormalizeTrainer(Trainer):
                                                                                   fill_value=2,
                                                                                   dtype=torch.long,
                                                                                   device=inputs.device,
-                                                                                  requires_grad=False))) + seg_loss
+                                                                                  requires_grad=False)))
+                gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss, seg_loss.loss))
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._generator)
 
-                self._generator.step()
-                self._generator.zero_grad()
-            else:
-                self._generator.step()
-                self._generator.zero_grad()
-
-            for p in self._discriminator.parameters():
-                p.data.clamp_(-(self._training_config.variables["clip_value"]),
-                              self._training_config.variables["clip_value"])
+            self._generator.step()
+            self._generator.zero_grad()
 
         if disc_pred is not None:
             count = self.count(torch.argmax(disc_pred, dim=1), 3)
@@ -189,6 +183,8 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
+            self._segmenter.compute_valid_metric(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1),
+                                                 target[IMAGE_TARGET])
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
