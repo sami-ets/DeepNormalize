@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader
 
 from deepNormalize.config.configurations import DatasetConfiguration
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.logger.image_slicer import AdaptedImageSlicer
+from deepNormalize.logger.image_slicer import SegmentationSlicer, AdaptedImageSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, IMAGE_TARGET, EPSILON
 
 
@@ -42,6 +42,7 @@ class DeepNormalizeTrainer(Trainer):
         self._training_config = training_config
         self._dataset_config = dataset_config
         self._patience_segmentation = training_config.patience_segmentation
+        self._seg_slicer = SegmentationSlicer()
         self._slicer = AdaptedImageSlicer()
         self._generator = self._model_trainers[GENERATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
@@ -115,8 +116,10 @@ class DeepNormalizeTrainer(Trainer):
         segmenter_predictions = self._normalize(segmenter_predictions)
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
-        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
-        self._custom_variables["Segmented Batch"] = self._slicer.get_slice(SliceType.AXIAL, segmenter_predictions)
+        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                      generator_predictions)
+        self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                                                       segmenter_predictions)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
