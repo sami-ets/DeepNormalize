@@ -76,10 +76,6 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.step()
             self._discriminator.zero_grad()
 
-            for p in self._discriminator.parameters():
-                p.data.clamp_(-(self._training_config.variables["clip_value"]),
-                              self._training_config.variables["clip_value"])
-
         if self._should_activate_discriminator_loss():
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._training_config.variables["lambda"] * \
@@ -105,10 +101,6 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator.step()
             self._discriminator.zero_grad()
-
-            for p in self._discriminator.parameters():
-                p.data.clamp_(-(self._training_config.variables["clip_value"]),
-                              self._training_config.variables["clip_value"])
 
         if self._should_activate_segmentation():
             seg_pred = self._segmenter.forward(gen_pred)
@@ -181,6 +173,9 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
+            self._segmenter.compute_valid_metric(
+                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
+
             self._segmenter.compute_valid_metric(
                 torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
