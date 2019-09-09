@@ -99,7 +99,7 @@ models:
         factor: 0.1
         patience: 3
     criterion:
-      type: "MeanLoss"
+      type: "CrossEntropyLoss"
       params:
     metric:
       type: "Accuracy"
@@ -140,7 +140,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_Wasserstein"
+  env: "deepNormalize_exp_home_GAN"
 
 logger:
   path: "/tmp/ml/tests"
