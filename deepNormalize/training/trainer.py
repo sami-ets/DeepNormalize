@@ -170,8 +170,6 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                          num_classes=4))
-            self._segmenter.compute_valid_metric(
-                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
 
             self._segmenter.compute_valid_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                  torch.squeeze(target[IMAGE_TARGET], dim=1).long())
@@ -187,9 +185,7 @@ class DeepNormalizeTrainer(Trainer):
             torch.argmax(torch.nn.functional.softmax(segmenter_predictions, dim=1), dim=1, keepdim=True).float(),
             scale_factor=5, mode="nearest").cpu().detach().numpy()
 
-        target = torch.nn.functional.interpolate(
-            torch.argmax(torch.nn.functional.softmax(target, dim=1), dim=1, keepdim=True).float(),
-            scale_factor=5, mode="nearest").cpu().detach().numpy()
+        target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").cpu().detach().numpy()
 
         inputs = self._normalize(inputs)
         generator_predictions = self._normalize(generator_predictions)
@@ -201,7 +197,7 @@ class DeepNormalizeTrainer(Trainer):
         self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                        segmenter_predictions)
         self._custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                                       segmenter_predictions)
+                                                                                                       target)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
