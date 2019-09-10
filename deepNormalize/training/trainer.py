@@ -26,7 +26,7 @@ from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.logger.image_slicer import AdaptedImageSlicer, SegmentationSlicer
+from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 
 
