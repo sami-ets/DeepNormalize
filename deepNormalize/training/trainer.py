@@ -307,6 +307,6 @@ class DeepNormalizeTrainer(Trainer):
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
-        self._discriminator.compute_valid_loss(pred, target)
+        self._discriminator.compute_valid_metric(pred, target)
 
         return disc_loss, pred
