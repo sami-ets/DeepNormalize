@@ -54,6 +54,10 @@ class DeepNormalizeTrainer(Trainer):
         gen_pred = self._generator.forward(inputs)
 
         if self._should_activate_autoencoder():
+
+            self._generator.zero_grad()
+            self._discriminator.zero_grad()
+
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._generator.compute_train_loss(gen_pred, inputs)
                 gen_loss.backward()
@@ -62,7 +66,6 @@ class DeepNormalizeTrainer(Trainer):
                     self.average_gradients(self._generator)
 
                 self._generator.step()
-                self._generator.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
@@ -71,9 +74,11 @@ class DeepNormalizeTrainer(Trainer):
                 self.average_gradients(self._discriminator)
 
             self._discriminator.step()
-            self._discriminator.zero_grad()
 
         if self._should_activate_discriminator_loss():
+            self._generator.zero_grad()
+            self._discriminator.zero_grad()
+
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._training_config.variables["lambda"] * \
                            (self.evaluate_loss_D_G_X_as_X(gen_pred,
@@ -89,6 +94,7 @@ class DeepNormalizeTrainer(Trainer):
 
                 self._generator.step()
                 self._generator.zero_grad()
+                self._discriminator.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
@@ -97,9 +103,12 @@ class DeepNormalizeTrainer(Trainer):
                 self.average_gradients(self._discriminator)
 
             self._discriminator.step()
-            self._discriminator.zero_grad()
 
         if self._should_activate_segmentation():
+            self._generator.zero_grad()
+            self._discriminator.zero_grad()
+            self._segmenter.zero_grad()
+
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
@@ -117,7 +126,6 @@ class DeepNormalizeTrainer(Trainer):
                 self.average_gradients(self._segmenter)
 
             self._segmenter.step()
-            self._segmenter.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
@@ -143,7 +151,6 @@ class DeepNormalizeTrainer(Trainer):
                     self.average_gradients(self._generator)
 
             self._generator.step()
-            self._generator.zero_grad()
 
         if disc_pred is not None:
             count = self.count(torch.argmax(disc_pred, dim=1), 3)
