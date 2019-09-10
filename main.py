@@ -23,21 +23,21 @@ from kerosene.config.parsers import YamlConfigurationParser
 from kerosene.config.trainers import RunConfiguration
 from kerosene.dataloaders.factories import DataloaderFactory
 from kerosene.events import Event
-from kerosene.events.handlers.console import ConsoleLogger
 from kerosene.events.handlers.checkpoints import ModelCheckpointIfBetter
-from kerosene.events.handlers.visdom.config import VisdomConfiguration
-from kerosene.events.handlers.visdom.data import VisdomData, PlotFrequency
-from kerosene.events.handlers.visdom.visdom import VisdomLogger
-from kerosene.events.preprocessors.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotType
+from kerosene.events.handlers.console import PrintTrainingStatus
+from kerosene.events.handlers.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotGradientFlow
+from kerosene.loggers.visdom import PlotType, PlotFrequency
+from kerosene.loggers.visdom.config import VisdomConfiguration
+from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from samitorch.inputs.datasets import PatchDatasetFactory
 from samitorch.inputs.utils import patch_collate
 from torch.utils.data import DataLoader
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
-from deepNormalize.events.preprocessor.console_preprocessor import PrintTrainLoss
-from deepNormalize.factories.customModelFactory import CustomModelFactory
+from deepNormalize.events.handlers.console import PrintTrainLoss
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
+from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 
 ISEG_ID = 0
@@ -97,43 +97,43 @@ if __name__ == '__main__':
     # Initialize the loggers.
     if run_config.local_rank == 0:
         visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
-        console_logger = ConsoleLogger()
         visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
                                  config_html))
 
     # Train with the training strategy.
     if run_config.local_rank == 0:
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config,
-                                       dataset_config) \
-            .with_event_handler(console_logger, Event.ON_BATCH_END) \
-            .with_event_handler(console_logger, Event.ON_BATCH_END, PrintTrainLoss()) \
-            .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotAllModelStateVariables()) \
-            .with_event_handler(visdom_logger, Event.ON_EPOCH_END, PlotLR()) \
-            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
-                                PlotCustomVariables("Generated Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Generated Patches"}})) \
-            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
-                                PlotCustomVariables("Input Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Input Patches"}})) \
-            .with_event_handler(visdom_logger, Event.ON_100_TRAIN_STEPS,
-                                PlotCustomVariables("Segmented Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Segmented Patches"}})) \
-            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
-                                PlotCustomVariables("Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+            .with_event_handler(PrintTrainingStatus(), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainLoss(), Event.ON_BATCH_END) \
+            .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Generated Patches"}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Input Patches"}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Segmented Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Segmented Patches"}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
+                                                    params={"nrow": 4, "opts": {"title": "Ground Truth Patches"}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
+                                params={"opts": {"title": "Generated Intensity Histogram",
+                                                 "nbins": 50}}), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                                     params={
-                                                        "opts": {"title": "Generated Intensity Histogram",
-                                                                 "nbins": 50}})) \
-            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
-                                PlotCustomVariables("Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                                    params={
-                                                        "opts": {"title": "Inputs Intensity Histogram", "nbins": 50}})) \
-            .with_event_handler(visdom_logger, Event.ON_TRAIN_BATCH_END,
-                                PlotCustomVariables("Pie Plot", PlotType.PIE_PLOT, params={"opts": {
-                                    "title": "Classification hit per classes",
-                                    "legend": ["iSEG", "MRBrainS", "Fake Class"]}})) \
-            .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
+                                                        "opts": {"title": "Inputs Intensity Histogram", "nbins": 50}}),
+                                Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
+                                                    params={"opts": {"title": "Classification hit per classes",
+                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}}),
+                                Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotGradientFlow(visdom_logger, every=10), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
+        # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
     else:
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config,
-                                       dataset_config) \
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .train(training_config.nb_epochs)

@@ -25,7 +25,6 @@ from kerosene.utils.distributed import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
-from deepNormalize.config.configurations import DatasetConfiguration
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.logger.image_slicer import AdaptedImageSlicer, SegmentationSlicer
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
@@ -34,13 +33,11 @@ from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, I
 class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
-                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration,
-                 dataset_config: DatasetConfiguration):
+                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    model_trainers, run_config)
 
         self._training_config = training_config
-        self._dataset_config = dataset_config
         self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
@@ -107,8 +104,8 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                                     num_classes=4))
-            self._segmenter.compute_train_metric(
-                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
+            self._segmenter.compute_train_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                 torch.squeeze(target[IMAGE_TARGET], dim=1).long())
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 seg_loss.backward(retain_graph=True)
@@ -153,7 +150,7 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Pie Plot"] = count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs, gen_pred, seg_pred)
+            self._update_plots(inputs, gen_pred, seg_pred, target[IMAGE_TARGET])
 
         self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu())
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu())
@@ -176,11 +173,12 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_metric(
                 torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
 
-            self._segmenter.compute_valid_metric(
-                torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=True), target[IMAGE_TARGET])
+            self._segmenter.compute_valid_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                 torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
-    def _update_plots(self, inputs, generator_predictions, segmenter_predictions):
+    def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).cpu().numpy()
         generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
@@ -189,14 +187,21 @@ class DeepNormalizeTrainer(Trainer):
             torch.argmax(torch.nn.functional.softmax(segmenter_predictions, dim=1), dim=1, keepdim=True).float(),
             scale_factor=5, mode="nearest").cpu().detach().numpy()
 
+        target = torch.nn.functional.interpolate(
+            torch.argmax(torch.nn.functional.softmax(target, dim=1), dim=1, keepdim=True).float(),
+            scale_factor=5, mode="nearest").cpu().detach().numpy()
+
         inputs = self._normalize(inputs)
         generator_predictions = self._normalize(generator_predictions)
         segmenter_predictions = self._normalize(segmenter_predictions)
+        target = self._normalize(target)
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
         self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
         self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                        segmenter_predictions)
+        self._custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                                                                       segmenter_predictions)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
