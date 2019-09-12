@@ -143,7 +143,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_school_GAN_02"
+  env: "deepNormalize_exp_home_GAN_02"
 
 logger:
   path: "/tmp/ml/tests"
