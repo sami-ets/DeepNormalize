@@ -17,6 +17,7 @@ models:
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "FusedSGD"
+      max_grad_norm: !!null
       params:
         lr: 0.00005
         momentum: 0.9
@@ -51,8 +52,9 @@ models:
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "FusedSGD"
+      max_grad_norm: 5.0
       params:
-        lr: 0.001
+        lr: 0.0005
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -65,7 +67,7 @@ models:
       type: "DiceLoss"
       params:
         reduction: "mean"
-        ignore_index: 0
+        ignore_index: -100
     metric:
       type: "Dice"
       params:
@@ -88,8 +90,9 @@ models:
       replace_stride_with_dilation: !!null
     optimizer:
       type: "FusedSGD"
+      max_grad_norm: 5.0
       params:
-        lr: 0.001
+        lr: 0.00005
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -126,21 +129,21 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 12
+  batch_size: 8
   nb_epochs: 100
-  patience_discriminator: 5
-  patience_segmentation: 7
+  patience_discriminator: 3
+  patience_segmentation: 4
   variables:
     lambda: 0.5
-    alpha: 1.0
+    alpha: 0.5
+    clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
-    clip_value: 0.01
 
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_school"
+  env: "deepNormalize_exp_home_GAN_02"
 
 logger:
   path: "/tmp/ml/tests"

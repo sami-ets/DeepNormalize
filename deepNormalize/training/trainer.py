@@ -21,7 +21,7 @@ import torch
 from kerosene.config.trainers import RunConfiguration
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
-from kerosene.utils.distributed import on_single_device
+from kerosene.utils.devices import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
 from torch.utils.data import DataLoader
 
