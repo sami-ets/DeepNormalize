@@ -62,16 +62,10 @@ class DeepNormalizeTrainer(Trainer):
                 gen_loss = self._generator.compute_train_loss(gen_pred, inputs)
                 gen_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
-
                 self._generator.step()
 
             disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
 
             self._discriminator.step()
 
@@ -93,18 +87,12 @@ class DeepNormalizeTrainer(Trainer):
                                                                                   requires_grad=False)))
                 gen_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
-
                 self._generator.step()
                 self._generator.zero_grad()
                 self._discriminator.zero_grad()
 
             disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
 
             self._discriminator.step()
 
@@ -129,10 +117,6 @@ class DeepNormalizeTrainer(Trainer):
             else:
                 seg_loss.backward()
 
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._generator)
-                self.average_gradients(self._segmenter)
-
             self._segmenter.step()
 
             disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
@@ -145,9 +129,6 @@ class DeepNormalizeTrainer(Trainer):
                 p.data.clamp_(-(self._training_config.variables["clip_value"]),
                               self._training_config.variables["clip_value"])
 
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
-
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._training_config.variables["lambda"] * \
                            (self.evaluate_loss_D_G_X_as_X(gen_pred,
@@ -158,9 +139,6 @@ class DeepNormalizeTrainer(Trainer):
                                                                                   requires_grad=False)))
                 gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss.half(), seg_loss.loss.half()))
                 gen_loss.backward()
-
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
 
             self._generator.step()
 
@@ -255,7 +233,10 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
-        pass
+        if not on_single_device(self._run_config.devices):
+            self.average_gradients(self._generator)
+            self.average_gradients(self._discriminator)
+            self.average_gradients(self._segmenter)
 
     @staticmethod
     def count(tensor, n_classes):
