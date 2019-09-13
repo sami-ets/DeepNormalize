@@ -233,10 +233,19 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
-        if not on_single_device(self._run_config.devices):
-            self.average_gradients(self._generator)
-            self.average_gradients(self._discriminator)
-            self.average_gradients(self._segmenter)
+        if self._should_activate_autoencoder():
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
+                self.average_gradients(self._discriminator)
+        elif self._should_activate_discriminator_loss():
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
+                self.average_gradients(self._discriminator)
+        else:
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
+                self.average_gradients(self._discriminator)
+                self.average_gradients(self._segmenter)
 
     @staticmethod
     def count(tensor, n_classes):
