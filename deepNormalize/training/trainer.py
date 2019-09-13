@@ -144,7 +144,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                                   dtype=torch.long,
                                                                                   device=inputs.device,
                                                                                   requires_grad=False)))
-                gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss, seg_loss.loss))
+                gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss.half(), seg_loss.loss.half()))
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
