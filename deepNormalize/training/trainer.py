@@ -281,8 +281,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 6 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
-        pred_D_G_X = pred_D_G_X[choices]
+        choices = torch.randperm(pred_D_G_X.size(0))
+        pred_D_G_X = pred_D_G_X[choices[:]]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
@@ -310,8 +310,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 6 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
-        pred_D_G_X = pred_D_G_X[choices]
+        choices = torch.randperm(pred_D_G_X.size(0))
+        pred_D_G_X = pred_D_G_X[choices[:]]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
