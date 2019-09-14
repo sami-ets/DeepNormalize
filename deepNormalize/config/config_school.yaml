@@ -131,8 +131,8 @@ dataset:
 training:
   batch_size: 8
   nb_epochs: 100
-  patience_discriminator: 0
-  patience_segmentation: 0
+  patience_discriminator: 3
+  patience_segmentation: 5
   variables:
     lambda: 0.5
     alpha: 0.5
@@ -143,7 +143,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_home_WGAN"
+  env: "deepNormalize_exp_school_Lab_WGAN"
 
 logger:
   path: "/tmp/ml/tests"

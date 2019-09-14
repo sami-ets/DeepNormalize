@@ -108,17 +108,21 @@ if __name__ == '__main__':
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Generated Patches"}},
+                                                    params={"nrow": 4, "opts": {"title": "Generated Patches",
+                                                                                "store_history": True}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Input Patches"}},
+                                                    params={"nrow": 4,
+                                                            "opts": {"title": "Input Patches", "store_history": True}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Segmented Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Segmented Patches"}},
+                                                    params={"nrow": 4, "opts": {"title": "Segmented Patches",
+                                                                                "store_history": True}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Ground Truth Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
+                                params={"nrow": 4, "opts": {"title": "Ground Truth Patches", "store_history": True}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",

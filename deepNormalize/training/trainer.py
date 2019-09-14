@@ -78,13 +78,16 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._training_config.variables["lambda"] * \
-                           (self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                          torch.Tensor().new_full(size=(inputs.size(0),),
-                                                                                  fill_value=2,
-                                                                                  dtype=torch.long,
-                                                                                  device=inputs.device,
-                                                                                  requires_grad=False)))
+                gen_loss = self._generator.compute_train_loss(gen_pred, inputs)
+
+                disc_loss_as_X = (self.evaluate_loss_D_G_X_as_X(gen_pred,
+                                                                torch.Tensor().new_full(
+                                                                    size=(inputs.size(0),),
+                                                                    fill_value=2,
+                                                                    dtype=torch.long,
+                                                                    device=inputs.device,
+                                                                    requires_grad=False)))
+                gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss.half(), disc_loss_as_X.loss.half()))
                 gen_loss.backward()
 
                 self._generator.step()
@@ -149,7 +152,10 @@ class DeepNormalizeTrainer(Trainer):
         if self.current_train_step % 100 == 0:
             self._update_plots(inputs, gen_pred, seg_pred, target[IMAGE_TARGET])
 
-        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu())
+        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu()) if not torch.isnan(
+            gen_pred).any() or torch.isinf(gen_pred).any() else flatten(torch.Tensor().new_full(gen_pred.size(), 0,
+                                                                                                dtype=gen_pred.dtype,
+                                                                                                device="cpu"))
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu())
 
     def validate_step(self, inputs, target):
