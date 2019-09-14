@@ -20,7 +20,7 @@ from deepNormalize.inputs.images import SliceType
 
 
 class SegmentationSlicer(object):
-    DEFAULT_COLOR_MAP = plt.get_cmap('jet')
+    DEFAULT_COLOR_MAP = plt.get_cmap('viridis')
 
     def __init__(self, colormap=None):
         self._colormap = colormap if colormap is not None else self.DEFAULT_COLOR_MAP
@@ -37,7 +37,7 @@ class SegmentationSlicer(object):
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
-        return np.transpose(np.uint8(colored_slice[:, :, :, :3]), axes=[0, 3, 1, 2])
+        return np.transpose(np.uint8(colored_slice[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
 
 
 class AdaptedImageSlicer(object):

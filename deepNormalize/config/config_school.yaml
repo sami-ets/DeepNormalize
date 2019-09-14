@@ -135,7 +135,7 @@ training:
   patience_segmentation: 4
   variables:
     lambda: 0.5
-    alpha: 0.5
+    alpha: 0.75
     clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
@@ -143,7 +143,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_02"
+  env: "deepNormalize_exp_school_GAN"
 
 logger:
   path: "/tmp/ml/tests"
