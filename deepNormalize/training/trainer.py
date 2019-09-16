@@ -80,13 +80,16 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._training_config.variables["lambda"] * \
-                           (self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                          torch.Tensor().new_full(size=(inputs.size(0),),
-                                                                                  fill_value=2,
-                                                                                  dtype=torch.long,
-                                                                                  device=inputs.device,
-                                                                                  requires_grad=False)))
+                gen_loss = self._generator.compute_train_loss(gen_pred, inputs)
+                disc_loss_as_X = self._training_config.variables["lambda"] * \
+                                 (self.evaluate_loss_D_G_X_as_X(gen_pred,
+                                                                torch.Tensor().new_full(
+                                                                    size=(inputs.size(0),),
+                                                                    fill_value=2,
+                                                                    dtype=torch.long,
+                                                                    device=inputs.device,
+                                                                    requires_grad=False)))
+                gen_loss = gen_loss + (disc_loss_as_X / torch.max(gen_loss.loss.float(), disc_loss_as_X.loss.float()))
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
@@ -137,14 +140,14 @@ class DeepNormalizeTrainer(Trainer):
                 self.average_gradients(self._discriminator)
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._training_config.variables["lambda"] * \
-                           (self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                          torch.Tensor().new_full(size=(inputs.size(0),),
-                                                                                  fill_value=2,
-                                                                                  dtype=torch.long,
-                                                                                  device=inputs.device,
-                                                                                  requires_grad=False)))
-                gen_loss = gen_loss + (gen_loss / torch.max(gen_loss.loss.half(), seg_loss.loss.half()))
+                disc_loss_as_X = self._training_config.variables["lambda"] * \
+                                 (self.evaluate_loss_D_G_X_as_X(gen_pred,
+                                                                torch.Tensor().new_full(size=(inputs.size(0),),
+                                                                                        fill_value=2,
+                                                                                        dtype=torch.long,
+                                                                                        device=inputs.device,
+                                                                                        requires_grad=False)))
+                gen_loss = disc_loss_as_X + (seg_loss / torch.max(disc_loss_as_X.loss.float(), seg_loss.loss.float()))
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
