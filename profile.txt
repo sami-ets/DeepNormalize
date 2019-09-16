@@ -1,0 +1,317 @@
+`bottleneck` is a tool that can be used as an initial step for debugging
+bottlenecks in your program.
+
+It summarizes runs of your script with the Python profiler and PyTorch's
+autograd profiler. Because your script will be profiled, please ensure that it
+exits in a finite amount of time.
+
+For more complicated uses of the profilers, please see
+https://docs.python.org/3/library/profile.html and
+https://pytorch.org/docs/master/autograd.html#profiler for more information.
+Running environment analysis...
+Running your script with cProfile
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 2 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 16384.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 8192.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 4096.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 2048.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 1024.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 512.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 256.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 128.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 64.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32.0
+Running your script with the autograd profiler...
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 2 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 16384.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 8192.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 4096.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 2048.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 1024.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 512.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 256.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 128.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 64.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32.0
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Selected optimization level O1:  Insert automatic casts around Pytorch functions and Tensor methods.
+
+Defaults for this optimization level are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Processing user overrides (additional kwargs that are not None)...
+After processing overrides, optimization options are:
+enabled                : True
+opt_level              : O1
+cast_model_type        : None
+patch_torch_functions  : True
+keep_batchnorm_fp32    : None
+master_weights         : None
+loss_scale             : dynamic
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 2 reducing loss scale to 32768.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 16384.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 8192.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 4096.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 2048.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 1024.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 512.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 256.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 128.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 64.0
+Gradient overflow.  Skipping step, loss scaler 0 reducing loss scale to 32.0
+--------------------------------------------------------------------------------
+  Environment Summary
+--------------------------------------------------------------------------------
+PyTorch 1.3.0a0+584c698 compiled w/ CUDA 10.1.168
+Running with Python 3.7 and CUDA 10.1.168
+
+`pip list` truncated output:
+numpy==1.16.4
+pytorch-ignite==0.3.0.dev20190910
+torch==1.3.0a0+584c698
+torch-kerosene==0.1.0
+torchfile==0.1.0
+torchvision==0.5.0a0+19315e3
+--------------------------------------------------------------------------------
+  cProfile output
+--------------------------------------------------------------------------------
+         30644682 function calls (28712070 primitive calls) in 366.145 seconds
+
+   Ordered by: internal time
+   List reduced from 7559 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    10737  111.709    0.010  111.709    0.010 {built-in method numpy.concatenate}
+    21209   46.705    0.002   46.705    0.002 {method 'copy' of 'numpy.ndarray' objects}
+     3262   43.755    0.013   43.977    0.013 /home/pierre-luc-delisle/anaconda3/envs/pytorch_build/lib/python3.7/site-packages/nibabel/volumeutils.py:916(apply_read_scaling)
+99744/88327   42.800    0.000   87.205    0.001 {built-in method numpy.array}
+    27188   16.180    0.001   16.182    0.001 {method 'astype' of 'numpy.ndarray' objects}
+   117035    9.669    0.000    9.669    0.000 {built-in method numpy.core._multiarray_umath.count_nonzero}
+      101    8.469    0.084   10.509    0.104 /mnt/md0/Research/Code/deepNormalizev5/deepNormalize/training/trainer.py:309(validate_wasserstein_discriminator)
+      605    7.651    0.013    7.651    0.013 {method 'encode' of 'ImagingEncoder' objects}
+     3262    7.135    0.002  210.177    0.064 /home/pierre-luc-delisle/anaconda3/envs/pytorch_build/lib/python3.7/site-packages/numpy/lib/arraypad.py:964(pad)
+      122    7.109    0.058    7.109    0.058 {method 'run_backward' of 'torch._C._EngineBase' objects}
+     1616    7.060    0.004  286.434    0.177 /home/pierre-luc-delisle/anaconda3/envs/pytorch_build/lib/python3.7/site-packages/torch/utils/data/dataset.py:196(__getitem__)
+      101    6.437    0.064    8.660    0.086 /mnt/md0/Research/Code/deepNormalizev5/deepNormalize/training/trainer.py:280(train_wasserstein_discriminator)
+     8570    4.901    0.001    4.901    0.001 {method 'item' of 'torch._C._TensorBase' objects}
+        3    3.672    1.224    3.674    1.225 /home/pierre-luc-delisle/anaconda3/envs/pytorch_build/lib/python3.7/site-packages/apex/optimizers/fused_sgd.py:76(__init__)
+     3247    3.618    0.001  213.842    0.066 /home/pierre-luc-delisle/anaconda3/envs/pytorch_build/lib/python3.7/site-packages/samitorch/inputs/transformers.py:280(__call__)
+
+
+--------------------------------------------------------------------------------
+  autograd profiler output (CPU mode)
+--------------------------------------------------------------------------------
+        top 15 events sorted by cpu_time_total
+
+-----------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+Name                     Self CPU total %  Self CPU total   CPU total %      CPU total        CPU time avg     CUDA total %     CUDA total       CUDA time avg    Number of Calls  Input Shapes                         
+-----------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+item                     7.09%            215.674ms        7.09%            215.674ms        215.674ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      7.09%            215.672ms        7.09%            215.672ms        215.672ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.75%            205.404ms        6.75%            205.404ms        205.404ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.75%            205.401ms        6.75%            205.401ms        205.401ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.58%            200.330ms        6.58%            200.330ms        200.330ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.58%            200.328ms        6.58%            200.328ms        200.328ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.58%            200.281ms        6.58%            200.281ms        200.281ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.58%            200.278ms        6.58%            200.278ms        200.278ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.58%            200.203ms        6.58%            200.203ms        200.203ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.58%            200.200ms        6.58%            200.200ms        200.200ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.57%            199.986ms        6.57%            199.986ms        199.986ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.57%            199.983ms        6.57%            199.983ms        199.983ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.57%            199.957ms        6.57%            199.957ms        199.957ms        NaN              0.000us          0.000us          1                []                                   
+_local_scalar_dense      6.57%            199.955ms        6.57%            199.955ms        199.955ms        NaN              0.000us          0.000us          1                []                                   
+item                     6.57%            199.886ms        6.57%            199.886ms        199.886ms        NaN              0.000us          0.000us          1                []                                   
+-----------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+Self CPU time total: 3.044s
+CUDA time total: 0.000us
+
+--------------------------------------------------------------------------------
+  autograd profiler output (CUDA mode)
+--------------------------------------------------------------------------------
+        top 15 events sorted by cpu_time_total
+
+	Because the autograd profiler uses the CUDA event API,
+	the CUDA time column reports approximately max(cuda_time, cpu_time).
+	Please ignore this output if your code does not use CUDA.
+
+---------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+Name                   Self CPU total %  Self CPU total   CPU total %      CPU total        CPU time avg     CUDA total %     CUDA total       CUDA time avg    Number of Calls  Input Shapes                         
+---------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+AddcmulBackward        8.13%            498.443ms        8.13%            498.443ms        498.443ms        8.20%            494.272ms        494.272ms        1                []                                   
+mul                    8.13%            498.274ms        8.13%            498.274ms        498.274ms        8.20%            494.128ms        494.128ms        1                []                                   
+conv3d                 7.05%            432.220ms        7.05%            432.220ms        432.220ms        7.02%            423.056ms        423.056ms        1                []                                   
+convolution            7.05%            432.192ms        7.05%            432.192ms        432.192ms        7.02%            423.044ms        423.044ms        1                []                                   
+conv3d                 6.81%            417.380ms        6.81%            417.380ms        417.380ms        6.93%            417.584ms        417.584ms        1                []                                   
+convolution            6.81%            417.374ms        6.81%            417.374ms        417.374ms        6.93%            417.584ms        417.584ms        1                []                                   
+conv3d                 6.64%            407.382ms        6.64%            407.382ms        407.382ms        6.74%            406.144ms        406.144ms        1                []                                   
+convolution            6.64%            407.375ms        6.64%            407.375ms        407.375ms        6.74%            406.144ms        406.144ms        1                []                                   
+_convolution           6.64%            407.369ms        6.64%            407.369ms        407.369ms        6.74%            406.144ms        406.144ms        1                []                                   
+cudnn_convolution      6.64%            407.329ms        6.64%            407.329ms        407.329ms        6.74%            406.112ms        406.112ms        1                []                                   
+to                     6.30%            386.203ms        6.30%            386.203ms        386.203ms        6.41%            386.208ms        386.208ms        1                []                                   
+empty                  6.30%            386.092ms        6.30%            386.092ms        386.092ms        6.41%            386.112ms        386.112ms        1                []                                   
+to                     5.86%            359.356ms        5.86%            359.356ms        359.356ms        5.96%            359.072ms        359.072ms        1                []                                   
+empty                  5.86%            359.291ms        5.86%            359.291ms        359.291ms        5.96%            359.024ms        359.024ms        1                []                                   
+max_pool3d             5.14%            314.885ms        5.14%            314.885ms        314.885ms        4.04%            243.312ms        243.312ms        1                []                                   
+---------------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  ---------------  -----------------------------------  
+Self CPU time total: 6.131s
+CUDA time total: 6.028s
+

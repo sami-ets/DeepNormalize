@@ -17,7 +17,7 @@ models:
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "FusedSGD"
-      max_grad_norm: 3.0
+      max_grad_norm: !!null
       params:
         lr: 0.00005
         momentum: 0.9
@@ -90,7 +90,7 @@ models:
       replace_stride_with_dilation: !!null
     optimizer:
       type: "FusedSGD"
-      max_grad_norm: 3.0
+      max_grad_norm: 1.0
       params:
         lr: 0.00005
         momentum: 0.9
@@ -136,7 +136,7 @@ training:
   variables:
     lambda: 0.5
     alpha: 0.5
-    clip_value: 0.01
+    clip_value: 0.005
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
 
