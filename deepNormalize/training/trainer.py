@@ -96,7 +96,6 @@ class DeepNormalizeTrainer(Trainer):
                     self.average_gradients(self._generator)
 
                 self._generator.step()
-                self._generator.zero_grad()
                 self._discriminator.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
@@ -156,14 +155,14 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.step()
 
         if disc_pred is not None:
-            count = self.count(torch.argmax(disc_pred, dim=1), 3)
+            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), 3)
             self.custom_variables["Pie Plot"] = count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs, gen_pred, seg_pred, target[IMAGE_TARGET])
+            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(), target[IMAGE_TARGET].cpu().detach())
 
-        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu())
-        self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu())
+        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
+        self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
 
     def validate_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
@@ -173,6 +172,7 @@ class DeepNormalizeTrainer(Trainer):
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_discriminator_loss():
+            self._generator.compute_valid_loss(gen_pred, inputs)
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_segmentation():
@@ -188,14 +188,14 @@ class DeepNormalizeTrainer(Trainer):
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
-                                                 align_corners=True).cpu().numpy()
+                                                 align_corners=True).numpy()
         generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
-                                                                align_corners=True).cpu().detach().numpy()
+                                                                align_corners=True).numpy()
         segmenter_predictions = torch.nn.functional.interpolate(
             torch.argmax(torch.nn.functional.softmax(segmenter_predictions, dim=1), dim=1, keepdim=True).float(),
-            scale_factor=5, mode="nearest").cpu().detach().numpy()
+            scale_factor=5, mode="nearest").numpy()
 
-        target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").cpu().detach().numpy()
+        target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
         inputs = self._normalize(inputs)
         generator_predictions = self._normalize(generator_predictions)

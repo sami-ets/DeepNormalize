@@ -16,7 +16,7 @@
 
 import logging
 import multiprocessing
-
+import os
 import torch
 import torch.backends.cudnn as cudnn
 from kerosene.config.parsers import YamlConfigurationParser
@@ -30,9 +30,10 @@ from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
-from samitorch.inputs.datasets import PatchDatasetFactory
-from samitorch.inputs.utils import patch_collate
+from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory
+from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
+from samitorch.utils.files import extract_file_paths
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.events.handlers.console import PrintTrainLoss
@@ -60,29 +61,21 @@ if __name__ == '__main__':
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
-    iSEG_train, iSEG_valid = PatchDatasetFactory.create_train_test(
-        source_dir=dataset_config[0].path + "/Training/Source",
-        target_dir=dataset_config[0].path + "/Training/Target",
-        dataset_id=ISEG_ID,
-        patch_size=dataset_config[0].training_patch_size,
-        step=dataset_config[0].training_patch_step,
-        modality=args.modality,
-        test_size=dataset_config[0].validation_split,
-        keep_centered_on_foreground=True)
+    iSEG_train, iSEG_valid = iSEGSegmentationFactory.create_train_test(source_dir=dataset_config[0].path,
+                                                                       target_dir=dataset_config[0].path + "/label",
+                                                                       modality=args.modality, dataset_id=ISEG_ID,
+                                                                       test_size=dataset_config[0].validation_split)
 
-    MRBrainS_train, MRBrains_valid = PatchDatasetFactory.create_train_test(
-        source_dir=dataset_config[1].path + "/TrainingData/Source",
-        target_dir=dataset_config[1].path + "/TrainingData/Target",
-        dataset_id=MRBRAINS_ID,
-        patch_size=dataset_config[1].training_patch_size,
-        step=dataset_config[1].training_patch_step,
-        test_size=dataset_config[1].validation_split,
-        keep_centered_on_foreground=True,
-        modality=args.modality)
+    MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(source_dir=dataset_config[1].path,
+                                                                                   target_dir=dataset_config[1].path,
+                                                                                   modality=args.modality,
+                                                                                   dataset_id=MRBRAINS_ID,
+                                                                                   test_size=dataset_config[
+                                                                                       1].validation_split)
 
     # Concat datasets.
     training_datasets = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
-    validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrains_valid))
+    validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -92,7 +85,7 @@ if __name__ == '__main__':
     # Create loaders.
     train_loader, valid_loader = DataloaderFactory(training_datasets, validation_datasets).create(run_config,
                                                                                                   training_config,
-                                                                                                  collate_fn=patch_collate)
+                                                                                                  collate_fn=sample_collate)
 
     # Initialize the loggers.
     if run_config.local_rank == 0:
@@ -103,8 +96,8 @@ if __name__ == '__main__':
     # Train with the training strategy.
     if run_config.local_rank == 0:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
-            .with_event_handler(PrintTrainingStatus(), Event.ON_BATCH_END) \
-            .with_event_handler(PrintTrainLoss(), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainingStatus(every=50), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainLoss(every=50), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
@@ -116,22 +109,23 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "Segmented Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4, "opts": {"title": "Segmented Patches"}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Ground Truth Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
+                                params={"nrow": 4, "opts": {"title": "Ground Truth Patches"}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
-                                                 "nbins": 50}}), Event.ON_TRAIN_BATCH_END) \
+                                                 "nbins": 75}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                                     params={
-                                                        "opts": {"title": "Inputs Intensity Histogram", "nbins": 50}}),
-                                Event.ON_TRAIN_BATCH_END) \
+                                                        "opts": {"title": "Inputs Intensity Histogram", "nbins": 75}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}}),
-                                Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotGradientFlow(visdom_logger, every=10), Event.ON_TRAIN_BATCH_END) \
+                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
     else:
