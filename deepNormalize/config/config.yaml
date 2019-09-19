@@ -131,8 +131,8 @@ dataset:
 training:
   batch_size: 12
   nb_epochs: 100
-  patience_discriminator: 0
-  patience_segmentation: 1
+  patience_discriminator: 5
+  patience_segmentation: 7
   variables:
     lambda: 0.5
     alpha: 100000
