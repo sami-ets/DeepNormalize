@@ -69,7 +69,7 @@ class DeepNormalizeTrainer(Trainer):
 
                 self._generator.step()
 
-            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
 
             if not on_single_device(self._run_config.devices):
@@ -99,7 +99,7 @@ class DeepNormalizeTrainer(Trainer):
                 self._generator.step()
                 self._discriminator.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
 
             if not on_single_device(self._run_config.devices):
@@ -130,7 +130,7 @@ class DeepNormalizeTrainer(Trainer):
 
             self._segmenter.step()
 
-            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_wasserstein_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
 
             self._discriminator.step()
@@ -180,11 +180,11 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_autoencoder():
             self._generator.compute_valid_loss(gen_pred, inputs)
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+            self.validate_wasserstein_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_discriminator_loss():
             self._generator.compute_valid_loss(gen_pred, inputs)
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+            self.validate_wasserstein_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_segmentation():
             self._generator.compute_valid_loss(gen_pred, inputs)
@@ -196,7 +196,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.compute_valid_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                  torch.squeeze(target[IMAGE_TARGET], dim=1).long())
 
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+            self.validate_wasserstein_discriminator(inputs, gen_pred, target[DATASET_ID])
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
@@ -274,29 +274,28 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X_as_X = self._discriminator.compute_train_loss(ones - pred_D_G_X, target)
         return loss_D_G_X_as_X
 
-    def train_discriminator(self, inputs, gen_pred, target):
+    def train_wasserstein_discriminator(self, inputs, gen_pred, target):
         # Forward on real data.
         pred_D_X = self._discriminator.forward(inputs)
 
         # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_train_loss(pred_D_X, target)
+        loss_D_X = self._discriminator.compute_train_loss(pred_D_X, None) * -1
 
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 6 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
-        pred_D_G_X = pred_D_G_X[choices]
+        choices = torch.randperm(pred_D_G_X.size(0))
+        pred_D_G_X = pred_D_G_X[choices[:]]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
                                         device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_train_loss(pred_D_G_X, y_bad)
+        loss_D_G_X = self._discriminator.compute_train_loss(pred_D_G_X, None)
 
-        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
-
+        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X))  # 1/3 because fake images represents 1/3 of total count.
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
@@ -304,29 +303,28 @@ class DeepNormalizeTrainer(Trainer):
 
         return disc_loss, pred
 
-    def validate_discriminator(self, inputs, gen_pred, target):
+    def validate_wasserstein_discriminator(self, inputs, gen_pred, target):
         # Forward on real data.
         pred_D_X = self._discriminator.forward(inputs)
 
         # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_valid_loss(pred_D_X, target)
+        loss_D_X = self._discriminator.compute_valid_loss(pred_D_X, None) * -1
 
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 6 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
-        pred_D_G_X = pred_D_G_X[choices]
+        choices = torch.randperm(pred_D_G_X.size(0))
+        pred_D_G_X = pred_D_G_X[choices[:]]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
                                         device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_valid_loss(pred_D_G_X, y_bad)
+        loss_D_G_X = self._discriminator.compute_valid_loss(pred_D_G_X, None)
 
-        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
-
+        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X))  # 1/3 because fake images represents 1/3 of total count.
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
