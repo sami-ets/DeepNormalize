@@ -38,8 +38,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
-        self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._segmenter = self._model_trainers[0]
@@ -95,13 +93,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                                                        target)
 
     def scheduler_step(self):
-        self._generator.scheduler_step()
-
-        if self._should_activate_discriminator_loss():
-            self._discriminator.scheduler_step()
-
-        if self._should_activate_segmentation():
-            self._segmenter.scheduler_step()
+        self._segmenter.scheduler_step()
 
     @staticmethod
     def _normalize(img):
@@ -117,15 +109,6 @@ class DeepNormalizeTrainer(Trainer):
     @staticmethod
     def merge_tensors(tensor_0, tensor_1):
         return torch.cat((tensor_0, tensor_1), dim=0)
-
-    def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
-
-    def _should_activate_discriminator_loss(self):
-        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
-
-    def _should_activate_segmentation(self):
-        return self._current_epoch >= self._patience_segmentation
 
     def on_epoch_begin(self):
         pass
