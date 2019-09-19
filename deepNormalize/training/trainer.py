@@ -184,6 +184,7 @@ class DeepNormalizeTrainer(Trainer):
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_segmentation():
+            self._generator.compute_valid_loss(gen_pred, inputs)
             seg_pred = self._segmenter.forward(gen_pred)
             self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
