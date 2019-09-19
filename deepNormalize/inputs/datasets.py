@@ -35,11 +35,11 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         train_ids, test_ids = next(ShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, target_paths))
 
         train_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True), source_paths[train_ids],
-                target_paths[train_ids]))
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[train_ids], target_paths[train_ids]))
         test_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True), source_paths[test_ids],
-                target_paths[test_ids]))
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[test_ids], target_paths[test_ids]))
 
         training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
                                                dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
@@ -121,10 +121,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         train_ids, test_ids = next(ShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, target_paths))
 
         train_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True), source_paths[train_ids],
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths[train_ids],
                 target_paths[train_ids]))
         test_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True), source_paths[test_ids],
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths[test_ids],
                 target_paths[test_ids]))
 
         training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,

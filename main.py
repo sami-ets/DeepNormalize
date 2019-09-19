@@ -55,7 +55,7 @@ if __name__ == '__main__':
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
     # Create configurations.
-    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank)
+    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank, args.num_workers)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
@@ -63,7 +63,8 @@ if __name__ == '__main__':
     # Prepare the data.
     iSEG_train, iSEG_valid = iSEGSegmentationFactory.create_train_test(source_dir=dataset_config[0].path,
                                                                        target_dir=dataset_config[0].path + "/label",
-                                                                       modality=args.modality, dataset_id=ISEG_ID,
+                                                                       modality=args.modality,
+                                                                       dataset_id=ISEG_ID,
                                                                        test_size=dataset_config[0].validation_split)
 
     MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(source_dir=dataset_config[1].path,
@@ -96,8 +97,8 @@ if __name__ == '__main__':
     # Train with the training strategy.
     if run_config.local_rank == 0:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
-            .with_event_handler(PrintTrainingStatus(every=50), Event.ON_BATCH_END) \
-            .with_event_handler(PrintTrainLoss(every=50), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainingStatus(every=1), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainLoss(every=1), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
@@ -125,6 +126,13 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Classification hit per classes",
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
+                                                    params={"opts": {"title": "Batch data distribution",
+                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
+                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
+                                                    params={"opts": {"title": "Loss D(G(X) | X"}},
+                                                    every=1), Event.ON_TRAIN_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
