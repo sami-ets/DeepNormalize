@@ -130,13 +130,12 @@ dataset:
 
 training:
   batch_size: 12
-  nb_epochs: 100
+  nb_epochs: 50
   patience_discriminator: 5
   patience_segmentation: 7
   variables:
-    lambda: 0.5
+    lambda: 0.0
     alpha: 100000
-    disc_ratio: 1.0
     clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
@@ -144,7 +143,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_04"
+  env: "deepNormalize_exp_home_GAN_lambda_0.00"
 
 logger:
   path: "/tmp/ml/tests"

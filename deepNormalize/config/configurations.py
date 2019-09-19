@@ -158,6 +158,7 @@ class DatasetConfiguration(Configuration):
     def __init__(self, dataset_name, path, validation_split, training_patch_size, training_patch_step,
                  validation_patch_size, validation_patch_step):
         super(DatasetConfiguration, self).__init__()
+
         self._dataset_name = dataset_name
         self._path = path
         self._validation_split = validation_split
@@ -165,6 +166,10 @@ class DatasetConfiguration(Configuration):
         self._training_patch_step = training_patch_step
         self._validation_patch_size = validation_patch_size
         self._validation_patch_step = validation_patch_step
+
+    @property
+    def dataset_name(self):
+        return self._dataset_name
 
     @property
     def path(self):

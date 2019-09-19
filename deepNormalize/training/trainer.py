@@ -23,6 +23,7 @@ from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
 from kerosene.utils.devices import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
+from kerosene.metrics.gauges import AverageGauge
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
@@ -45,6 +46,7 @@ class DeepNormalizeTrainer(Trainer):
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
+        self._D_G_X_as_X_gauge = AverageGauge()
 
     def train_step(self, inputs, target):
         disc_pred = None
@@ -145,8 +147,9 @@ class DeepNormalizeTrainer(Trainer):
                                                                                        dtype=torch.long,
                                                                                        device=inputs.device,
                                                                                        requires_grad=False))
-                gen_loss = disc_loss_as_X + self._training_config.variables["lambda"] * seg_loss
-                self.custom_variables["D(G(X) | X"] = gen_loss.loss.detach()
+                gen_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
+                           self._training_config.variables["lambda"] * seg_loss
+                self._D_G_X_as_X_gauge.update(gen_loss.loss)
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
@@ -255,7 +258,8 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
-        pass
+        self.custom_variables["D(G(X) | X"] = self._D_G_X_as_X_gauge.compute()
+        self._D_G_X_as_X_gauge.reset()
 
     @staticmethod
     def count(tensor, n_classes):

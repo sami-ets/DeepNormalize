@@ -61,22 +61,34 @@ if __name__ == '__main__':
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
-    iSEG_train, iSEG_valid = iSEGSegmentationFactory.create_train_test(source_dir=dataset_config[0].path,
-                                                                       target_dir=dataset_config[0].path + "/label",
-                                                                       modality=args.modality,
-                                                                       dataset_id=ISEG_ID,
-                                                                       test_size=dataset_config[0].validation_split)
+    iSEG_train = None
+    iSEG_valid = None
+    MRBrainS_train = None
+    MRBrainS_valid = None
 
-    MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(source_dir=dataset_config[1].path,
-                                                                                   target_dir=dataset_config[1].path,
-                                                                                   modality=args.modality,
-                                                                                   dataset_id=MRBRAINS_ID,
-                                                                                   test_size=dataset_config[
-                                                                                       1].validation_split)
+    if "iSEG" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+        iSEG_train, iSEG_valid = iSEGSegmentationFactory.create_train_test(source_dir=dataset_config[0].path,
+                                                                           target_dir=dataset_config[0].path + "/label",
+                                                                           modality=args.modality,
+                                                                           dataset_id=ISEG_ID,
+                                                                           test_size=dataset_config[0].validation_split)
+
+    if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+        MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(
+            source_dir=dataset_config[1].path,
+            target_dir=dataset_config[1].path,
+            modality=args.modality,
+            dataset_id=MRBRAINS_ID,
+            test_size=dataset_config[
+                1].validation_split)
 
     # Concat datasets.
-    training_datasets = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
-    validation_datasets = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
+    if len(dataset_config) == 2:
+        training_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
+        validation_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
+    else:
+        training_dataset = iSEG_train if iSEG_train is not None else MRBrainS_train
+        validation_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -84,9 +96,9 @@ if __name__ == '__main__':
     model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
 
     # Create loaders.
-    train_loader, valid_loader = DataloaderFactory(training_datasets, validation_datasets).create(run_config,
-                                                                                                  training_config,
-                                                                                                  collate_fn=sample_collate)
+    train_loader, valid_loader = DataloaderFactory(training_dataset, validation_dataset).create(run_config,
+                                                                                                training_config,
+                                                                                                collate_fn=sample_collate)
 
     # Initialize the loggers.
     if run_config.local_rank == 0:
