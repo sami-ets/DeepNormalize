@@ -110,6 +110,7 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.zero_grad()
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
+            self._generator.optimizer_lr = 0.0
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -156,10 +157,18 @@ class DeepNormalizeTrainer(Trainer):
 
         if disc_pred is not None:
             count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), 3)
+            real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
+                size=(inputs.size(0) // 2,),
+                fill_value=2,
+                dtype=torch.long,
+                device="cpu",
+                requires_grad=False)), dim=0), 3)
             self.custom_variables["Pie Plot"] = count
+            self.custom_variables["Pie Plot True"] = real_count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(), target[IMAGE_TARGET].cpu().detach())
+            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
+                               target[IMAGE_TARGET].cpu().detach())
 
         self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())

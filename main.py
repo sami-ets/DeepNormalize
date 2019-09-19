@@ -55,7 +55,7 @@ if __name__ == '__main__':
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
     # Create configurations.
-    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank)
+    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank, args.num_workers)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
@@ -63,7 +63,8 @@ if __name__ == '__main__':
     # Prepare the data.
     iSEG_train, iSEG_valid = iSEGSegmentationFactory.create_train_test(source_dir=dataset_config[0].path,
                                                                        target_dir=dataset_config[0].path + "/label",
-                                                                       modality=args.modality, dataset_id=ISEG_ID,
+                                                                       modality=args.modality,
+                                                                       dataset_id=ISEG_ID,
                                                                        test_size=dataset_config[0].validation_split)
 
     MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(source_dir=dataset_config[1].path,
