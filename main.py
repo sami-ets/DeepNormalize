@@ -59,7 +59,7 @@ if __name__ == '__main__':
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_config)),
-                   list(map(lambda config: config.to_html(), model_trainer_configs))]
+                   list(map(lambda config: config.to_html(), [model_trainer_configs]))]
 
     # Prepare the data.
     iSEG_train = None
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory())
-    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
+    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), [model_trainer_configs]))
 
     # Create loaders.
     train_loader, valid_loader = DataloaderFactory(training_dataset, validation_dataset).create(run_config,
@@ -113,9 +113,6 @@ if __name__ == '__main__':
             .with_event_handler(PrintTrainLoss(every=1), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4, "opts": {"title": "Generated Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4, "opts": {"title": "Input Patches"}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
@@ -126,32 +123,10 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
                                 params={"nrow": 4, "opts": {"title": "Ground Truth Patches"}},
                                 every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "Generated Intensity Histogram",
-                                                 "nbins": 75}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                                     params={
                                                         "opts": {"title": "Inputs Intensity Histogram", "nbins": 75}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Loss D(G(X) | X"}},
-                                                    every=1), Event.ON_TRAIN_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Loss D(G(X) | X"}},
-                                                    every=1), Event.ON_TRAIN_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
