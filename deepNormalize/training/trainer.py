@@ -109,7 +109,6 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.zero_grad()
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
-            self._generator.optimizer_lr = 0.0
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -147,6 +146,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                                        device=inputs.device,
                                                                                        requires_grad=False))
                 gen_loss = disc_loss_as_X + self._training_config.variables["lambda"] * seg_loss
+                self.custom_variables["D(G(X) | X"] = gen_loss.loss.detach()
                 gen_loss.backward()
 
                 if not on_single_device(self._run_config.devices):
