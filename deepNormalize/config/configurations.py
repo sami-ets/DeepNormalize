@@ -237,6 +237,9 @@ class DatasetConfiguration(Configuration):
                    config_dict["training"]["patch_size"], config_dict["training"]["step"],
                    config_dict["validation"]["patch_size"], config_dict["validation"]["step"])
 
+    def to_html(self):
+        configuration_values = '\n'.join("<p>%s: %s</p>" % item for item in vars(self).items())
+        return "<h2>Dataset Configuration</h2> \n {}".format(configuration_values)
 
 class DeepNormalizeTrainingConfiguration(Configuration):
 

@@ -58,7 +58,8 @@ if __name__ == '__main__':
     run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank, args.num_workers)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
-    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), model_trainer_configs))]
+    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_config)),
+                   list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
     iSEG_train = None
@@ -75,12 +76,11 @@ if __name__ == '__main__':
 
     if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
         MRBrainS_train, MRBrainS_valid = MRBrainSSegmentationFactory.create_train_test(
-            source_dir=dataset_config[1].path,
-            target_dir=dataset_config[1].path,
+            source_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
+            target_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
             modality=args.modality,
             dataset_id=MRBRAINS_ID,
-            test_size=dataset_config[
-                1].validation_split)
+            test_size=dataset_config[1 if len(dataset_config) == 2 else 0].validation_split)
 
     # Concat datasets.
     if len(dataset_config) == 2:

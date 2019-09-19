@@ -130,12 +130,13 @@ dataset:
 
 training:
   batch_size: 12
-  nb_epochs: 50
+  nb_epochs: 40
   patience_discriminator: 5
   patience_segmentation: 7
   variables:
     lambda: 0.0
     alpha: 100000
+    disc_ratio: 1.0
     clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5

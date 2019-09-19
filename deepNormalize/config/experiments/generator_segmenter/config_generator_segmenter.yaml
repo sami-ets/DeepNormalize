@@ -130,7 +130,7 @@ dataset:
 
 training:
   batch_size: 12
-  nb_epochs: 50
+  nb_epochs: 40
   patience_discriminator: 5
   patience_segmentation: 5
   variables:
