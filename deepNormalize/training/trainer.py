@@ -23,12 +23,11 @@ from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
 from kerosene.utils.devices import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
-from kerosene.metrics.gauges import AverageGauge
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
+from deepNormalize.utils.constants import IMAGE_TARGET, EPSILON
 from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 
 
 class DeepNormalizeTrainer(Trainer):
