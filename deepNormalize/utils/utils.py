@@ -15,35 +15,47 @@
 #  ==============================================================================
 
 import numpy as np
-import copy
-
-from samitorch.inputs.batch import PatchBatch
 
 
-def split_dataset(dataset, split):
-    validation_dataset = copy.copy(dataset)
-    idx_full = np.arange(len(dataset))
+def to_html(classe_names, metric_names, metric_values):
+    arr_tuple = tuple(([metric_values[i] for i in range(len(metric_values))]))
+    interleaved = np.vstack(arr_tuple).reshape((-1,), order='F')
 
-    np.random.shuffle(idx_full)
+    class_row = "".join(["<th colspan='{}'> {} </th>".format(str(len(metric_names)),
+                                                             str(class_name)) for class_name in classe_names])
 
-    if isinstance(split, int):
-        assert split > 0
-        assert split < len(dataset), "Validation set size is configured to be larger than entire dataset."
-        len_valid = split
-    else:
-        len_valid = int(len(dataset) * split)
+    metric_row = "".join(["<th> {} </th>".format(str(metric_name)) for metric_name in metric_names]) * len(classe_names)
 
-    valid_idx = idx_full[0:len_valid]
-    train_idx = np.delete(idx_full, np.arange(0, len_valid))
+    metric_values_row = "".join(["<td> {} </td>".format(str(metric_value)) for metric_value in interleaved])
 
-    dataset.slices = dataset.slices[train_idx]
-    dataset.num_patches = dataset.slices.shape[0]
+    header = "<!DOCTYPE html> \
+             <html> \
+             <head> \
+             <style> \
+             table { \
+               font-family: arial, sans-serif;\
+               border-collapse: collapse;\
+               width: 100%;\
+             } \
+             td, th { \
+               border: 1px solid #dddddd; \
+               text-align: left; \
+               padding: 8px; \
+             } \
+             tr:nth-child(even) { \
+               background-color: #dddddd; \
+             } \
+             </style> \
+             </head> \
+             <body> \
+             <h2>Metric Table</h2> \
+             <table> \
+              <caption>Metrics</caption>"
 
-    validation_dataset.slices = validation_dataset.slices[valid_idx]
-    validation_dataset.num_patches = validation_dataset.slices.shape[0]
+    html = header + \
+           "<tr>" + class_row + "</tr>" + \
+           "<tr>" + metric_row + "</tr>" + \
+           "<tr>" + metric_values_row + "</tr>" + \
+           "</table></body></html>"
 
-    return dataset, validation_dataset
-
-
-def concat_batches(batch_0, batch_1):
-    return PatchBatch(batch_0.samples + batch_1.samples)
+    return html

@@ -23,11 +23,14 @@ from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
 from kerosene.utils.devices import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
+from kerosene.metrics.gauges import AverageGauge
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import IMAGE_TARGET, EPSILON
 from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
+from deepNormalize.utils.utils import to_html
+from scipy.spatial.distance import directed_hausdorff
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -41,17 +44,25 @@ class DeepNormalizeTrainer(Trainer):
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._segmenter = self._model_trainers[0]
+        self._hausdorff_gauge = AverageGauge()
+        self._dice_gauge = AverageGauge()
 
     def train_step(self, inputs, target):
         self._segmenter.zero_grad()
 
         seg_pred = self._segmenter.forward(inputs)
 
-        seg_loss = self._segmenter.compute_train_loss(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                      to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
-                                                                num_classes=4))
-        self._segmenter.compute_train_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                             torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+        seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
+                                                          num_classes=4))
+        self._segmenter.update_train_loss(seg_loss.loss.mean())
+
+        metric = self._segmenter.compute_train_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
+        self._segmenter.update_train_metric(metric.mean())
+
+        seg_loss._loss = seg_loss.loss.mean()
         seg_loss.backward()
 
         if not on_single_device(self._run_config.devices):
@@ -66,12 +77,28 @@ class DeepNormalizeTrainer(Trainer):
 
     def validate_step(self, inputs, target):
         seg_pred = self._segmenter.forward(inputs)
-        self._segmenter.compute_valid_loss(torch.nn.functional.softmax(seg_pred, dim=1),
-                                           to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
-                                                     num_classes=4))
+        seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
+                                                          num_classes=4))
+        self._segmenter.update_valid_loss(seg_loss)
 
-        self._segmenter.compute_valid_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                             torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+        metric = self._segmenter.compute_valid_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+        self._segmenter.compute_valid_metric(metric.mean())
+
+        seg_pred_ = to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1), num_classes=4)
+        target_ = to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(), num_classes=4)
+
+        distances = list()
+        for channel in range(seg_pred_.size(1)):
+            distances.append(max(
+                directed_hausdorff(flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy(),
+                                   flatten(target_[:, channel, ...]).cpu().detach().numpy())[0],
+                directed_hausdorff(flatten(target_[:, channel, ...]).cpu().detach().numpy(),
+                                   flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy())[0]))
+
+        self._hausdorff_gauge.update(np.array(distances))
+        self._dice_gauge.update(np.array(metric.numpy()))
 
     def _update_plots(self, inputs, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
@@ -114,7 +141,13 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
-        pass
+        self.custom_variables["Mean Hausdorff Distance"] = self._hausdorff_gauge.compute()[-3:].mean()
+        self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
+                                                        [self._dice_gauge.compute(),
+                                                         self._hausdorff_gauge.compute()[-3:]])
+
+        self._hausdorff_gauge.reset()
+        self._dice_gauge.reset()
 
     @staticmethod
     def count(tensor, n_classes):

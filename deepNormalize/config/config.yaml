@@ -10,7 +10,7 @@ models:
       conv_kernel_size: 3
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
-      num_groups: 8
+      num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
       activation: "LeakyReLU"
       interpolation: True
@@ -31,13 +31,13 @@ models:
     criterion:
       type: "DiceLoss"
       params:
-        reduction: "mean"
+        reduction: !!null
         ignore_index: -100
     metric:
       type: "Dice"
       params:
         num_classes: 4
-        reduction: "mean"
+        reduction: !!null
         ignore_index: 0
         average: !!null
 
@@ -59,7 +59,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_only_iSEG"
+  env: "deepNormalize_exp_home_segmenter_test"
 
 logger:
   path: "/tmp/ml/tests"

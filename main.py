@@ -127,6 +127,12 @@ if __name__ == '__main__':
                                                     params={
                                                         "opts": {"title": "Inputs Intensity Histogram", "nbins": 75}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
+                                                    params={"opts": {"title": "Hausdorff Distance"}},
+                                                    every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Metric Table"}},
+                                                    every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
