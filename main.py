@@ -152,6 +152,12 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Loss D(G(X) | X"}},
                                                     every=1), Event.ON_TRAIN_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
+                                                    params={"opts": {"title": "Hausdorff Distance"}},
+                                                    every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Metric Table"}},
+                                                    every=1), Event.ON_EPOCH_END
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
