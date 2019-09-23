@@ -10,7 +10,7 @@ models:
       conv_kernel_size: 3
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
-      num_groups: 8
+      num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
       activation: "LeakyReLU"
       interpolation: True
@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.00005
+        lr: 0.00001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -45,7 +45,7 @@ models:
       conv_kernel_size: 3
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
-      num_groups: 8
+      num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
       activation: "LeakyReLU"
       interpolation: True
@@ -66,13 +66,13 @@ models:
     criterion:
       type: "DiceLoss"
       params:
-        reduction: "mean"
+        reduction: !!null
         ignore_index: -100
     metric:
       type: "Dice"
       params:
         num_classes: 4
-        reduction: "mean"
+        reduction: !!null
         ignore_index: 0
         average: !!null
   Discriminator:
@@ -110,7 +110,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Research/Data/Preprocessed/iSEG/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -119,7 +119,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Research/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -129,21 +129,22 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 12
+  batch_size: 4
   nb_epochs: 100
-  patience_discriminator: 5
-  patience_segmentation: 7
+  patience_discriminator: 0
+  patience_segmentation: 0
   variables:
-    lambda: 0.75
-    alpha: 0.5
+    lambda: 0.5
+    alpha: 1000
+    disc_ratio: 1.0
     clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 5
 
 visdom:
-  server: "pldelisle.no-ip.info:8097"
+  server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_school_GAN_02"
+  env: "deepNormalize_exp_school_GAN_test"
 
 logger:
   path: "/tmp/ml/tests"

@@ -109,8 +109,8 @@ if __name__ == '__main__':
     # Train with the training strategy.
     if run_config.local_rank == 0:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
-            .with_event_handler(PrintTrainingStatus(every=1), Event.ON_BATCH_END) \
-            .with_event_handler(PrintTrainLoss(every=1), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
+            .with_event_handler(PrintTrainLoss(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
@@ -142,21 +142,27 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Batch data distribution",
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Loss D(G(X) | X"}},
-                                                    every=1), Event.ON_TRAIN_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Batch data distribution",
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X) | X", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Loss D(G(X) | X"}},
-                                                    every=1), Event.ON_TRAIN_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
+                                                    params={"name": "training", "opts": {"title": "Loss D(G(X)) | X"}},
+                                                    every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Valid", PlotType.LINE_PLOT,
+                                                    params={"name": "validation",
+                                                            "opts": {"title": "Loss D(G(X)) | X"}},
+                                                    every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Hausdorff Distance"}},
+                                                    params={"opts": {"title": "Mean Hausdorff Distance"}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
+                                                    every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["Background", "CSF", "GM", "WM"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "Confusion Matrix"}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)

@@ -42,7 +42,7 @@ def to_html(classe_names, metric_names, metric_values):
                text-align: left; \
                padding: 8px; \
              } \
-             tr:nth-child(even) { \
+             tr:nth-child(odd) { \
                background-color: #dddddd; \
              } \
              </style> \

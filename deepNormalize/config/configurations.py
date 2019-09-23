@@ -241,6 +241,7 @@ class DatasetConfiguration(Configuration):
         configuration_values = '\n'.join("<p>%s: %s</p>" % item for item in vars(self).items())
         return "<h2>Dataset Configuration</h2> \n {}".format(configuration_values)
 
+
 class DeepNormalizeTrainingConfiguration(Configuration):
 
     def __init__(self, config: dict):
