@@ -99,10 +99,11 @@ if __name__ == '__main__':
     train_loader, valid_loader = DataloaderFactory(training_dataset, validation_dataset).create(run_config,
                                                                                                 training_config,
                                                                                                 collate_fn=sample_collate)
-
     # Initialize the loggers.
+    visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
+
+    # Print configuration.
     if run_config.local_rank == 0:
-        visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
         visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
                                  config_html))
 
@@ -156,6 +157,10 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance"}},
                                                     every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
+                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank)}},
+                                every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
                                                     every=1), Event.ON_EPOCH_END) \
@@ -169,4 +174,8 @@ if __name__ == '__main__':
         # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
+                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank)}},
+                                every=1), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)

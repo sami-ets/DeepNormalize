@@ -27,7 +27,7 @@ models:
       params:
         mode: "min"
         factor: 0.1
-        patience: 1
+        patience: 100
     criterion:
       type: "MSELoss"
       params:
@@ -100,7 +100,7 @@ models:
       params:
         mode: "min"
         factor: 0.1
-        patience: 3
+        patience: 100
     criterion:
       type: "CrossEntropyLoss"
       params:

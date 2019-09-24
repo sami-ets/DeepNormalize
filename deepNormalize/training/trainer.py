@@ -317,6 +317,9 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
+        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = np.array(
+            [torch.cuda.memory_allocated() / (1024.0 * 1024.0)])
+
         if self._should_activate_autoencoder():
             self.custom_variables["D(G(X)) | X"] = np.array([0])
             self.custom_variables["D(G(X)) | X Valid"] = np.array([0])
