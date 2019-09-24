@@ -106,6 +106,9 @@ if __name__ == '__main__':
     if run_config.local_rank == 0:
         visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
                                  config_html))
+        save_folder = "saves/" + os.path.basename(os.path.normpath(os.path.splitext(args.config_file)[0]))
+        [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True) for model in
+         ["Discriminator", "Generator", "Segmenter"]]
 
     # Train with the training strategy.
     if run_config.local_rank == 0:
@@ -152,7 +155,7 @@ if __name__ == '__main__':
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Valid", PlotType.LINE_PLOT,
                                                     params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X"}},
+                                                            "opts": {"title": "Loss D(G(X)) | X Validation"}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance"}},
@@ -171,7 +174,8 @@ if __name__ == '__main__':
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
-        # .with_event_handler(ModelCheckpointIfBetter("saves/"), Event.ON_EPOCH_END) \
+
+
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .with_event_handler(
