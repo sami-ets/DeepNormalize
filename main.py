@@ -138,25 +138,6 @@ if __name__ == '__main__':
                                                     params={
                                                         "opts": {"title": "Inputs Intensity Histogram", "nbins": 75}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
-                                                    params={"name": "training", "opts": {"title": "Loss D(G(X)) | X"}},
-                                                    every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Valid", PlotType.LINE_PLOT,
-                                                    params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X Validation"}},
-                                                    every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance"}},
                                                     every=1), Event.ON_EPOCH_END) \
