@@ -86,10 +86,7 @@ class DeepNormalizeTrainer(Trainer):
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_train_metric(metric.mean())
 
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                seg_loss.mean().backward(retain_graph=True)
-            else:
-                seg_loss.mean().backward()
+            seg_loss.mean().backward()
 
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._segmenter)
