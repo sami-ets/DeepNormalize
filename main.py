@@ -146,10 +146,6 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Batch data distribution",
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
                                                     params={"name": "training", "opts": {"title": "Loss D(G(X)) | X"}},
                                                     every=1), Event.ON_EPOCH_END) \
