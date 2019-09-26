@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.00001
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -54,7 +54,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.0005
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:

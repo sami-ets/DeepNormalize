@@ -104,15 +104,13 @@ class DeepNormalizeTrainer(Trainer):
                                                                    device=inputs.device,
                                                                    requires_grad=False))
                 self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.loss)
-                gen_loss = self._training_config.variables["identity_ratio"] * gen_loss + \
-                           self._training_config.variables["alpha"] * disc_loss_as_X
-                self._generator.update_train_loss(gen_loss.loss)
-                gen_loss.backward()
+                disc_loss_as_X.backward()
 
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._generator)
 
                 self._generator.step()
+
                 self._discriminator.zero_grad()
 
             # Classify domains.
@@ -130,7 +128,6 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_train_loss(seg_loss.mean().loss)
-
             metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_train_metric(metric.mean())
