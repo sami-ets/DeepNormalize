@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.00001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -54,7 +54,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.0005
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -86,21 +86,11 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
-#  MRBrainS:
-#    path: "/home/pierre-luc-delisle/Documents/Research/Data/Preprocessed/MRBrainS/Patches/Normalized"
-#    validation_split: 0.2
-#    training:
-#      patch_size: [1, 32, 32, 32]
-#      step: [1, 8, 8, 8]
-#    validation:
-#      patch_size: [1, 32, 32, 32]
-#      step: [1, 8, 8, 8]
 
 training:
-  batch_size: 12
+  batch_size: 16
   nb_epochs: 50
-  patience_discriminator: 3
-  patience_segmentation: 5
+  patience_segmentation: 3
   variables:
     alpha: 1000
     disc_ratio: 0.0

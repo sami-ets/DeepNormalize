@@ -42,7 +42,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
@@ -189,10 +188,7 @@ class DeepNormalizeTrainer(Trainer):
         return torch.cat((tensor_0, tensor_1), dim=0)
 
     def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
-
-    def _should_activate_discriminator_loss(self):
-        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
+        return self._current_epoch < self._patience_segmentation
 
     def _should_activate_segmentation(self):
         return self._current_epoch >= self._patience_segmentation
