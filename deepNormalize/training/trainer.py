@@ -165,10 +165,12 @@ class DeepNormalizeTrainer(Trainer):
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._segmenter)
 
-            self._segmenter.step()
             self._generator.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
+                for param in self._segmenter.parameters():
+                    param.requires_grad = False
+
                 gen_loss = self._generator.compute_loss(gen_pred, inputs)
                 self._generator.update_train_loss(gen_loss.loss)
 
@@ -181,13 +183,19 @@ class DeepNormalizeTrainer(Trainer):
                                                                    requires_grad=False))
                 self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.loss)
                 gen_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
-                           self._training_config.variables["seg_ratio"] * seg_loss
+                           self._training_config.variables["seg_ratio"] * seg_loss.mean()
                 gen_loss.backward()
+
+                for param in self._segmenter.parameters():
+                    param.requires_grad = True
 
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._generator)
 
                 self._generator.step()
+                self._segmenter.step()
+            else:
+                self._segmenter.step()
 
             self._discriminator.zero_grad()
 

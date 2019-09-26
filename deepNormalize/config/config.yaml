@@ -19,9 +19,9 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.00005
-        momentum: 0.9
-        weight_decay: 0.1
+        lr: 0.001
+#        momentum: 0.9
+#        weight_decay: 0.01
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -54,9 +54,9 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.01
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -92,9 +92,9 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.00005
+        lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.01
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -129,10 +129,10 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 16
+  batch_size: 8
   nb_epochs: 50
   patience_discriminator: 3
-  patience_segmentation: 3
+  patience_segmentation: 5
   variables:
     alpha: 1000
     disc_ratio: 0.0
@@ -145,7 +145,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_test_05"
+  env: "deepNormalize_exp_home_GAN_test_06"
 
 logger:
   path: "/tmp/ml/tests"
