@@ -75,38 +75,6 @@ models:
         reduction: !!null
         ignore_index: 0
         average: !!null
-  Discriminator:
-    name: "ResNet3D"
-    type: "ResNet18"
-    params:
-      in_channels: 1
-      out_channels: 3
-      num_groups: 8
-      conv_groups: 1
-      width_per_group: 64
-      padding: !!null
-      activation: "ReLU"
-      zero_init_residual: False
-      replace_stride_with_dilation: !!null
-    optimizer:
-      type: "FusedSGD"
-      max_grad_norm: 5.0
-      params:
-        lr: 0.00005
-        momentum: 0.9
-        weight_decay: 0.1
-    scheduler:
-      type: "ReduceLROnPlateau"
-      params:
-        mode: "min"
-        factor: 0.1
-        patience: 100
-    criterion:
-      type: "CrossEntropyLoss"
-      params:
-    metric:
-      type: "Accuracy"
-      params:
 
 dataset:
   iSEG:
@@ -118,18 +86,9 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
-    validation_split: 0.2
-    training:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
-    validation:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
 
 training:
-  batch_size: 16
+  batch_size: 8
   nb_epochs: 50
   patience_discriminator: 3
   patience_segmentation: 3
@@ -145,7 +104,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_test_04"
+  env: "deepNormalize_exp_home_GAN_test_06"
 
 logger:
   path: "/tmp/ml/tests"

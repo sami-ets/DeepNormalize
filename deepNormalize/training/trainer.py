@@ -93,6 +93,7 @@ class DeepNormalizeTrainer(Trainer):
 
             if not on_single_device(self._run_config.devices):
                 self.average_gradients(self._segmenter)
+                self.average_gradients(self._generator)
 
             self._segmenter.step()
             self._generator.step()
