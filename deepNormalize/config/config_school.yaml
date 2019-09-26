@@ -103,7 +103,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_school_Gen_Seg_test_01"
+  env: "deepNormalize_exp_school_generator_segmenter_02"
 
 logger:
   path: "/tmp/ml/tests"
