@@ -61,15 +61,14 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
 
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._generator.compute_loss(gen_pred, inputs)
-                self._generator.update_train_loss(gen_loss.loss)
-                gen_loss.backward()
+            gen_loss = self._generator.compute_loss(gen_pred, inputs)
+            self._generator.update_train_loss(gen_loss.loss)
+            gen_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
 
-                self._generator.step()
+            self._generator.step()
 
         if self._should_activate_segmentation():
             self._generator.zero_grad()
