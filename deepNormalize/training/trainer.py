@@ -78,7 +78,7 @@ class DeepNormalizeTrainer(Trainer):
 
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_train_loss(gen_loss.loss)
-            
+
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
