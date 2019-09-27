@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.0001
+        lr: 0.00005
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -132,13 +132,12 @@ training:
   batch_size: 16
   nb_epochs: 50
   patience_discriminator: 3
-  patience_segmentation: 5
+  patience_segmentation: 3
   variables:
     alpha: 1000
     disc_ratio: 0.0
     seg_ratio: 1.0
     identity_ratio: 0.5
-    clip_value: 0.01
     train_discriminator_every_n_steps: 10
     train_generator_every_n_steps: 1
 

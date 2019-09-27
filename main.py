@@ -33,7 +33,7 @@ from kerosene.training.trainers import ModelTrainerFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
-from samitorch.utils.files import extract_file_paths
+
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.events.handlers.console import PrintTrainLoss

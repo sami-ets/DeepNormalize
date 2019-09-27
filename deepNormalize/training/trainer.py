@@ -66,7 +66,6 @@ class DeepNormalizeTrainer(Trainer):
         gen_pred = self._generator.forward(inputs)
 
         if self._should_activate_autoencoder():
-
             self._generator.zero_grad()
             self._discriminator.zero_grad()
 
@@ -96,6 +95,8 @@ class DeepNormalizeTrainer(Trainer):
             # Adapt images across domains while still using MSELoss.
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._generator.compute_loss(gen_pred, inputs)
+                self._generator.update_train_loss(gen_loss.loss)
+
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
                                                                    size=(inputs.size(0),),
@@ -159,9 +160,6 @@ class DeepNormalizeTrainer(Trainer):
             else:
                 seg_loss.mean().backward()
 
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._segmenter)
-
             self._generator.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
@@ -188,10 +186,14 @@ class DeepNormalizeTrainer(Trainer):
 
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._generator)
+                    self.average_gradients(self._segmenter)
 
                 self._generator.step()
                 self._segmenter.step()
             else:
+                if not on_single_device(self._run_config.devices):
+                    self.average_gradients(self._segmenter)
+
                 self._segmenter.step()
 
             self._discriminator.zero_grad()
