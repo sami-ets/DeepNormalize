@@ -34,7 +34,6 @@ from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegme
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
 
-
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.events.handlers.console import PrintTrainLoss
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
@@ -100,18 +99,17 @@ if __name__ == '__main__':
                                                                                                 training_config,
                                                                                                 collate_fn=sample_collate)
     # Initialize the loggers.
-    visdom_logger = VisdomLogger(VisdomConfiguration.from_yml(args.config_file, "visdom"))
-
-    # Print configuration.
-    if run_config.local_rank == 0:
-        visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
-                                 config_html))
-        save_folder = "saves/" + os.path.basename(os.path.normpath(os.path.splitext(args.config_file)[0]))
-        [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True) for model in
-         ["Discriminator", "Generator", "Segmenter"]]
+    visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
+    visdom_logger = VisdomLogger(visdom_config)
 
     # Train with the training strategy.
     if run_config.local_rank == 0:
+        visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
+                                 config_html))
+        save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
+        [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True) for model in
+         ["Discriminator", "Generator", "Segmenter"]]
+
         trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, run_config) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintTrainLoss(every=25), Event.ON_BATCH_END) \
@@ -169,6 +167,7 @@ if __name__ == '__main__':
                                                                      "title": "Confusion Matrix"}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(ModelCheckpointIfBetter(save_folder), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
 
 
