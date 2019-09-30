@@ -144,7 +144,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0"
+  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0_test3"
 
 logger:
   path: "/tmp/ml/tests"

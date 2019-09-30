@@ -145,6 +145,9 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
 
+            gen_loss = self._generator.compute_loss(gen_pred, inputs)
+            self._generator.update_train_loss(gen_loss.loss)
+
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
@@ -155,19 +158,16 @@ class DeepNormalizeTrainer(Trainer):
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_train_metric(metric.mean())
 
+            # if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
+            #     seg_loss.mean().backward(retain_graph=True)
+            # else:
+            #     seg_loss.mean().backward()
+            #
+            # self._generator.zero_grad()
+
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                seg_loss.mean().backward(retain_graph=True)
-            else:
-                seg_loss.mean().backward()
-
-            self._generator.zero_grad()
-
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                for param in self._segmenter.parameters():
-                    param.requires_grad = False
-
-                gen_loss = self._generator.compute_loss(gen_pred, inputs)
-                self._generator.update_train_loss(gen_loss.loss)
+                # for param in self._segmenter.parameters():
+                #     param.requires_grad = False
 
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
@@ -176,13 +176,13 @@ class DeepNormalizeTrainer(Trainer):
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
-                self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.loss)
-                gen_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
-                           self._training_config.variables["seg_ratio"] * seg_loss.mean()
-                gen_loss.backward()
+                self._D_G_X_as_X_training_gauge.update(float(disc_loss_as_X.loss))
+                total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
+                             self._training_config.variables["seg_ratio"] * seg_loss.mean()
+                total_loss.backward()
 
-                for param in self._segmenter.parameters():
-                    param.requires_grad = True
+                # for param in self._segmenter.parameters():
+                #     param.requires_grad = True
 
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._generator)
@@ -194,6 +194,7 @@ class DeepNormalizeTrainer(Trainer):
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._segmenter)
 
+                seg_loss.mean().backward()
                 self._segmenter.step()
 
             self._discriminator.zero_grad()
@@ -291,7 +292,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.loss)
+            self._D_G_X_as_X_validation_gauge.update(float(disc_loss_as_X.loss))
             gen_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
                        self._training_config.variables["seg_ratio"] * seg_loss
 
@@ -373,20 +374,16 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
 
         if self._should_activate_discriminator_loss():
-            self.custom_variables["D(G(X)) | X"] = np.array(
-                [self._D_G_X_as_X_training_gauge.compute().cpu().detach().numpy()])
-            self.custom_variables["D(G(X)) | X Valid"] = np.array(
-                [self._D_G_X_as_X_validation_gauge.compute().cpu().detach().numpy()])
+            self.custom_variables["D(G(X)) | X"] = np.array([self._D_G_X_as_X_training_gauge.compute()])
+            self.custom_variables["D(G(X)) | X Valid"] = np.array([self._D_G_X_as_X_validation_gauge.compute()])
             self.custom_variables["Mean Hausdorff Distance"] = np.array([0])
             self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
                                                             [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
             self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
 
         if self._should_activate_segmentation():
-            self.custom_variables["D(G(X)) | X"] = np.array(
-                [self._D_G_X_as_X_training_gauge.compute().cpu().detach().numpy()])
-            self.custom_variables["D(G(X)) | X Valid"] = np.array(
-                [self._D_G_X_as_X_validation_gauge.compute().cpu().detach().numpy()])
+            self.custom_variables["D(G(X)) | X"] = np.array([self._D_G_X_as_X_training_gauge.compute()])
+            self.custom_variables["D(G(X)) | X Valid"] = np.array([self._D_G_X_as_X_validation_gauge.compute()])
             self.custom_variables["Mean Hausdorff Distance"] = np.array([self._class_hausdorff_distance_gauge.compute()[
                                                                          -3:].mean()])
             self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
@@ -436,7 +433,7 @@ class DeepNormalizeTrainer(Trainer):
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
 
-        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = ((2/3) * loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
         self._discriminator.update_train_loss(disc_loss.loss)
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
@@ -468,7 +465,7 @@ class DeepNormalizeTrainer(Trainer):
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
 
-        disc_loss = (loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = ((2/3) * loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
         self._discriminator.update_valid_loss(disc_loss)
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
