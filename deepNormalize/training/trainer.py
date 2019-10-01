@@ -55,8 +55,6 @@ class DeepNormalizeTrainer(Trainer):
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._class_dice_gauge = AverageGauge()
         self._confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
-        self._ones = torch.Tensor().new_ones(size=(6,), device=run_config.local_rank, dtype=torch.float32,
-                                             requires_grad=False)
 
     def train_step(self, inputs, target):
         disc_pred = None
@@ -236,14 +234,6 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_discriminator_loss():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_valid_loss(gen_loss.loss)
-            disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                           torch.Tensor().new_full(
-                                                               size=(inputs.size(0),),
-                                                               fill_value=2,
-                                                               dtype=torch.long,
-                                                               device=inputs.device,
-                                                               requires_grad=False))
-            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.loss)
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -255,6 +245,15 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_valid_metric(metric.mean())
 
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+
+            disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
+                                                           torch.Tensor().new_full(
+                                                               size=(inputs.size(0),),
+                                                               fill_value=2,
+                                                               dtype=torch.long,
+                                                               device=inputs.device,
+                                                               requires_grad=False))
+            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.loss)
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -274,17 +273,6 @@ class DeepNormalizeTrainer(Trainer):
             seg_pred_ = to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1), num_classes=4)
             target_ = to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(), num_classes=4)
 
-            distances = np.zeros((4,))
-            for channel in range(seg_pred_.size(1)):
-                distances[channel] = max(
-                    directed_hausdorff(flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy(),
-                                       flatten(target_[:, channel, ...]).cpu().detach().numpy())[0],
-                    directed_hausdorff(flatten(target_[:, channel, ...]).cpu().detach().numpy(),
-                                       flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy())[0])
-
-            self._class_hausdorff_distance_gauge.update(distances)
-            self._class_dice_gauge.update(np.array(metric.numpy()))
-
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                            torch.Tensor().new_full(
                                                                size=(inputs.size(0),),
@@ -293,8 +281,19 @@ class DeepNormalizeTrainer(Trainer):
                                                                device=inputs.device,
                                                                requires_grad=False))
             self._D_G_X_as_X_validation_gauge.update(float(disc_loss_as_X.loss))
-            gen_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
-                       self._training_config.variables["seg_ratio"] * seg_loss
+
+            distances = np.zeros((4,))
+            for channel in range(seg_pred_.size(1)):
+                distances[channel] = (
+                                             directed_hausdorff(
+                                                 flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy(),
+                                                 flatten(target_[:, channel, ...]).cpu().detach().numpy())[0] +
+                                             directed_hausdorff(
+                                                 flatten(target_[:, channel, ...]).cpu().detach().numpy(),
+                                                 flatten(seg_pred_[:, channel, ...]).cpu().detach().numpy())[0]) / 2.0
+
+            self._class_hausdorff_distance_gauge.update(distances)
+            self._class_dice_gauge.update(np.array(metric.numpy()))
 
             self._confusion_matrix_gauge.update((
                 to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=False),
@@ -433,7 +432,8 @@ class DeepNormalizeTrainer(Trainer):
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
 
-        disc_loss = ((2/3) * loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = ((2 / 3) * loss_D_X +
+                     ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
         self._discriminator.update_train_loss(disc_loss.loss)
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
@@ -465,7 +465,8 @@ class DeepNormalizeTrainer(Trainer):
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
 
-        disc_loss = ((2/3) * loss_D_X + ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = ((2 / 3) * loss_D_X +
+                     ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
         self._discriminator.update_valid_loss(disc_loss)
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
