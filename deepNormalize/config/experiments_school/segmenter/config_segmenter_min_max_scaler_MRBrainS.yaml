@@ -109,17 +109,8 @@ models:
       params:
 
 dataset:
-  iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
-    validation_split: 0.2
-    training:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
-    validation:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -131,20 +122,10 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 50
-  patience_discriminator: 3
-  patience_segmentation: 3
   variables:
-    disc_ratio: 0.0
-    seg_ratio: 1.0
-    train_generator_every_n_steps: 5
-    train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.3.9"
+  server: "10.180.113.21"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0_test4"
-
-logger:
-  path: "/tmp/ml/tests"
-  log_after_iterations: 50
+  env: "deepNormalize_exp_home_segmenter_MRBRainS_min_max_scaler"
 
