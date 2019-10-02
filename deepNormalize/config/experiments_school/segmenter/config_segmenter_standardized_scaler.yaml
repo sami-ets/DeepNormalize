@@ -1,0 +1,140 @@
+models:
+  Generator:
+    name: "UNet3D"
+    type: "UNet3D"
+    params:
+      feature_maps: 64
+      in_channels: 1
+      out_channels: 1
+      num_levels: 4
+      conv_kernel_size: 3
+      pool_kernel_size: 2
+      pooling_type: "MaxPool3d"
+      num_groups: !!null
+      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      activation: "LeakyReLU"
+      interpolation: True
+      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    optimizer:
+      type: "FusedSGD"
+      max_grad_norm: !!null
+      params:
+        lr: 0.00001
+        momentum: 0.9
+        weight_decay: 0.1
+    scheduler:
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 100
+    criterion:
+      type: "MSELoss"
+      params:
+    metric:
+      type: "Accuracy"
+      params:
+  Segmenter:
+    name: "UNet3D"
+    type: "UNet3D"
+    params:
+      feature_maps: 64
+      in_channels: 1
+      out_channels: 4
+      num_levels: 4
+      conv_kernel_size: 3
+      pool_kernel_size: 2
+      pooling_type: "MaxPool3d"
+      num_groups: !!null
+      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      activation: "LeakyReLU"
+      interpolation: True
+      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    optimizer:
+      type: "FusedSGD"
+      max_grad_norm: 5.0
+      params:
+        lr: 0.0001
+        momentum: 0.9
+        weight_decay: 0.1
+    scheduler:
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 3
+    criterion:
+      type: "DiceLoss"
+      params:
+        reduction: !!null
+        ignore_index: -100
+    metric:
+      type: "Dice"
+      params:
+        num_classes: 4
+        reduction: !!null
+        ignore_index: 0
+        average: !!null
+  Discriminator:
+    name: "ResNet3D"
+    type: "ResNet18"
+    params:
+      in_channels: 1
+      out_channels: 3
+      num_groups: 8
+      conv_groups: 1
+      width_per_group: 64
+      padding: !!null
+      activation: "ReLU"
+      zero_init_residual: False
+      replace_stride_with_dilation: !!null
+    optimizer:
+      type: "FusedSGD"
+      max_grad_norm: 5.0
+      params:
+        lr: 0.0001
+        momentum: 0.9
+        weight_decay: 0.1
+    scheduler:
+      type: "ReduceLROnPlateau"
+      params:
+        mode: "min"
+        factor: 0.1
+        patience: 100
+    criterion:
+      type: "CrossEntropyLoss"
+      params:
+    metric:
+      type: "Accuracy"
+      params:
+
+dataset:
+  iSEG:
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized"
+    validation_split: 0.2
+    training:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+    validation:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+  MRBrainS:
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized"
+    validation_split: 0.2
+    training:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+    validation:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+
+training:
+  batch_size: 16
+  nb_epochs: 50
+  variables:
+
+visdom:
+  server: "10.180.113.21"
+  port: "8097"
+  env: "deepNormalize_exp_home_segmenter_dual_standardized"
+
