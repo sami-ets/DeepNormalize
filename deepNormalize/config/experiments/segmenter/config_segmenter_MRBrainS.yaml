@@ -42,15 +42,6 @@ models:
         average: !!null
 
 dataset:
-  iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
-    validation_split: 0.2
-    training:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
-    validation:
-      patch_size: [1, 32, 32, 32]
-      step: [1, 8, 8, 8]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
@@ -69,5 +60,5 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_dual"
+  env: "deepNormalize_exp_home_segmenter_MRBrainS"
 

@@ -109,8 +109,8 @@ models:
       params:
 
 dataset:
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+  iSEG:
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Quantile"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -120,18 +120,12 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 24
+  batch_size: 40
   nb_epochs: 50
-  patience_discriminator: 3
-  patience_segmentation: 3
   variables:
-    disc_ratio: 0.00
-    seg_ratio: 1.0
-    train_generator_every_n_steps: 5
-    train_generator_every_n_steps_seg: 1
 
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_generator_segmenter_MRBrainS"
+  env: "deepNormalize_exp_home_segmenter_iSEG_quantile"
 

@@ -325,16 +325,16 @@ class VariableConfiguration(Configuration):
 
     def __init__(self, config: dict):
         super(VariableConfiguration, self).__init__()
-        self._lambda = config["lambda"]
+        self._lambda = config["disc_ratio"]
         self._alpha = config["alpha"]
 
     @property
     def lambda_(self) -> float:
         """
-        The lambda variable between losses.
+        The disc_ratio variable between losses.
 
         Returns:
-            float: The lambda variable.
+            float: The disc_ratio variable.
         """
         return self._lambda
 
