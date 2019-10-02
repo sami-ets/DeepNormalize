@@ -10,7 +10,7 @@ models:
       conv_kernel_size: 3
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
-      num_groups: 8
+      num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
       activation: "LeakyReLU"
       interpolation: True
@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.00005
+        lr: 0.00001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -27,7 +27,7 @@ models:
       params:
         mode: "min"
         factor: 0.1
-        patience: 1
+        patience: 100
     criterion:
       type: "MSELoss"
       params:
@@ -45,7 +45,7 @@ models:
       conv_kernel_size: 3
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
-      num_groups: 8
+      num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
       activation: "LeakyReLU"
       interpolation: True
@@ -54,7 +54,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.0005
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -66,13 +66,13 @@ models:
     criterion:
       type: "DiceLoss"
       params:
-        reduction: "mean"
+        reduction: !!null
         ignore_index: -100
     metric:
       type: "Dice"
       params:
         num_classes: 4
-        reduction: "mean"
+        reduction: !!null
         ignore_index: 0
         average: !!null
   Discriminator:
@@ -92,7 +92,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: 5.0
       params:
-        lr: 0.00005
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -100,7 +100,7 @@ models:
       params:
         mode: "min"
         factor: 0.1
-        patience: 3
+        patience: 100
     criterion:
       type: "CrossEntropyLoss"
       params:
@@ -129,24 +129,18 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 12
-  nb_epochs: 40
-  patience_discriminator: 5
-  patience_segmentation: 7
+  batch_size: 24
+  nb_epochs: 50
+  patience_discriminator: 3
+  patience_segmentation: 5
   variables:
-    lambda: 1.00
-    alpha: 100000
-    disc_ratio: 1.0
-    clip_value: 0.01
-    train_discriminator_every_n_steps: 10
+    disc_ratio: 1.00
+    seg_ratio: 1.0
     train_generator_every_n_steps: 5
+    train_generator_every_n_steps_seg: 1
 
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_lambda_1.00"
-
-logger:
-  path: "/tmp/ml/tests"
-  log_after_iterations: 50
+  env: "deepNormalize_exp_home_GAN_dual_disc_ratio_1.00"
 
