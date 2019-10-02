@@ -29,6 +29,8 @@ from samitorch.inputs.transformers import ToNumpyArray, ToNifti1Image, NiftiToDi
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from torchvision.transforms import transforms
 
+from deepNormalize.preprocessing.pipelines import PatchPreProcessingPipeline, iSEGPatchPreProcessingPipeline
+
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     """
@@ -232,12 +234,30 @@ if __name__ == "__main__":
     #                        scaler=StandardScalerTransformer
     #                        ).run(prefix="standardized_")
 
-    ScalerPipeline(root_dir=args.path_iseg,
-                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
-                   scaler=QuantileScalerTransformer,
-                   params={}).run(prefix="quantile_")
-    ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
-                           scaler=QuantileScalerTransformer, params={}).run(prefix="quantile_")
+    # ScalerPipeline(root_dir=args.path_iseg,
+    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
+    #                scaler=QuantileScalerTransformer,
+    #                params={}).run(prefix="quantile_")
+    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
+    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
+    #                        scaler=QuantileScalerTransformer, params={}).run(prefix="quantile_")
 
+    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
+                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled",
+                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Scaled",
+                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized",
+                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized",
+                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
+                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Quantile",
+                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Quantile",
+                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
     print("Preprocessing pipeline completed successfully.")

@@ -156,17 +156,7 @@ class DeepNormalizeTrainer(Trainer):
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_train_metric(metric.mean())
 
-            # if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-            #     seg_loss.mean().backward(retain_graph=True)
-            # else:
-            #     seg_loss.mean().backward()
-            #
-            # self._generator.zero_grad()
-
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                # for param in self._segmenter.parameters():
-                #     param.requires_grad = False
-
+            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps_seg"] == 0:
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
                                                                    size=(inputs.size(0),),
@@ -175,25 +165,26 @@ class DeepNormalizeTrainer(Trainer):
                                                                    device=inputs.device,
                                                                    requires_grad=False))
                 self._D_G_X_as_X_training_gauge.update(float(disc_loss_as_X.loss))
-                total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
-                             self._training_config.variables["seg_ratio"] * seg_loss.mean()
+                total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
+                             self._training_config.variables["disc_ratio"] * disc_loss_as_X
+
                 total_loss.backward()
 
-                # for param in self._segmenter.parameters():
-                #     param.requires_grad = True
-
                 if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
                     self.average_gradients(self._segmenter)
+                    self.average_gradients(self._generator)
 
                 self._generator.step()
                 self._segmenter.step()
             else:
+                seg_loss.mean().backward()
+
                 if not on_single_device(self._run_config.devices):
                     self.average_gradients(self._segmenter)
+                    self.average_gradients(self._generator)
 
-                seg_loss.mean().backward()
                 self._segmenter.step()
+                self._generator.step()
 
             self._discriminator.zero_grad()
 
@@ -229,11 +220,14 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_autoencoder():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_valid_loss(gen_loss.loss)
+
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
         if self._should_activate_discriminator_loss():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_valid_loss(gen_loss.loss)
+
+            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -243,8 +237,6 @@ class DeepNormalizeTrainer(Trainer):
             metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_valid_metric(metric.mean())
-
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                            torch.Tensor().new_full(
@@ -259,6 +251,8 @@ class DeepNormalizeTrainer(Trainer):
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_valid_loss(gen_loss.loss)
 
+            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
@@ -267,8 +261,6 @@ class DeepNormalizeTrainer(Trainer):
             metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             self._segmenter.update_valid_metric(metric.mean())
-
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
             seg_pred_ = to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1), num_classes=4)
             target_ = to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(), num_classes=4)

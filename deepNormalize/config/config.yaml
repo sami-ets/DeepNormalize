@@ -118,15 +118,15 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
-#  MRBrainS:
-#    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
-#    validation_split: 0.2
-#    training:
-#      patch_size: [1, 32, 32, 32]
-#      step: [1, 8, 8, 8]
-#    validation:
-#      patch_size: [1, 32, 32, 32]
-#      step: [1, 8, 8, 8]
+  MRBrainS:
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    validation_split: 0.2
+    training:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+    validation:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
 
 training:
   batch_size: 16
@@ -134,17 +134,15 @@ training:
   patience_discriminator: 3
   patience_segmentation: 3
   variables:
-    alpha: 1000
     disc_ratio: 0.0
     seg_ratio: 1.0
-    identity_ratio: 0.5
-    train_discriminator_every_n_steps: 10
-    train_generator_every_n_steps: 1
+    train_generator_every_n_steps: 5
+    train_generator_every_n_steps_seg: 1
 
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0_test3"
+  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0_test4"
 
 logger:
   path: "/tmp/ml/tests"
