@@ -110,7 +110,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Data/Preprocessed/iSEG/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -119,7 +119,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
