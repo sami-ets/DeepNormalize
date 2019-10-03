@@ -37,9 +37,10 @@ from deepNormalize.utils.utils import to_html
 class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
-                 train_data_loader: DataLoader, valid_data_loader: DataLoader, run_config: RunConfiguration):
+                 train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
+                 run_config: RunConfiguration):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
-                                                   model_trainers, run_config)
+                                                   test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
         self._patience_discriminator = training_config.patience_discriminator
@@ -245,7 +246,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.loss)
+            self._D_G_X_as_X_validation_gauge.update(float(disc_loss_as_X.loss))
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -291,6 +292,9 @@ class DeepNormalizeTrainer(Trainer):
                 to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=False),
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
+
+    def on_test_end(self):
+        pass
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",

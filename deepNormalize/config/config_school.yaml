@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.0001
+        lr: 0.00001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -110,7 +110,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Data/Preprocessed/iSEG/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -118,8 +118,12 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
+
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/home/pierre-luc-delisle/Documents/Data/Preprocessed/MRBrainS/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -127,24 +131,25 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
 
 training:
   batch_size: 16
-  nb_epochs: 50
+  nb_epochs: 1
   patience_discriminator: 3
-  patience_segmentation: 5
+  patience_segmentation: 3
   variables:
-    alpha: 1000
     disc_ratio: 0.0
     seg_ratio: 1.0
-    identity_ratio: 0.5
-    train_discriminator_every_n_steps: 10
-    train_generator_every_n_steps: 1
+    train_generator_every_n_steps: 5
+    train_generator_every_n_steps_seg: 1
 
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_school_GAN_test_06"
+  env: "deepNormalize_exp_home_GAN_iSEG_disc_ratio_0.0_test4"
 
 logger:
   path: "/tmp/ml/tests"

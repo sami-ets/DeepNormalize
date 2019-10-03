@@ -118,6 +118,10 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
+
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
@@ -127,6 +131,9 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
 
 training:
   batch_size: 16

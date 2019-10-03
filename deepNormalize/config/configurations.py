@@ -156,7 +156,7 @@ class RunningConfiguration(Configuration):
 class DatasetConfiguration(Configuration):
 
     def __init__(self, dataset_name, path, validation_split, training_patch_size, training_patch_step,
-                 validation_patch_size, validation_patch_step):
+                 validation_patch_size, validation_patch_step, test_patch_size, test_patch_step):
         super(DatasetConfiguration, self).__init__()
 
         self._dataset_name = dataset_name
@@ -166,6 +166,8 @@ class DatasetConfiguration(Configuration):
         self._training_patch_step = training_patch_step
         self._validation_patch_size = validation_patch_size
         self._validation_patch_step = validation_patch_step
+        self._test_patch_size = test_patch_size
+        self._test_patch_step = test_patch_step
 
     @property
     def dataset_name(self):
@@ -231,11 +233,20 @@ class DatasetConfiguration(Configuration):
         """
         return self._validation_patch_step
 
+    @property
+    def test_patch_size(self):
+        return self._test_patch_size
+
+    @property
+    def test_patch_step(self):
+        return self._test_patch_step
+
     @classmethod
     def from_dict(cls, dataset_name, config_dict):
         return cls(dataset_name, config_dict["path"], config_dict["validation_split"],
                    config_dict["training"]["patch_size"], config_dict["training"]["step"],
-                   config_dict["validation"]["patch_size"], config_dict["validation"]["step"])
+                   config_dict["validation"]["patch_size"], config_dict["validation"]["step"],
+                   config_dict["test"]["patch_size"], config_dict["test"]["step"])
 
     def to_html(self):
         configuration_values = '\n'.join("<p>%s: %s</p>" % item for item in vars(self).items())

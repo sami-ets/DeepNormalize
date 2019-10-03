@@ -129,7 +129,7 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 24
+  batch_size: 16
   nb_epochs: 50
   patience_discriminator: 3
   patience_segmentation: 5
