@@ -129,7 +129,7 @@ dataset:
       step: [1, 8, 8, 8]
 
 training:
-  batch_size: 40
+  batch_size: 32
   nb_epochs: 50
   variables:
 
