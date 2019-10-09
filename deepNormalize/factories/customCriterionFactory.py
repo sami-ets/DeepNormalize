@@ -14,12 +14,29 @@
 # limitations under the License.
 # ==============================================================================
 
-from kerosene.nn.criterions import CriterionFactory
+from typing import Union
+
+import numpy as np
+import torch
+from kerosene.config.trainers import RunConfiguration
+from kerosene.nn.criterions import CriterionFactory, CriterionType
 
 from deepNormalize.nn.criterions import MeanLoss
 
 
 class CustomCriterionFactory(CriterionFactory):
-    def __init__(self):
+    def __init__(self, run_config: RunConfiguration):
         super(CustomCriterionFactory, self).__init__()
+        self._run_config = run_config
         self.register("MeanLoss", MeanLoss)
+
+    def create(self, criterion_type: Union[str, CriterionType], params):
+        if criterion_type == CriterionType.DiceLoss or criterion_type == "DiceLoss" or criterion_type == CriterionType.TverskyLoss or criterion_type == "TverskyLoss":
+            if params["weight"] is not None:
+                params["weight"] = torch.Tensor().new_tensor(np.array(params["weight"]),
+                                                             dtype=torch.float,
+                                                             device=self._run_config.device,
+                                                             requires_grad=False)
+
+        return self._criterion[str(criterion_type)](**params) if params is not None else self._criterion[
+            str(criterion_type)]()
