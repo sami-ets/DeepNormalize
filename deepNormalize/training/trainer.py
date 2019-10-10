@@ -73,7 +73,7 @@ class DeepNormalizeTrainer(Trainer):
         seg_pred = torch.Tensor().new_zeros(
             size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
-        gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
+        gen_pred = self._generator.forward(inputs)
 
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
@@ -131,12 +131,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.step()
             self._generator.step()
 
-        real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
-            size=(inputs.size(0) // 2,),
-            fill_value=2,
-            dtype=torch.long,
-            device="cpu",
-            requires_grad=False)), dim=0), 3)
+        real_count = self.count(target[DATASET_ID].cpu().detach(), 3)
         self.custom_variables["Pie Plot True"] = real_count
 
         if self.current_train_step % 100 == 0:

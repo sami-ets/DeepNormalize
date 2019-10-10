@@ -12,7 +12,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "Leaky_ReLU"
+      activation: "ReLU"
       interpolation: True
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -47,7 +47,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "Leaky_ReLU"
+      activation: "ReLU"
       interpolation: True
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -112,7 +112,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/home/pierre-luc-delisle/Documents/Research/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/home/AM54900/Data/Preprocessed/iSEG/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -124,7 +124,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
   MRBrainS:
-    path: "/home/pierre-luc-delisle/Documents/Research/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/home/AM54900/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -137,12 +137,12 @@ dataset:
       step: [1, 32, 32, 32]
 
 training:
-  batch_size: 16
+  batch_size: 24
   nb_epochs: 50
   patience_discriminator: 3
   patience_segmentation: 3
   variables:
-    disc_ratio: 0.0
+    disc_ratio: 1.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 5
     train_generator_every_n_steps_seg: 1
@@ -150,7 +150,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_lab_GAN_gen_seg_test11"
+  env: "deepNormalize_exp_phoebe_GAN_dual_disc_ratio_1.0"
 
 logger:
   path: "/tmp/ml/tests"
