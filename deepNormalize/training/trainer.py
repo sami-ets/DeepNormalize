@@ -47,8 +47,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
-        self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._segmenter = self._model_trainers[0]
