@@ -32,7 +32,7 @@ from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, IMAGE_TARGET, DATASET_ID, EPSILON
+from deepNormalize.utils.constants import IMAGE_TARGET, DATASET_ID, EPSILON
 from deepNormalize.utils.constants import ISEG, MRBrainS
 from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
@@ -51,8 +51,7 @@ class DeepNormalizeTrainer(Trainer):
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
-        self._generator = self._model_trainers[GENERATOR]
-        self._segmenter = self._model_trainers[SEGMENTER]
+        self._segmenter = self._model_trainers[0]
         self._class_hausdorff_distance_gauge = AverageGauge()
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._per_dataset_hausdorff_distance_gauge = AverageGauge()
@@ -62,7 +61,6 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_hausdorff_gauge = AverageGauge()
         self._class_dice_gauge = AverageGauge()
         self._js_div_inputs_gauge = AverageGauge()
-        self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
@@ -70,15 +68,9 @@ class DeepNormalizeTrainer(Trainer):
         self._stop_time = 0
 
     def train_step(self, inputs, target):
-        self._generator.zero_grad()
         self._segmenter.zero_grad()
 
-        gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
-
-        gen_loss = self._generator.compute_loss(gen_pred, inputs)
-        self._generator.update_train_loss(gen_loss.loss)
-
-        seg_pred = self._segmenter.forward(gen_pred)
+        seg_pred = self._segmenter.forward(inputs)
         seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                 to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                           num_classes=4))
@@ -92,10 +84,8 @@ class DeepNormalizeTrainer(Trainer):
 
         if not on_single_device(self._run_config.devices):
             self.average_gradients(self._segmenter)
-            self.average_gradients(self._generator)
 
         self._segmenter.step()
-        self._generator.step()
 
         real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
             size=(inputs.size(0) // 2,),
@@ -106,19 +96,9 @@ class DeepNormalizeTrainer(Trainer):
         self.custom_variables["Pie Plot True"] = real_count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
-                               target[IMAGE_TARGET].cpu().detach())
+            self._update_plots(inputs.cpu().detach(), seg_pred.cpu().detach(), target[IMAGE_TARGET].cpu().detach())
 
-        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
-        self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
-        self.custom_variables["CSF Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
-        self.custom_variables["GM Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
-        self.custom_variables["WM Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
         self.custom_variables["Background Input Intensity Histogram"] = inputs[
             torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
         self.custom_variables["CSF Input Intensity Histogram"] = inputs[
@@ -129,12 +109,7 @@ class DeepNormalizeTrainer(Trainer):
             torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
 
     def validate_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs)
-
-        gen_loss = self._generator.compute_loss(gen_pred, inputs)
-        self._generator.update_valid_loss(gen_loss.loss)
-
-        seg_pred = self._segmenter.forward(gen_pred)
+        seg_pred = self._segmenter.forward(inputs)
         seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                 to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                           num_classes=4))
@@ -144,12 +119,7 @@ class DeepNormalizeTrainer(Trainer):
         self._segmenter.update_valid_metric(metric.mean())
 
     def test_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs)
-
-        gen_loss = self._generator.compute_loss(gen_pred, inputs)
-        self._generator.update_test_loss(gen_loss.loss)
-
-        seg_pred = self._segmenter.forward(gen_pred)
+        seg_pred = self._segmenter.forward(inputs)
         seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                 to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                           num_classes=4))
@@ -226,24 +196,15 @@ class DeepNormalizeTrainer(Trainer):
         inputs_reshaped = inputs.reshape(inputs.shape[0],
                                          inputs.shape[1] * inputs.shape[2] * inputs.shape[3] * inputs.shape[4])
 
-        gen_pred_reshaped = gen_pred.reshape(gen_pred.shape[0],
-                                             gen_pred.shape[1] * gen_pred.shape[2] * gen_pred.shape[3] *
-                                             gen_pred.shape[4])
         inputs_ = torch.Tensor().new_zeros((inputs_reshaped.shape[0], 256))
-        gen_pred_ = torch.Tensor().new_zeros((gen_pred_reshaped.shape[0], 256))
         for image in range(inputs_reshaped.shape[0]):
             inputs_[image] = torch.nn.functional.softmax(torch.histc(inputs_reshaped[image], bins=256), dim=0)
-            gen_pred_[image] = torch.nn.functional.softmax(torch.histc(gen_pred_reshaped[image].float(), bins=256),
-                                                           dim=0)
 
         self._js_div_inputs_gauge.update(js_div(inputs_))
-        self._js_div_gen_gauge.update(js_div(gen_pred_))
 
-    def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target):
+    def _update_plots(self, inputs, segmenter_predictions, target):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).numpy()
-        generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
-                                                                align_corners=True).numpy()
         segmenter_predictions = torch.nn.functional.interpolate(
             torch.argmax(torch.nn.functional.softmax(segmenter_predictions, dim=1), dim=1, keepdim=True).float(),
             scale_factor=5, mode="nearest").numpy()
@@ -251,23 +212,17 @@ class DeepNormalizeTrainer(Trainer):
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
         inputs = self._normalize(inputs)
-        generator_predictions = self._normalize(generator_predictions)
         segmenter_predictions = self._normalize(segmenter_predictions)
         target = self._normalize(target)
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
-        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
         self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                        segmenter_predictions)
         self._custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                                        target)
 
     def scheduler_step(self):
-        self._generator.scheduler_step()
-
-        if self._should_activate_segmentation():
-            self._discriminator.scheduler_step()
-            self._segmenter.scheduler_step()
+        self._segmenter.scheduler_step()
 
     @staticmethod
     def _normalize(img):
@@ -324,7 +279,7 @@ class DeepNormalizeTrainer(Trainer):
         self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
                                                                    ["JS Divergence"],
                                                                    [self._js_div_inputs_gauge.compute().numpy(),
-                                                                    self._js_div_gen_gauge.compute().numpy()])
+                                                                    np.array([0])])
         self.custom_variables["Confusion Matrix"] = np.array(
             np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
 
@@ -342,8 +297,6 @@ class DeepNormalizeTrainer(Trainer):
 
         self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array(
             [self._js_div_inputs_gauge.compute().numpy()])
-        self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array(
-            [self._js_div_gen_gauge.compute().numpy()])
 
         self._MRBrainS_confusion_matrix_gauge.reset()
         self._iSEG_confusion_matrix_gauge.reset()
@@ -351,7 +304,6 @@ class DeepNormalizeTrainer(Trainer):
         self._class_hausdorff_distance_gauge.reset()
         self._class_dice_gauge.reset()
         self._js_div_inputs_gauge.reset()
-        self._js_div_gen_gauge.reset()
 
     @staticmethod
     def count(tensor, n_classes):

@@ -58,7 +58,7 @@ if __name__ == '__main__':
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_config = DatasetConfigurationParser().parse(args.config_file)
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_config)),
-                   list(map(lambda config: config.to_html(), model_trainer_configs))]
+                   list(map(lambda config: config.to_html(), [model_trainer_configs]))]
 
     # Prepare the data.
     iSEG_train = None
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory(run_config))
-    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
+    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), [model_trainer_configs]))
 
     # Create loaders.
     train_loader, valid_loader, test_loader = DataloaderFactory(training_dataset, validation_dataset,
@@ -134,11 +134,6 @@ if __name__ == '__main__':
             .with_event_handler(PrintModelTrainersStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4,
-                                                            "opts": {"store_history": True,
-                                                                     "title": "Generated Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4,
                                                             "opts": {"store_history": True,
@@ -155,26 +150,6 @@ if __name__ == '__main__':
                                         "opts": {"store_history": True,
                                                  "title": "Ground Truth Patches"}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "Generated Intensity Histogram",
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "Background Generated Intensity Histogram",
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "CSF Generated Intensity Histogram",
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "GM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "GM Generated Intensity Histogram",
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "WM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "WM Generated Intensity Histogram",
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={
