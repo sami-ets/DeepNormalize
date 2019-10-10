@@ -36,7 +36,6 @@ from torch.utils.data import DataLoader
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
-from deepNormalize.factories.customMetricFactory import CustomMetricFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
@@ -99,8 +98,7 @@ if __name__ == '__main__':
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
-                                                criterion_factory=CustomCriterionFactory(run_config),
-                                                metric_factory=CustomMetricFactory())
+                                                criterion_factory=CustomCriterionFactory(run_config))
     model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
 
     # Create loaders.
