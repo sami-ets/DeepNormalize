@@ -142,7 +142,7 @@ training:
   patience_discriminator: 3
   patience_segmentation: 3
   variables:
-    disc_ratio: 0.25
+    disc_ratio: 1.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 5
     train_generator_every_n_steps_seg: 1
@@ -150,7 +150,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_minerva_GAN_dual_disc_ratio_0.25"
+  env: "deepNormalize_exp_phoebe_GAN_dual_disc_ratio_1.0"
 
 logger:
   path: "/tmp/ml/tests"

@@ -150,7 +150,7 @@ training:
 visdom:
   server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_minerva_GAN_dual_disc_ratio_0.25"
+  env: "deepNormalize_exp_phoebe_GAN_dual_disc_ratio_0.25"
 
 logger:
   path: "/tmp/ml/tests"

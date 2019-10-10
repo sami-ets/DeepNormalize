@@ -37,10 +37,12 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             extract_file_paths(target_dir + "/*"))
 
         train_valid_ids, test_ids = next(
-            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
+            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
+                                                                          np.asarray(csv["center_class"])))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                    csv["center_class"][train_valid_ids]))
+                                                                          np.asarray(csv["center_class"])[
+                                                                              train_valid_ids]))
 
         train_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
@@ -65,7 +67,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                     dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float):
         """
         Create a MultimodalDataset object for both training and validation.
 
@@ -96,7 +98,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                    csv["center_class"][train_valid_ids]))
+                                                                          csv["center_class"][train_valid_ids]))
 
         train_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
@@ -151,7 +153,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                    csv["center_class"][train_valid_ids]))
+                                                                          csv["center_class"][train_valid_ids]))
 
         train_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
@@ -176,7 +178,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                     dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float):
         """
         Create a MultimodalDataset object for both training and validation.
 
@@ -207,7 +209,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                    csv["center_class"][train_valid_ids]))
+                                                                          csv["center_class"][train_valid_ids]))
 
         train_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
@@ -224,10 +226,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                          Compose([ToNumpyArray(), ToNDTensor()]))
 
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
-                                                     modality_1.value, modality_2.value, dataset_id,
-                                                     Compose([ToNumpyArray(), ToNDTensor()]))
-        test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
                                                       modality_1.value, modality_2.value, dataset_id,
                                                       Compose([ToNumpyArray(), ToNDTensor()]))
+        test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
+                                                     modality_1.value, modality_2.value, dataset_id,
+                                                     Compose([ToNumpyArray(), ToNDTensor()]))
 
         return training_dataset, valid_dataset, test_dataset, csv
