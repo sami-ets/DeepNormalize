@@ -106,7 +106,7 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
                 shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, root_dir_end))
 
 
-class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
+class MRBrainsPreProcessingPipeline(AbstractPreProcessingPipeline):
     """
        A MRBrainS data pre-processing pipeline. Resample images to a Template size.
     """
@@ -132,17 +132,20 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
                 if not "_1mm" in file:
                     self._transforms = transforms.Compose([LoadNifti(),
                                                            ResampleNiftiImageToTemplate(clip=False,
-                                                                                        template=root + "/T1_1mm.nii",
+                                                                                        template=os.path.join(root,
+                                                                                                              "T1_1mm.nii"),
                                                                                         interpolation="continuous"),
-                                                           ApplyMask(os.path.join(self._output_dir,
-                                                                                  root_dir_number) + "/LabelsForTesting.nii"),
+                                                           ApplyMask(os.path.join(os.path.join(self._output_dir,
+                                                                                               root_dir_number),
+                                                                                  "LabelsForTesting.nii")),
                                                            NiftiToDisk(os.path.join(
                                                                os.path.join(self._output_dir, root_dir_number),
                                                                prefix + file))])
                 else:
                     self._transforms = transforms.Compose([LoadNifti(),
-                                                           ApplyMask(os.path.join(self._output_dir,
-                                                                                  root_dir_number) + "/LabelsForTesting.nii"),
+                                                           ApplyMask(os.path.join(os.path.join(self._output_dir,
+                                                                                               root_dir_number),
+                                                                                  "LabelsForTesting.nii")),
                                                            NiftiToDisk(os.path.join(
                                                                os.path.join(self._output_dir, root_dir_number),
                                                                prefix + file))])
@@ -254,7 +257,8 @@ class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                     os.makedirs(modality_path)
 
                 transformed_image = self._transforms(os.path.join(root, file))
-                transformed_labels = self._transforms(os.path.join(root, "LabelsForTesting.nii"))
+                transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
+                    np.int8)
                 sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
                 slices = SliceBuilder(sample.x.shape, patch_size=self._patch_size, step=self._step).build_slices()
 
@@ -314,7 +318,7 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                 transformed_image = self._transforms(os.path.join(root, file))
 
                 transformed_labels = self._transforms(os.path.join(os.path.join(self._source_dir, "label"),
-                                                                   "subject-" + subject + "-label.nii"))
+                                                                   "subject-" + subject + "-label.nii")).astype(np.int8)
                 sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
 
                 patches = iSEGPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step)
@@ -354,8 +358,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     iSEGPreProcessingPipeline(root_dir=args.path_iseg,
                               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    MRBrainsImagePreProcessingPipeline(root_dir=args.path_mrbrains,
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
+    MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
     AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
                                     output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized").run()
     AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
