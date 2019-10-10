@@ -170,10 +170,6 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence Inputs", PlotType.LINE_PLOT,
                                 params={"opts": {"title": "Jensen-Shannon Divergence Inputs"}},
                                 every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence Generated", PlotType.LINE_PLOT,
-                                params={"opts": {"title": "Jensen-Shannon Divergence Generated"}},
-                                every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance"}},
                                                     every=1), Event.ON_EPOCH_END) \
