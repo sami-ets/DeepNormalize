@@ -12,7 +12,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
+      activation: "Leaky_ReLU"
       interpolation: True
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -78,7 +78,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_train_iSEG_test_MRBrainS"
+  env: "deepNormalize_exp_home_segmenter_train_iSEG_test_MRBrainS_leaky"
 
 logger:
   path: "/tmp/ml/tests"
