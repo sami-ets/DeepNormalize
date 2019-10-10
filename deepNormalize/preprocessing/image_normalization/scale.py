@@ -54,15 +54,17 @@ class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+
 class QuantileScalerTransformer(object):
-    def __init__(self, params):
-        self._scaler = RobustScaler(**params)
+    def __init__(self):
+        self._scaler = RobustScaler()
 
     def __call__(self, input: np.ndarray) -> np.ndarray:
         if isinstance(input, np.ndarray):
             return self._scaler.fit_transform(input)
         else:
             raise NotImplementedError("Type {} is not supported.".format(type(input)))
+
 
 class StandardScalerTransformer(object):
     def __init__(self):
@@ -129,7 +131,7 @@ class ScalerPipeline(AbstractPreProcessingPipeline):
         images = np.array(images_np).astype(np.float32)
         images_shape = images.shape
         images = images.reshape(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4])
-        transform_ = transforms.Compose([self._scaler(self._params)])
+        transform_ = transforms.Compose([self._scaler])
 
         transformed_images = transform_(images).reshape(images_shape)
 
@@ -187,7 +189,7 @@ class ScalerMRBrainSPipeline(AbstractPreProcessingPipeline):
         images = np.array(images_np).astype(np.float32)
         images_shape = images.shape
         images = images.reshape(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4])
-        transform_ = transforms.Compose([self._scaler(self._params)])
+        transform_ = transforms.Compose([self._scaler])
 
         transformed_images = transform_(images).reshape(images_shape)
 
@@ -217,30 +219,30 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    #
-    # ScalerPipeline(root_dir=args.path_iseg,
-    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
-    #                scaler=MinMaxScalerTransformer).run()
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
-    #                        scaler=MinMaxScalerTransformer
-    #                        ).run()
-    #
-    # ScalerPipeline(root_dir=args.path_iseg,
-    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
-    #                scaler=StandardScalerTransformer).run(prefix="standardized_")
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
-    #                        scaler=StandardScalerTransformer
-    #                        ).run(prefix="standardized_")
 
-    # ScalerPipeline(root_dir=args.path_iseg,
-    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
-    #                scaler=QuantileScalerTransformer,
-    #                params={}).run(prefix="quantile_")
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
-    #                        scaler=QuantileScalerTransformer, params={}).run(prefix="quantile_")
+    ScalerPipeline(root_dir=args.path_iseg,
+                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
+                   scaler=MinMaxScalerTransformer()).run()
+    ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
+                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
+                           scaler=MinMaxScalerTransformer()
+                           ).run()
+
+    ScalerPipeline(root_dir=args.path_iseg,
+                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
+                   scaler=StandardScalerTransformer()).run(prefix="standardized_")
+    ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
+                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+                           scaler=StandardScalerTransformer()
+                           ).run(prefix="standardized_")
+
+    ScalerPipeline(root_dir=args.path_iseg,
+                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
+                   scaler=QuantileScalerTransformer(),
+                   params={}).run(prefix="quantile_")
+    ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
+                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
+                           scaler=QuantileScalerTransformer(), params={}).run(prefix="quantile_")
 
     PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
                                output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled",
