@@ -266,7 +266,6 @@ class DeepNormalizeTrainer(Trainer):
         self._generator.scheduler_step()
 
         if self._should_activate_segmentation():
-            self._discriminator.scheduler_step()
             self._segmenter.scheduler_step()
 
     @staticmethod
