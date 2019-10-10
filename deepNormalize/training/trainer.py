@@ -32,7 +32,7 @@ from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
+from deepNormalize.utils.constants import GENERATOR, SEGMENTER, IMAGE_TARGET, DATASET_ID, EPSILON
 from deepNormalize.utils.constants import ISEG, MRBrainS
 from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
@@ -52,7 +52,6 @@ class DeepNormalizeTrainer(Trainer):
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._generator = self._model_trainers[GENERATOR]
-        self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
         self._class_hausdorff_distance_gauge = AverageGauge()
         self._mean_hausdorff_distance_gauge = AverageGauge()
@@ -72,7 +71,6 @@ class DeepNormalizeTrainer(Trainer):
 
     def train_step(self, inputs, target):
         self._generator.zero_grad()
-        self._discriminator.zero_grad()
         self._segmenter.zero_grad()
 
         gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
