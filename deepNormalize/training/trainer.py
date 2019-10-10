@@ -47,8 +47,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
-        self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._segmenter = self._model_trainers[0]
@@ -117,6 +115,29 @@ class DeepNormalizeTrainer(Trainer):
         metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
                                                 torch.squeeze(target[IMAGE_TARGET], dim=1).long())
         self._segmenter.update_valid_metric(metric.mean())
+
+        self._MRBrainS_dice_gauge.update(np.array(self._segmenter.compute_metric(
+            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)],
+                          dim=1).long()).numpy()))
+
+        self._MRBrainS_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
+            to_onehot(
+                torch.argmax(
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                    dim=1), num_classes=4),
+            to_onehot(
+                torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)], dim=1).long(),
+                num_classes=4))[-3:])
+
+        self._MRBrainS_confusion_matrix_gauge.update((
+            to_onehot(
+                torch.argmax(
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                    dim=1, keepdim=False),
+                num_classes=4),
+            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)].long(), dim=1)))
+
 
     def test_step(self, inputs, target):
         seg_pred = self._segmenter.forward(inputs)
