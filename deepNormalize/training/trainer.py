@@ -239,15 +239,6 @@ class DeepNormalizeTrainer(Trainer):
     def merge_tensors(tensor_0, tensor_1):
         return torch.cat((tensor_0, tensor_1), dim=0)
 
-    def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
-
-    def _should_activate_discriminator_loss(self):
-        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
-
-    def _should_activate_segmentation(self):
-        return self._current_epoch >= self._patience_segmentation
-
     def on_training_begin(self):
         self._start_time = time.time()
 
