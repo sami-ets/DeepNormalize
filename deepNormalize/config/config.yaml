@@ -75,10 +75,6 @@ training:
   patience_discriminator: 3
   patience_segmentation: 3
   variables:
-    disc_ratio: 0.0
-    seg_ratio: 1.0
-    train_generator_every_n_steps: 5
-    train_generator_every_n_steps_seg: 1
 
 visdom:
   server: "10.0.3.9"
