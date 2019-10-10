@@ -197,25 +197,10 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "WM Input Intensity Histogram",
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Batch data distribution",
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
-                                                    params={"name": "training", "opts": {"title": "Loss D(G(X)) | X"}},
-                                                    every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Valid", PlotType.LINE_PLOT,
-                                                    params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X Validation"}},
-                                                    every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Test", PlotType.LINE_PLOT,
-                                                    params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X Test"}},
-                                                    every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence Inputs", PlotType.LINE_PLOT,
                                 params={"opts": {"title": "Jensen-Shannon Divergence Inputs"}},
