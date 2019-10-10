@@ -85,12 +85,7 @@ class DeepNormalizeTrainer(Trainer):
 
         self._segmenter.step()
 
-        real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
-            size=(inputs.size(0) // 2,),
-            fill_value=2,
-            dtype=torch.long,
-            device="cpu",
-            requires_grad=False)), dim=0), 3)
+        real_count = self.count(target[DATASET_ID].cpu().detach(), 3)
         self.custom_variables["Pie Plot True"] = real_count
 
         if self.current_train_step % 100 == 0:
