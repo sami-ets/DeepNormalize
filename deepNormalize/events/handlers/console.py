@@ -14,19 +14,25 @@ class PrintTrainLoss(BaseConsoleLogger):
             self.SUPPORTED_EVENTS)
         if self.should_handle_epoch_data(event, trainer):
             return self.LOGGER.info("".join(list(map(
-                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {} ".format(model_trainer.name,
-                                                                                               model_trainer.train_loss.mean().item(),
-                                                                                               model_trainer.valid_loss.mean().item()),
+                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {}, Test Loss: {}".format(
+                    model_trainer.name,
+                    model_trainer.train_loss.mean().item(),
+                    model_trainer.valid_loss.mean().item(),
+                    model_trainer.test_loss.mean().item()),
                 trainer.model_trainers))))
         elif self.should_handle_train_step_data(event, trainer):
             return self.LOGGER.info("".join(list(map(
-                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {} ".format(model_trainer.name,
-                                                                                               model_trainer.train_loss.mean().item(),
-                                                                                               model_trainer.valid_loss.mean().item()),
+                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {}, Test Loss: {}".format(
+                    model_trainer.name,
+                    model_trainer.train_loss.mean().item(),
+                    model_trainer.valid_loss.mean().item(),
+                    model_trainer.test_loss.mean().item()),
                 trainer.model_trainers))))
         elif self.should_handle_validation_step_data(event, trainer):
             return self.LOGGER.info("".join(list(map(
-                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {} ".format(model_trainer.name,
-                                                                                               model_trainer.train_loss.mean().item(),
-                                                                                               model_trainer.valid_loss.mean().item()),
+                lambda model_trainer: "Model: {}, Train Loss: {}, Validation Loss: {}, Test Loss: {} ".format(
+                    model_trainer.name,
+                    model_trainer.train_loss.mean().item(),
+                    model_trainer.valid_loss.mean().item(),
+                    model_trainer.test_loss.mean().item()),
                 trainer.model_trainers))))
