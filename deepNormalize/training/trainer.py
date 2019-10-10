@@ -116,6 +116,28 @@ class DeepNormalizeTrainer(Trainer):
                                                 torch.squeeze(target[IMAGE_TARGET], dim=1).long())
         self._segmenter.update_valid_metric(metric.mean())
 
+        self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metric(
+            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)],
+                          dim=1).long()).numpy()))
+
+        self._iSEG_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
+            to_onehot(
+                torch.argmax(
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                    dim=1), num_classes=4),
+            to_onehot(
+                torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)], dim=1).long(),
+                num_classes=4))[-3:])
+
+        self._iSEG_confusion_matrix_gauge.update((
+            to_onehot(
+                torch.argmax(
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                    dim=1, keepdim=False),
+                num_classes=4),
+            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)].long(), dim=1)))
+
     def test_step(self, inputs, target):
         seg_pred = self._segmenter.forward(inputs)
         seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
