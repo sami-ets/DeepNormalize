@@ -22,3 +22,6 @@ IMAGE_TARGET = 0
 DATASET_ID = 1
 
 EPSILON = 1e-15
+
+ISEG = 0
+MRBrainS = 1
