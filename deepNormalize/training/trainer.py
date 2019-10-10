@@ -70,32 +70,66 @@ class DeepNormalizeTrainer(Trainer):
         self._stop_time = 0
 
     def train_step(self, inputs, target):
-        self._generator.zero_grad()
-        self._segmenter.zero_grad()
+        seg_pred = torch.Tensor().new_zeros(
+            size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
         gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
 
-        gen_loss = self._generator.compute_loss(gen_pred, inputs)
-        self._generator.update_train_loss(gen_loss.loss)
+        if self._should_activate_autoencoder():
+            self._generator.zero_grad()
 
-        seg_pred = self._segmenter.forward(gen_pred)
-        seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
-                                                          num_classes=4))
-        self._segmenter.update_train_loss(seg_loss.mean().loss)
+            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
+                gen_loss = self._generator.compute_loss(gen_pred, inputs)
+                self._generator.update_train_loss(gen_loss.loss)
+                gen_loss.backward()
 
-        metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-        self._segmenter.update_train_metric(metric.mean())
+                if not on_single_device(self._run_config.devices):
+                    self.average_gradients(self._generator)
 
-        seg_loss.mean().backward()
+                self._generator.step()
 
-        if not on_single_device(self._run_config.devices):
-            self.average_gradients(self._segmenter)
-            self.average_gradients(self._generator)
+            # Pretrain segmenter.
+            seg_pred = self._segmenter.forward(gen_pred.detach())
+            seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                    to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
+                                                              num_classes=4))
+            self._segmenter.update_train_loss(seg_loss.mean().loss)
+            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            self._segmenter.update_train_metric(metric.mean())
 
-        self._segmenter.step()
-        self._generator.step()
+            seg_loss.mean().backward()
+
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._segmenter)
+
+            self._segmenter.step()
+
+        if self._should_activate_segmentation():
+            self._generator.zero_grad()
+            self._segmenter.zero_grad()
+
+            gen_loss = self._generator.compute_loss(gen_pred, inputs)
+            self._generator.update_train_loss(gen_loss.loss)
+
+            seg_pred = self._segmenter.forward(gen_pred)
+            seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                    to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
+                                                              num_classes=4))
+            self._segmenter.update_train_loss(seg_loss.mean().loss)
+
+            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            self._segmenter.update_train_metric(metric.mean())
+
+            seg_loss.mean().backward()
+
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._segmenter)
+                self.average_gradients(self._generator)
+
+            self._segmenter.step()
+            self._generator.step()
 
         real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
             size=(inputs.size(0) // 2,),
