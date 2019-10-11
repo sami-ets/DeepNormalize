@@ -47,7 +47,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
@@ -79,15 +78,14 @@ class DeepNormalizeTrainer(Trainer):
             self._generator.zero_grad()
             self._segmenter.zero_grad()
 
-            if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._generator.compute_loss(gen_pred, inputs)
-                self._generator.update_train_loss(gen_loss.loss)
-                gen_loss.backward()
+            gen_loss = self._generator.compute_loss(gen_pred, inputs)
+            self._generator.update_train_loss(gen_loss.loss)
+            gen_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
+            if not on_single_device(self._run_config.devices):
+                self.average_gradients(self._generator)
 
-                self._generator.step()
+            self._generator.step()
 
             # Pretrain segmenter.
             seg_pred = self._segmenter.forward(gen_pred.detach())
@@ -314,10 +312,7 @@ class DeepNormalizeTrainer(Trainer):
         return torch.cat((tensor_0, tensor_1), dim=0)
 
     def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
-
-    def _should_activate_discriminator_loss(self):
-        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
+        return self._current_epoch < self._patience_segmentation
 
     def _should_activate_segmentation(self):
         return self._current_epoch >= self._patience_segmentation
