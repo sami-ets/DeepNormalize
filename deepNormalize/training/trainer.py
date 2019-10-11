@@ -73,10 +73,11 @@ class DeepNormalizeTrainer(Trainer):
         seg_pred = torch.Tensor().new_zeros(
             size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
-        gen_pred = self._generator.forward(inputs)
+        gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
 
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
+            self._segmenter.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -391,13 +392,15 @@ class DeepNormalizeTrainer(Trainer):
     def compute_mean_hausdorff_distance(self, seg_pred, target):
         distances = np.zeros((4,))
         for channel in range(seg_pred.size(1)):
-            distances[channel] = (
-                                         directed_hausdorff(
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy())[0] +
-                                         directed_hausdorff(
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0]) / 2.0
+            hd1 = directed_hausdorff(
+                flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
+                flatten(target[:, channel, ...]).cpu().detach().numpy())[0]
+            hd2 = directed_hausdorff(
+                flatten(target[:, channel, ...]).cpu().detach().numpy(),
+                flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0]
+
+            distances[channel] = np.percentile(np.hstack((hd1, hd2)), 95)
+
         return distances
 
     def finalize(self):
