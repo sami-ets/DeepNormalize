@@ -17,7 +17,6 @@
 import time
 from datetime import timedelta
 from typing import List
-
 import numpy as np
 import torch
 from ignite.metrics.confusion_matrix import ConfusionMatrix
@@ -612,13 +611,13 @@ class DeepNormalizeTrainer(Trainer):
     def compute_mean_hausdorff_distance(self, seg_pred, target):
         distances = np.zeros((4,))
         for channel in range(seg_pred.size(1)):
-            distances[channel] = (
+            distances[channel] = max(
                                          directed_hausdorff(
                                              flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy())[0] +
+                                             flatten(target[:, channel, ...]).cpu().detach().numpy())[0],
                                          directed_hausdorff(
                                              flatten(target[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0]) / 2.0
+                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0])
         return distances
 
     def finalize(self):
