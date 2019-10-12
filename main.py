@@ -32,7 +32,6 @@ from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from samitorch.inputs.utils import sample_collate
-from torch.utils.data import DataLoader
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
