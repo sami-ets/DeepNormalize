@@ -33,7 +33,7 @@ models:
       params:
         reduction: !!null
         ignore_index: -100
-        weight: !!python/tuple [0.22141935, 0.28180645, 0.23845161, 0.25832258]
+        weight: !!null
     metric:
       type: "Dice"
       params:
@@ -45,7 +45,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/home/AM54900/Data/Preprocessed/iSEG/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -57,7 +57,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/home/AM54900/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -70,14 +70,14 @@ dataset:
       step: [1, 32, 32, 32]
 
 training:
-  batch_size: 16
+  batch_size: 56
   nb_epochs: 50
   variables:
 
 visdom:
-  server: "10.0.3.9"
+  server: "pldelisle.no-ip.info"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_dual_disc_ratio_0.0_test10t"
+  env: "deepNormalize_exp_home_segmenter_train_MRBrainS_test_iSEG_2"
 
 logger:
   path: "/tmp/ml/tests"

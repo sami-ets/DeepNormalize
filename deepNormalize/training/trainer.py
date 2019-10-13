@@ -133,7 +133,6 @@ class DeepNormalizeTrainer(Trainer):
                 num_classes=4),
             torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBrainS)].long(), dim=1)))
 
-
     def test_step(self, inputs, target):
         seg_pred = self._segmenter.forward(inputs)
         seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -322,13 +321,15 @@ class DeepNormalizeTrainer(Trainer):
     def compute_mean_hausdorff_distance(self, seg_pred, target):
         distances = np.zeros((4,))
         for channel in range(seg_pred.size(1)):
-            distances[channel] = (
-                                         directed_hausdorff(
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy())[0] +
-                                         directed_hausdorff(
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0]) / 2.0
+            hd1 = directed_hausdorff(
+                flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
+                flatten(target[:, channel, ...]).cpu().detach().numpy())[0]
+            hd2 = directed_hausdorff(
+                flatten(target[:, channel, ...]).cpu().detach().numpy(),
+                flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0]
+
+            distances[channel] = np.percentile(np.hstack((hd1, hd2)), 95)
+
         return distances
 
     def finalize(self):
