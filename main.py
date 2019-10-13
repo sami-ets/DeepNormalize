@@ -17,6 +17,7 @@
 import logging
 import multiprocessing
 import os
+import numpy as np
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -120,8 +121,8 @@ if __name__ == '__main__':
                                     len(MRBrainS_train) if MRBrainS_train is not None else 0],
                                  y=["iSEG", "MRBrainS"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
-                                 x=[iSEG_CSV.groupby('center_class').count().get_values().flatten() if iSEG_train is not None else 0,
-                                    MRBrainS_CSV.groupby('center_class').count().get_values().flatten() if MRBrainS_train is not None else 0],
+                                 x=[np.asarray(iSEG_CSV.groupby('center_class').count()) if iSEG_train is not None else 0,
+                                    np.asarray(MRBrainS_CSV.groupby('center_class').count()) if MRBrainS_train is not None else 0],
                                  y=["iSEG", "MRBrainS"], params={"opts": {"title": "Center Voxel Class Count", "stacked": True, "legend":["CSF", "GM", "WM"]}}))
 
         save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))

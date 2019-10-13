@@ -46,7 +46,6 @@ class DeepNormalizeTrainer(Trainer):
                                                    test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
-        self._patience_discriminator = training_config.patience_discriminator
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
@@ -71,6 +70,9 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._start_time = 0
         self._stop_time = 0
+        print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
+                                                      sum(p.numel() for p in self._generator.parameters()) +
+                                                      sum(p.numel() for p in self._discriminator.parameters())))
 
     def train_step(self, inputs, target):
         disc_pred = None
@@ -422,10 +424,7 @@ class DeepNormalizeTrainer(Trainer):
         return torch.cat((tensor_0, tensor_1), dim=0)
 
     def _should_activate_autoencoder(self):
-        return self._current_epoch < self._patience_discriminator
-
-    def _should_activate_discriminator_loss(self):
-        return self._patience_discriminator <= self._current_epoch < self._patience_segmentation
+        return self._current_epoch < self._patience_segmentation
 
     def _should_activate_segmentation(self):
         return self._current_epoch >= self._patience_segmentation
@@ -534,8 +533,9 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(inputs)
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
                                        requires_grad=False)
-        loss_D_G_X_as_X = self._discriminator.compute_loss(ones - torch.nn.functional.softmax(pred_D_G_X, dim=1),
-                                                           target)
+        loss_D_G_X_as_X = self._discriminator.compute_loss(
+            torch.nn.functional.log_softmax(ones - torch.nn.functional.softmax(pred_D_G_X, dim=1), dim=1),
+            target)
         return loss_D_G_X_as_X
 
     def train_discriminator(self, inputs, gen_pred, target):
@@ -543,7 +543,7 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_X = self._discriminator.forward(inputs)
 
         # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_loss(pred_D_X, target)
+        loss_D_X = self._discriminator.compute_loss(torch.nn.functional.log_softmax(pred_D_X, dim=1), target)
 
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
@@ -557,7 +557,7 @@ class DeepNormalizeTrainer(Trainer):
                                         device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
+        loss_D_G_X = self._discriminator.compute_loss(torch.nn.functional.log_softmax(pred_D_G_X, dim=1), y_bad)
 
         disc_loss = ((2 / 3) * loss_D_X +
                      ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
@@ -576,7 +576,7 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_X = self._discriminator.forward(inputs)
 
         # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_loss(pred_D_X, target)
+        loss_D_X = self._discriminator.compute_loss(torch.nn.functional.log_softmax(pred_D_X, dim=1), target)
 
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
@@ -590,7 +590,7 @@ class DeepNormalizeTrainer(Trainer):
                                         device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_loss(pred_D_G_X, y_bad)
+        loss_D_G_X = self._discriminator.compute_loss(torch.nn.functional.log_softmax(pred_D_G_X, dim=1), y_bad)
 
         disc_loss = ((2 / 3) * loss_D_X +
                      ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
@@ -612,12 +612,12 @@ class DeepNormalizeTrainer(Trainer):
         distances = np.zeros((4,))
         for channel in range(seg_pred.size(1)):
             distances[channel] = max(
-                                         directed_hausdorff(
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy())[0],
-                                         directed_hausdorff(
-                                             flatten(target[:, channel, ...]).cpu().detach().numpy(),
-                                             flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0])
+                directed_hausdorff(
+                    flatten(seg_pred[:, channel, ...]).cpu().detach().numpy(),
+                    flatten(target[:, channel, ...]).cpu().detach().numpy())[0],
+                directed_hausdorff(
+                    flatten(target[:, channel, ...]).cpu().detach().numpy(),
+                    flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0])
         return distances
 
     def finalize(self):
