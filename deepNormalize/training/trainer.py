@@ -113,8 +113,7 @@ class DeepNormalizeTrainer(Trainer):
 
         self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metric(
             torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
-            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)],
-                          dim=1).long()).numpy()))
+            torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)], dim=1).long()).numpy()))
 
         self._iSEG_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
             to_onehot(
