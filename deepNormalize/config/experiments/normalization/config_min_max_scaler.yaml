@@ -12,7 +12,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "LeakyReLU"
+      activation: "ReLU"
       interpolation: True
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -47,12 +47,12 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !!python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "LeakyReLU"
+      activation: "ReLU"
       interpolation: True
       scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
       type: "FusedSGD"
-      max_grad_norm: 5.0
+      max_grad_norm: !!null
       params:
         lr: 0.0001
         momentum: 0.9
@@ -68,6 +68,7 @@ models:
       params:
         reduction: !!null
         ignore_index: -100
+        weight: !!python/tuple [0.22141935, 0.28180645, 0.23845161, 0.25832258]
     metric:
       type: "Dice"
       params:
@@ -75,6 +76,7 @@ models:
         reduction: !!null
         ignore_index: 0
         average: !!null
+        weight: !!null
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
@@ -90,7 +92,7 @@ models:
       replace_stride_with_dilation: !!null
     optimizer:
       type: "FusedSGD"
-      max_grad_norm: 5.0
+      max_grad_norm: !!null
       params:
         lr: 0.0001
         momentum: 0.9
@@ -102,7 +104,7 @@ models:
         factor: 0.1
         patience: 100
     criterion:
-      type: "CrossEntropyLoss"
+      type: "NLLLoss"
       params:
     metric:
       type: "Accuracy"
@@ -118,6 +120,9 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled"
     validation_split: 0.2
@@ -127,17 +132,23 @@ dataset:
     validation:
       patch_size: [1, 32, 32, 32]
       step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
 
 training:
-  batch_size: 24
+  batch_size: 16
   nb_epochs: 50
-  patience_discriminator: 3
-  patience_segmentation: 5
+  patience_segmentation: 3
   variables:
     disc_ratio: 0.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 5
     train_generator_every_n_steps_seg: 1
+
+logger:
+  path: "/tmp/ml/tests"
+  log_after_iterations: 50
 
 visdom:
   server: "10.0.3.9"

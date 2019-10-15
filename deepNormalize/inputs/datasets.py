@@ -142,7 +142,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir = os.path.join(os.path.join(source_dir, "*"), "T1_1mm")
+        source_dir = os.path.join(os.path.join(source_dir, "*"), "standardized_T1_1mm")
         target_dir = os.path.join(os.path.join(target_dir, "*"), "LabelsForTesting")
 
         source_paths, target_paths = np.array(extract_file_paths(source_dir)), np.array(extract_file_paths(target_dir))
