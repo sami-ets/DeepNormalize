@@ -78,13 +78,13 @@ if __name__ == '__main__':
             dataset_id=ISEG_ID,
             test_size=dataset_config[0].validation_split)
 
-    # if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
-    #     MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
-    #         source_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
-    #         target_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
-    #         modality=args.modality,
-    #         dataset_id=MRBRAINS_ID,
-    #         test_size=dataset_config[1 if len(dataset_config) == 2 else 0].validation_split)
+    if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
+            source_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
+            target_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
+            modality=args.modality,
+            dataset_id=MRBRAINS_ID,
+            test_size=dataset_config[1 if len(dataset_config) == 2 else 0].validation_split)
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -92,9 +92,10 @@ if __name__ == '__main__':
     model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), [model_trainer_configs]))
 
     # Create loaders.
-    train_loader, valid_loader, test_loader = DataloaderFactory(iSEG_train, iSEG_test, iSEG_valid).create(run_config,
-                                                                                                          training_config,
-                                                                                                          collate_fn=sample_collate)
+    train_loader, valid_loader, test_loader = DataloaderFactory(iSEG_train, iSEG_valid, MRBrainS_test).create(
+        run_config,
+        training_config,
+        collate_fn=sample_collate)
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
