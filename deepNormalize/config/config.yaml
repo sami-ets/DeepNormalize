@@ -19,7 +19,7 @@ models:
       type: "FusedSGD"
       max_grad_norm: !!null
       params:
-        lr: 0.0001
+        lr: 0.0005
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -45,7 +45,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/home/AM54900/Data/Preprocessed/iSEG/Patches/Normalized"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -57,7 +57,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
   MRBrainS:
-    path: "/home/AM54900/Data/Preprocessed/MRBrainS/Patches/Normalized"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -70,14 +70,14 @@ dataset:
       step: [1, 32, 32, 32]
 
 training:
-  batch_size: 56
+  batch_size: 32
   nb_epochs: 50
   variables:
 
 visdom:
-  server: "pldelisle.no-ip.info"
+  server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_train_MRBrainS_test_iSEG_2"
+  env: "deepNormalize_exp_home_segmenter_train_MRBrainS_test_MRBrainS"
 
 logger:
   path: "/tmp/ml/tests"

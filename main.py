@@ -70,13 +70,13 @@ if __name__ == '__main__':
     MRBrainS_test = None
     MRBrainS_CSV = None
 
-    if "iSEG" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_config[0].path,
-            target_dir=dataset_config[0].path + "/label",
-            modality=args.modality,
-            dataset_id=ISEG_ID,
-            test_size=dataset_config[0].validation_split)
+    # if "iSEG" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+    #     iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
+    #         source_dir=dataset_config[0].path,
+    #         target_dir=dataset_config[0].path + "/label",
+    #         modality=args.modality,
+    #         dataset_id=ISEG_ID,
+    #         test_size=dataset_config[0].validation_split)
 
     if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
@@ -93,9 +93,9 @@ if __name__ == '__main__':
 
     # Create loaders.
     train_loader, valid_loader, test_loader = DataloaderFactory(MRBrainS_train, MRBrainS_valid,
-                                                                iSEG_train).create(run_config,
-                                                                                     training_config,
-                                                                                     collate_fn=sample_collate)
+                                                                MRBrainS_test).create(run_config,
+                                                                                      training_config,
+                                                                                      collate_fn=sample_collate)
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
@@ -111,9 +111,10 @@ if __name__ == '__main__':
                                  y=["iSEG", "MRBrainS"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
                                  x=[np.asarray(iSEG_CSV.groupby(
-                                     'center_class').count()).flatten() if iSEG_train is not None else 0,
+                                     'center_class').count()).flatten() if iSEG_train is not None else [0, 0, 0],
                                     np.asarray(MRBrainS_CSV.groupby(
-                                        'center_class').count()).flatten() if MRBrainS_train is not None else 0],
+                                        'center_class').count()).flatten() if MRBrainS_train is not None else [0, 0,
+                                                                                                               0]],
                                  y=["iSEG", "MRBrainS"], params={
                 "opts": {"title": "Center Voxel Class Count", "stacked": True, "legend": ["CSF", "GM", "WM"]}}))
 
