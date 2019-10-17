@@ -383,7 +383,8 @@ class DualStandardScaler(AbstractPreProcessingPipeline):
                 if not os.path.exists(
                         os.path.join(self._output_dir, "MRBrainS/Dual_Standardized/{}".format(root_dir_number))):
                     os.makedirs(os.path.join(self._output_dir, "MRBrainS/Dual_Standardized/{}".format(root_dir_number)))
-                transforms_ = transforms.Compose([ToNifti1Image(),
+                transforms_ = transforms.Compose([
+                                                  ToNifti1Image(),
                                                   NiftiToDisk(
                                                       os.path.join(
                                                           os.path.join(self._output_dir,
@@ -396,7 +397,8 @@ class DualStandardScaler(AbstractPreProcessingPipeline):
                 if not os.path.exists(
                         os.path.join(self._output_dir, "iSEG/Dual_Standardized/{}".format(root_dir_number))):
                     os.makedirs(os.path.join(self._output_dir, "iSEG/Dual_Standardized/{}".format(root_dir_number)))
-                transforms_ = transforms.Compose([ToNifti1Image(),
+                transforms_ = transforms.Compose([
+                                                  ToNifti1Image(),
                                                   NiftiToDisk(
                                                       os.path.join(
                                                           os.path.join(self._output_dir,
@@ -482,16 +484,7 @@ class DualStandardScaler(AbstractPreProcessingPipeline):
 
         c_2, h_2, w_2, d_2 = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
                                     image_shapes_MRBrainS)
-        return c_2, max(h, h_2), max(w, w_2), max(d, d_2)
-
-        # images_iSEG = np.array(images_np_iSEG).astype(np.float32)
-        # images_MRBrains = np.array(images_np_MRBrainS).astype(np.float32)
-        # images = np.vstack((images_iSEG, images_MRBrains))
-        # images_shape = images.shape
-        # images = images.reshape(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4])
-        # transform_ = transforms.Compose([self._scaler])
-        #
-        # transformed_images = transform_(images).reshape(images_shape)
+        return max(c, c_2), max(h, h_2), max(w, w_2), max(d, d_2)
 
 
 if __name__ == "__main__":
