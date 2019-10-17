@@ -45,7 +45,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Dual_Standardized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -57,7 +57,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -77,7 +77,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_train_iSEG_standardized_test_iSEG_standardized"
+  env: "deepNormalize_exp_home_segmenter_train_dual_standardized"
 
 logger:
   path: "/tmp/ml/tests"

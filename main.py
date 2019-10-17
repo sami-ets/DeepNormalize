@@ -86,16 +86,26 @@ if __name__ == '__main__':
             dataset_id=MRBRAINS_ID,
             test_size=dataset_config[1 if len(dataset_config) == 2 else 0].validation_split)
 
-    # Initialize the model trainers
+    # Concat datasets.
+    if len(dataset_config) == 2:
+        training_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
+        validation_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
+        test_dataset = torch.utils.data.ConcatDataset((iSEG_test, MRBrainS_test))
+    else:
+        training_dataset = iSEG_train if iSEG_train is not None else MRBrainS_train
+        validation_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
+        test_dataset = iSEG_test if iSEG_test is not None else MRBrainS_test
+
+        # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory(run_config))
-    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), [model_trainer_configs]))
+    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
 
     # Create loaders.
-    train_loader, valid_loader, test_loader = DataloaderFactory(iSEG_train, iSEG_valid, MRBrainS_test).create(
-        run_config,
-        training_config,
-        collate_fn=sample_collate)
+    train_loader, valid_loader, test_loader = DataloaderFactory(training_dataset, validation_dataset,
+                                                                test_dataset).create(run_config,
+                                                                                     training_config,
+                                                                                     collate_fn=sample_collate)
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
