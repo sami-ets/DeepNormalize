@@ -21,7 +21,7 @@ models:
       params:
         lr: 0.0005
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -77,7 +77,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_segmenter_train_dual_standardized"
+  env: "deepNormalize_exp_home_segmenter_train_dual_standardized_2"
 
 logger:
   path: "/tmp/ml/tests"

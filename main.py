@@ -99,7 +99,7 @@ if __name__ == '__main__':
         # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory(run_config))
-    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
+    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), [model_trainer_configs]))
 
     # Create loaders.
     train_loader, valid_loader, test_loader = DataloaderFactory(training_dataset, validation_dataset,
