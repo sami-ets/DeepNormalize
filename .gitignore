@@ -170,3 +170,4 @@ venv.bak/
 *.nii
 *.nii.gz
 /data/
+/saves/

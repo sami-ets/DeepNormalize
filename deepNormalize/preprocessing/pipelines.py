@@ -15,19 +15,23 @@
 # ==============================================================================
 
 import abc
-import nibabel as nib
-import os
 import argparse
-import re
 import logging
-
+import os
+import re
+import shutil
 from functools import reduce
+from typing import Tuple
 
-from torchvision.transforms import transforms
-
+import nibabel as nib
+import numpy as np
+from samitorch.inputs.images import Image
+from samitorch.inputs.patch import Patch, CenterCoordinate
+from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
-    ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti
-from samitorch.inputs.images import Modalities, Image
+    ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti, PadToPatchShape
+from samitorch.utils.slice_builder import SliceBuilder
+from torchvision.transforms import transforms
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -59,7 +63,7 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
     """
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
+    def __init__(self, root_dir: str, output_dir: str):
         """
         Pre-processing pipeline constructor.
 
@@ -68,36 +72,48 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
         """
         self._root_dir = root_dir
         self._transforms = None
-        self._input_modality = input_modality
-        self._output_modality = output_modality if output_modality is not None else input_modality
         self._output_dir = output_dir
 
-        self.LOGGER.info("Changing class IDs of {} images in {}".format(input_modality, root_dir))
+        self.LOGGER.info("Changing class IDs of images in {}".format(root_dir))
 
-    def run(self, prefix: str = "Preprocessed_"):
+    def run(self, prefix: str = ""):
         """
         Apply piepline's transformations.
 
         Args:
             prefix (str): Prefix to transformed file.
         """
-        for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+        if not os.path.exists(os.path.join(self._output_dir, "label")):
+            os.makedirs(os.path.join(self._output_dir, "label"))
+
+        for root, dirs, files in os.walk(os.path.join(self._root_dir, "label")):
             for file in files:
                 self._transforms = transforms.Compose([ToNumpyArray(),
                                                        RemapClassIDs([10, 150, 250], [1, 2, 3]),
                                                        ToNifti1Image(),
-                                                       NiftiToDisk(os.path.join(root, prefix + file))])
+                                                       NiftiToDisk(os.path.join(os.path.join(self._output_dir, "label"),
+                                                                                prefix + file))])
                 self._transforms(os.path.join(root, file))
 
+        for root, dirs, files in os.walk(self._root_dir):
+            root_dir_end = os.path.basename(os.path.normpath(root))
 
-class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
+            if "label" in root_dir_end:
+                pass
+            for file in files:
+                if not os.path.exists(os.path.join(self._output_dir, root_dir_end)):
+                    os.makedirs(os.path.join(self._output_dir, root_dir_end))
+                shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, root_dir_end))
+
+
+class MRBrainsPreProcessingPipeline(AbstractPreProcessingPipeline):
     """
        A MRBrainS data pre-processing pipeline. Resample images to a Template size.
     """
 
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
+    def __init__(self, root_dir: str, output_dir: str):
         """
         Pre-processing pipeline constructor.
 
@@ -106,42 +122,54 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
         """
         self._root_dir = root_dir
         self._transforms = None
-        self._input_modality = input_modality
-        self._output_modality = output_modality if output_modality is not None else input_modality
         self._output_dir = output_dir
 
-        self.LOGGER.info("Resampling of {} images in {}".format(input_modality, root_dir))
-
-    def _run_images_transforms(self, prefix: str = "Preprocessed_"):
+    def _run_images_transforms(self, prefix: str = ""):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+            root_dir_number = os.path.basename(os.path.normpath(root))
             images = list(filter(re.compile(r"^T.*\.nii").search, files))
             for file in images:
                 if not "_1mm" in file:
                     self._transforms = transforms.Compose([LoadNifti(),
                                                            ResampleNiftiImageToTemplate(clip=False,
-                                                                                        template=root + "/T1_1mm.nii",
+                                                                                        template=os.path.join(root,
+                                                                                                              "T1_1mm.nii"),
                                                                                         interpolation="continuous"),
-                                                           ApplyMask(root + "/Preprocessed_LabelsForTesting.nii"),
-                                                           NiftiToDisk(os.path.join(root, prefix + file))])
+                                                           ApplyMask(os.path.join(os.path.join(self._output_dir,
+                                                                                               root_dir_number),
+                                                                                  "LabelsForTesting.nii")),
+                                                           NiftiToDisk(os.path.join(
+                                                               os.path.join(self._output_dir, root_dir_number),
+                                                               prefix + file))])
                 else:
                     self._transforms = transforms.Compose([LoadNifti(),
-                                                           ApplyMask(root + "/Preprocessed_LabelsForTesting.nii"),
-                                                           NiftiToDisk(os.path.join(root, prefix + file))])
+                                                           ApplyMask(os.path.join(os.path.join(self._output_dir,
+                                                                                               root_dir_number),
+                                                                                  "LabelsForTesting.nii")),
+                                                           NiftiToDisk(os.path.join(
+                                                               os.path.join(self._output_dir, root_dir_number),
+                                                               prefix + file))])
 
                 self._transforms(os.path.join(root, file))
 
-    def _run_label_transforms(self, prefix: str = "Preprocessed_"):
+    def _run_label_transforms(self, prefix: str = ""):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+            root_dir_number = os.path.basename(os.path.normpath(root))
             labels = list(filter(re.compile(r"^Labels.*\.nii").search, files))
+
             for file in labels:
+                if not os.path.exists(os.path.join(self._output_dir, root_dir_number)):
+                    os.makedirs(os.path.join(self._output_dir, root_dir_number))
                 self._transforms = transforms.Compose([LoadNifti(),
                                                        ResampleNiftiImageToTemplate(clip=True,
                                                                                     template=root + "/T1_1mm.nii",
                                                                                     interpolation="linear"),
-                                                       NiftiToDisk(os.path.join(root, prefix + file))])
+                                                       NiftiToDisk(
+                                                           os.path.join(os.path.join(self._output_dir, root_dir_number),
+                                                                        prefix + file))])
                 self._transforms(os.path.join(root, file))
 
-    def run(self, prefix: str = "Preprocessed_"):
+    def run(self, prefix: str = ""):
         """
         Apply piepline's transformations.
 
@@ -155,34 +183,31 @@ class MRBrainsImagePreProcessingPipeline(AbstractPreProcessingPipeline):
 class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir: str, input_modality: str, output_dir: str, output_modality: str = None):
+    def __init__(self, root_dir: str, output_dir: str):
         self._root_dir = root_dir
-        self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
-        self._transforms = None
-        self._input_modality = input_modality
-        self._output_modality = output_modality if output_modality is not None else input_modality
         self._output_dir = output_dir
-
-        self.LOGGER.info("Computing the normalized shape of {} images in {}".format(input_modality, root_dir))
         self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
         self._transforms = transforms.Compose([ToNumpyArray(),
                                                CropToContent(),
                                                PadToShape(self._normalized_shape)])
 
-    def run(self, prefix="Normalized_"):
+    def run(self, prefix=""):
         for root, dirs, files in os.walk(os.path.join(self._root_dir)):
-            for file in list(filter(lambda path: Image.is_(self._input_modality, path), files)):
-                try:
-                    match = re.search(
-                        self._root_dir + '/(?P<file_name>.*)',
-                        os.path.join(root, file))
+            root_dir_number = os.path.basename(os.path.normpath(root))
 
+            for file in files:
+                if not os.path.exists(os.path.join(self._output_dir, root_dir_number)):
+                    os.makedirs(os.path.join(self._output_dir, root_dir_number))
+                try:
                     self.LOGGER.info("Processing: {}".format(file))
 
                     transformed_image = self._transforms(os.path.join(root, file))
                     header = self._get_image_header(os.path.join(root, file))
                     transforms_ = transforms.Compose([ToNifti1Image(header),
-                                                      NiftiToDisk(os.path.join(root, prefix + file))])
+                                                      NiftiToDisk(
+                                                          os.path.join(
+                                                              os.path.join(self._output_dir, root_dir_number),
+                                                              prefix + file))])
                     transforms_(transformed_image)
 
                 except Exception as e:
@@ -192,7 +217,7 @@ class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
         image_shapes = []
 
         for root, dirs, files in os.walk(root_dir):
-            for file in list(filter(lambda path: Image.is_(self._input_modality, path), files)):
+            for file in list(filter(lambda path: Image.is_nifti(path), files)):
                 try:
                     self.LOGGER.debug("Computing the bounding box of {}".format(file))
                     c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
@@ -200,9 +225,129 @@ class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
                     image_shapes.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
                 except Exception as e:
                     self.LOGGER.warning(
-                        "Error while computing the content bounding box for {} wiith error {}".format(file, e))
+                        "Error while computing the content bounding box for {} with error {}".format(file, e))
 
         return reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), image_shapes)
+
+
+class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
+    LOGGER = logging.getLogger("PatchExtraction")
+
+    def __init__(self, root_dir: str, output_dir: str, patch_size: Tuple[int, int, int, int],
+                 step: Tuple[int, int, int, int]):
+        self._source_dir = root_dir
+        self._output_dir = output_dir
+        self._patch_size = patch_size
+        self._step = step
+        self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
+
+    def run(self, prefix=""):
+
+        for root, dirs, files in os.walk(self._source_dir):
+            root_dir_number = os.path.basename(os.path.normpath(root))
+
+            if not os.path.exists(os.path.join(self._output_dir)):
+                os.makedirs(os.path.join(self._output_dir))
+
+            for file in files:
+                modality = file.split(".")[0]
+                modality_path = os.path.join(os.path.join(self._output_dir, root_dir_number), modality)
+
+                if not os.path.exists(modality_path):
+                    os.makedirs(modality_path)
+
+                transformed_image = self._transforms(os.path.join(root, file))
+                transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
+                    np.int8)
+                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
+                slices = SliceBuilder(sample.x.shape, patch_size=self._patch_size, step=self._step).build_slices()
+
+                patches = list()
+
+                for slice in slices:
+                    if np.count_nonzero(sample.x[slice]) > 0:
+                        center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+                        patches.append(
+                            Patch(slice, 0, center_coordinate))
+                    else:
+                        pass
+
+                patches = np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+
+                for i, patch in enumerate(patches):
+                    x = transformed_image[tuple(patch.slice)]
+                    transform_ = transforms.Compose([ToNifti1Image(), NiftiToDisk(
+                        os.path.join(os.path.join(os.path.join(self._output_dir, root_dir_number), modality),
+                                     str(i) + ".nii.gz"))])
+                    transform_(x)
+
+
+class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
+    LOGGER = logging.getLogger("PatchExtraction")
+
+    def __init__(self, root_dir: str, output_dir: str, patch_size: Tuple[int, int, int, int],
+                 step: Tuple[int, int, int, int]):
+        self._source_dir = root_dir
+        self._output_dir = output_dir
+        self._patch_size = patch_size
+        self._step = step
+        self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
+
+    def run(self, prefix=""):
+
+        for root, dirs, files in os.walk(self._source_dir):
+            root_dir_number = os.path.basename(os.path.normpath(root))
+
+            if not os.path.exists(os.path.join(self._output_dir)):
+                os.makedirs(os.path.join(self._output_dir))
+
+            if root_dir_number == "label":
+                pass
+            for file in files:
+                modality_path = os.path.join(self._output_dir, root_dir_number)
+                subject = re.search(r"-(?P<subject_no>.*)-", file).group("subject_no")
+                label_path = os.path.join(os.path.join(self._output_dir, "label"), subject)
+
+                if not os.path.exists(label_path):
+                    os.makedirs(label_path)
+
+                if not os.path.exists(os.path.join(modality_path, subject)):
+                    os.makedirs(os.path.join(modality_path, subject))
+
+                current_path = os.path.join(modality_path, subject)
+                transformed_image = self._transforms(os.path.join(root, file))
+
+                transformed_labels = self._transforms(os.path.join(os.path.join(self._source_dir, "label"),
+                                                                   "subject-" + subject + "-label.nii")).astype(np.int8)
+                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
+
+                patches = iSEGPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step)
+
+                for i, patch in enumerate(patches):
+                    x = transformed_image[tuple(patch.slice)]
+                    transform_ = transforms.Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(current_path, str(i) + ".nii.gz"))])
+                    transform_(x)
+                    y = transformed_labels[tuple(patch.slice)]
+                    transform_ = transforms.Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(label_path, str(i) + ".nii.gz"))])
+                    transform_(y)
+
+    @staticmethod
+    def get_patches(sample, patch_size, step):
+        slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
+
+        patches = list()
+
+        for slice in slices:
+            if np.count_nonzero(sample.x[slice]) > 0:
+                center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+                patches.append(
+                    Patch(slice, 0, center_coordinate))
+            else:
+                pass
+
+        return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
 
 
 if __name__ == "__main__":
@@ -211,9 +356,19 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    iSEGPreProcessingPipeline(root_dir=args.path_iseg + "/label").run()
-    MRBrainsImagePreProcessingPipeline(root_dir=args.path_mrbrains).run()
-    T1AnatomicalPreProcessingPipeline(root_dir=args.path_mrbrains).run([r"^Preprocessed_.*\.nii"])
-    T1AnatomicalPreProcessingPipeline(root_dir=args.path_iseg).run([r".*T.*\.nii", r"^Preprocessed_.*label.*\.nii"])
+    iSEGPreProcessingPipeline(root_dir=args.path_iseg,
+                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
+    MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
+                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
+                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized").run()
+    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized",
+                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized",
+                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized",
+                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
 
     print("Preprocessing pipeline completed successfully.")

@@ -1,0 +1,13 @@
+#!/bin/bash
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_iSEG.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_MRBrainS.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_min_max_scaler.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_quantile_scaler.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_standardized_scaler.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_min_max_scaler_iSEG.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_min_max_scaler_MRBrainS.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_quantile_scaler_iSEG.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_quantile_scaler_MRBrainS.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_standardized_scaler_iSEG.yaml --amp-opt-level="01"
+CUDA_VISIBLE_DEVICES=0,1 OMP_NUM_THREADS=1 python3 -m torch.distributed.launch --nproc_per_node=2 ../../../../main.py --config=config_segmenter_standardized_scaler_MRBrainS.yaml --amp-opt-level="01"
