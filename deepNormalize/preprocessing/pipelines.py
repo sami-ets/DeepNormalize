@@ -32,7 +32,7 @@ from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1I
     ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti, PadToPatchShape
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
-
+import matplotlib.pyplot as plt
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     """
@@ -316,7 +316,8 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
 
                 current_path = os.path.join(modality_path, subject)
                 transformed_image = self._transforms(os.path.join(root, file))
-
+                plt.imshow(transformed_image[0, 64, :, :])
+                plt.show()
                 transformed_labels = self._transforms(os.path.join(os.path.join(self._source_dir, "label"),
                                                                    "subject-" + subject + "-label.nii")).astype(np.int8)
                 sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
@@ -340,14 +341,15 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
         patches = list()
 
         for slice in slices:
-            if np.count_nonzero(sample.x[slice]) > 0:
-                center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
-                patches.append(
-                    Patch(slice, 0, center_coordinate))
-            else:
-                pass
+            # if np.count_nonzero(sample.x[slice]) > 0:
+            center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+            patches.append(
+                Patch(slice, 0, center_coordinate))
+            # else:
+            #     pass
 
-        return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+        return patches
+        # return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
 
 
 if __name__ == "__main__":
@@ -356,17 +358,17 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    iSEGPreProcessingPipeline(root_dir=args.path_iseg,
-                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
-                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
-                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized").run()
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
-                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized").run()
-    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized",
-                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized",
-                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGPreProcessingPipeline(root_dir=args.path_iseg,
+    #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
+    # MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+    #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized").run()
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized").run()
+    # PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized",
+    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized",
+    #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
     iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized",
                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized",
                                    patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
