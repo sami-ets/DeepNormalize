@@ -14,21 +14,20 @@
 # limitations under the License.
 # ==============================================================================
 
-import abc
 import argparse
 import logging
+from typing import Callable
+
+import abc
+import nibabel as nib
+import numpy as np
 import os
 import re
 import shutil
 from functools import reduce
-from typing import Callable, Union, List
-
-import nibabel as nib
-import numpy as np
 from samitorch.inputs.transformers import ToNumpyArray, NiftiToDisk, CropToContent, PadToShape, Image, ToNifti1Image
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from torchvision.transforms import transforms
-from deepNormalize.preprocessing.pipelines import PatchPreProcessingPipeline, iSEGPatchPreProcessingPipeline
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -89,7 +88,7 @@ class MinMaxScalerTransformer(object):
             raise NotImplementedError("Type {} is not supported.".format(type(input)))
 
 
-class ScalerPipeline(AbstractPreProcessingPipeline):
+class iSEGScalerPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
     def __init__(self, root_dir: str, output_dir: str, scaler: Callable = None, params: dict = None):
@@ -152,7 +151,7 @@ class ScalerPipeline(AbstractPreProcessingPipeline):
                     shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, root_dir_end))
 
 
-class ScalerMRBrainSPipeline(AbstractPreProcessingPipeline):
+class MRBrainSScalerPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
     def __init__(self, root_dir: str, output_dir: str, scaler: Callable = None, params: dict = None):
@@ -384,13 +383,13 @@ class DualStandardScaler(AbstractPreProcessingPipeline):
                         os.path.join(self._output_dir, "MRBrainS/Dual_Standardized/{}".format(root_dir_number))):
                     os.makedirs(os.path.join(self._output_dir, "MRBrainS/Dual_Standardized/{}".format(root_dir_number)))
                 transforms_ = transforms.Compose([
-                                                  ToNifti1Image(),
-                                                  NiftiToDisk(
-                                                      os.path.join(
-                                                          os.path.join(self._output_dir,
-                                                                       os.path.join("MRBrainS/Dual_Standardized",
-                                                                                    root_dir_number)),
-                                                          prefix + file_names[i]))])
+                    ToNifti1Image(),
+                    NiftiToDisk(
+                        os.path.join(
+                            os.path.join(self._output_dir,
+                                         os.path.join("MRBrainS/Dual_Standardized",
+                                                      root_dir_number)),
+                            prefix + file_names[i]))])
                 transforms_(transformed_images[i])
             elif "iSEG" in root_dirs[i]:
                 root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
@@ -398,13 +397,13 @@ class DualStandardScaler(AbstractPreProcessingPipeline):
                         os.path.join(self._output_dir, "iSEG/Dual_Standardized/{}".format(root_dir_number))):
                     os.makedirs(os.path.join(self._output_dir, "iSEG/Dual_Standardized/{}".format(root_dir_number)))
                 transforms_ = transforms.Compose([
-                                                  ToNifti1Image(),
-                                                  NiftiToDisk(
-                                                      os.path.join(
-                                                          os.path.join(self._output_dir,
-                                                                       os.path.join("iSEG/Dual_Standardized",
-                                                                                    root_dir_number)),
-                                                          prefix + file_names[i]))])
+                    ToNifti1Image(),
+                    NiftiToDisk(
+                        os.path.join(
+                            os.path.join(self._output_dir,
+                                         os.path.join("iSEG/Dual_Standardized",
+                                                      root_dir_number)),
+                            prefix + file_names[i]))])
 
                 transforms_(transformed_images[i])
 
@@ -494,62 +493,56 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # ScalerPipeline(root_dir=args.path_iseg,
+    # iSEGScalerPipeline(root_dir=args.path_iseg,
     #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
     #                scaler=MinMaxScalerTransformer()).run()
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
+    # MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
     #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
     #                        scaler=MinMaxScalerTransformer()
     #                        ).run()
-    #
-    # ScalerPipeline(root_dir=args.path_iseg,
-    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
-    #                scaler=StandardScalerTransformer()).run(prefix="standardized_")
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
-    #                        scaler=StandardScalerTransformer()
-    #                        ).run(prefix="standardized_")
-    # AlignPipeline(root_dir=args.path_iseg,
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              FlipLR()]),
-    #               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned"
-    #               ).run(prefix="")
-    # AlignPipeline(root_dir=args.path_mrbrains,
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              Transpose((0, 2, 3, 1))]),
-    #               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned"
-    #               ).run(prefix="")
-    # ScalerPipeline(root_dir=args.path_iseg,
-    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
-    #                scaler=QuantileScalerTransformer(),
-    #                params={}).run(prefix="quantile_")
-    # ScalerMRBrainSPipeline(root_dir=args.path_mrbrains,
-    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
-    #                        scaler=QuantileScalerTransformer(), params={}).run(prefix="quantile_")
-    #
-    # PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
     #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled",
     #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
     # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
     #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Scaled",
     #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
 
-    DualStandardScaler(root_dir_iseg="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
-                       root_dir_mrbrains="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
-                       output_dir="/mnt/md0/Data/Preprocessed/").run()
-    PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Dual_Standardized",
-                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized",
-                               patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Dual_Standardized",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Dual_Standardized",
-                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGScalerPipeline(root_dir=args.path_iseg,
+    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
+    #                scaler=StandardScalerTransformer()).run(prefix="standardized_")
+    # MRBrainSScalerSPipeline(root_dir=args.path_mrbrains,
+    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+    #                        scaler=StandardScalerTransformer()
+    #                        ).run(prefix="standardized_")
     # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
     #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized",
     #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    # PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
-    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Quantile",
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized",
     #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+
+    # iSEGScalerPipeline(root_dir=args.path_iseg,
+    #                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
+    #                scaler=QuantileScalerTransformer(),
+    #                params={}).run(prefix="quantile_")
+    # MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
+    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
+    #                        scaler=QuantileScalerTransformer(), params={}).run(prefix="quantile_")
     # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
     #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Quantile",
     #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Quantile",
+    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Quantile",
+    #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+
+    # DualStandardScaler(root_dir_iseg="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
+    #                    root_dir_mrbrains="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
+    #                    output_dir="/mnt/md0/Data/Preprocessed/").run()
+    # PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Dual_Standardized",
+    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized",
+    #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Dual_Standardized",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Dual_Standardized",
+    #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+
     print("Preprocessing pipeline completed successfully.")

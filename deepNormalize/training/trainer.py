@@ -17,15 +17,15 @@
 import time
 from datetime import timedelta
 from typing import List
+
 import numpy as np
 import torch
 from ignite.metrics.confusion_matrix import ConfusionMatrix
-from kerosene.config.trainers import RunConfiguration
+from kerosene.configs.configs import RunConfiguration
 from kerosene.metrics.gauges import AverageGauge
 from kerosene.nn.functional import js_div
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
-from kerosene.utils.devices import on_single_device
 from kerosene.utils.tensors import flatten, to_onehot
 from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader
@@ -33,7 +33,7 @@ from torch.utils.data import DataLoader
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 from deepNormalize.utils.constants import ISEG, MRBrainS
-from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer
+from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer, ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
 
 
@@ -41,14 +41,18 @@ class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
-                 run_config: RunConfiguration):
+                 reconstruction_dataset, run_config: RunConfiguration):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
+        self._run_config = run_config
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = AdaptedImageSlicer()
         self._seg_slicer = SegmentationSlicer()
+        self._reconstruction_dataset = reconstruction_dataset
+        self._reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
+                                                 self._model_trainers[GENERATOR])
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
@@ -90,16 +94,10 @@ class DeepNormalizeTrainer(Trainer):
                 self._generator.update_train_loss(gen_loss.loss)
                 gen_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._generator)
-
                 self._generator.step()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
 
             self._discriminator.step()
 
@@ -109,14 +107,12 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_train_loss(seg_loss.mean().loss)
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_train_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_train_metrics(metric)
 
             seg_loss.mean().backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._segmenter)
 
             self._segmenter.step()
 
@@ -134,9 +130,10 @@ class DeepNormalizeTrainer(Trainer):
                                                               num_classes=4))
             self._segmenter.update_train_loss(seg_loss.mean().loss)
 
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_train_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_train_metrics(metric)
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps_seg"] == 0:
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
@@ -152,19 +149,11 @@ class DeepNormalizeTrainer(Trainer):
 
                 total_loss.backward()
 
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._segmenter)
-                    self.average_gradients(self._generator)
-
                 self._segmenter.step()
                 self._generator.step()
 
             else:
                 seg_loss.mean().backward()
-
-                if not on_single_device(self._run_config.devices):
-                    self.average_gradients(self._segmenter)
-                    self.average_gradients(self._generator)
 
                 self._segmenter.step()
                 self._generator.step()
@@ -173,9 +162,6 @@ class DeepNormalizeTrainer(Trainer):
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
-
-            if not on_single_device(self._run_config.devices):
-                self.average_gradients(self._discriminator)
 
             self._discriminator.step()
 
@@ -227,9 +213,10 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_valid_loss(seg_loss.mean())
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_valid_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_valid_metrics(metric)
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -242,9 +229,10 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_valid_loss(seg_loss.mean())
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_valid_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_valid_metrics(metric)
 
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                            torch.Tensor().new_full(
@@ -269,9 +257,10 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_test_loss(seg_loss.mean())
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_test_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_test_metrics(metric)
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -284,14 +273,15 @@ class DeepNormalizeTrainer(Trainer):
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
             self._segmenter.update_test_loss(seg_loss.mean())
-            metric = self._segmenter.compute_metric(torch.nn.functional.softmax(seg_pred, dim=1),
-                                                    torch.squeeze(target[IMAGE_TARGET], dim=1).long())
-            self._segmenter.update_test_metric(metric.mean())
+            metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
+                                                     torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+            metric["Dice"] = metric["Dice"].mean()
+            self._segmenter.update_test_metrics(metric)
 
             self._class_dice_gauge.update(np.array(metric.numpy()))
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG)].shape[0] != 0:
-                self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metric(
+                self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)],
                                   dim=1).long()).numpy()))
@@ -318,7 +308,7 @@ class DeepNormalizeTrainer(Trainer):
                 self._iSEG_hausdorff_gauge.update(np.zeros((3,)))
 
             if seg_pred[torch.where(target[DATASET_ID] == MRBrainS)].shape[0] != 0:
-                self._MRBrainS_dice_gauge.update(np.array(self._segmenter.compute_metric(
+                self._MRBrainS_dice_gauge.update(np.array(self._segmenter.compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBrainS)], dim=1),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBrainS)],
                                   dim=1).long()).numpy()))
@@ -442,74 +432,84 @@ class DeepNormalizeTrainer(Trainer):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = np.array(
             [torch.cuda.memory_allocated() / (1024.0 * 1024.0)])
 
-        self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
+        if self._run_config.local_rank == 0:
 
-        if self._should_activate_autoencoder():
-            self.custom_variables["D(G(X)) | X"] = np.array([0])
-            self.custom_variables["D(G(X)) | X Valid"] = np.array([0])
-            self.custom_variables["D(G(X)) | X Test"] = np.array([0])
-            self.custom_variables["Mean Hausdorff Distance"] = np.array([0])
-            self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
-                                                            [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
-            self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
-                ["CSF", "Grey Matter", "White Matter"],
-                ["DSC", "HD"],
-                [[[0.0, 0.0, 0.0],
-                  [0.0, 0.0, 0.0]],
-                 [[0.0, 0.0, 0.0],
-                  [0.0, 0.0, 0.0]]],
-                ["iSEG", "MRBrainS"])
-            self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
-                                                                       ["JS Divergence"],
-                                                                       [0.0, 0.0])
+            all_patches = []
+            all_labels = []
+            for current_batch, input in enumerate(self._reconstruction_dataset):
+                all_patches.append(input.x)
+                all_labels.append(input.y)
+            img = self._reconstructor.reconstruct_from_patches_3d(all_patches)
+            self._custom_variables["Reconstructed Image"] = img[64, :, :]
 
-            self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
-            self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
-            self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
+            self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 
-            self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array([0.0])
-            self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array([0.0])
+            if self._should_activate_autoencoder():
+                self.custom_variables["D(G(X)) | X"] = np.array([0])
+                self.custom_variables["D(G(X)) | X Valid"] = np.array([0])
+                self.custom_variables["D(G(X)) | X Test"] = np.array([0])
+                self.custom_variables["Mean Hausdorff Distance"] = np.array([0])
+                self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
+                                                                [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+                self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
+                    ["CSF", "Grey Matter", "White Matter"],
+                    ["DSC", "HD"],
+                    [[[0.0, 0.0, 0.0],
+                      [0.0, 0.0, 0.0]],
+                     [[0.0, 0.0, 0.0],
+                      [0.0, 0.0, 0.0]]],
+                    ["iSEG", "MRBrainS"])
+                self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
+                                                                           ["JS Divergence"],
+                                                                           [0.0, 0.0])
 
-        if self._should_activate_segmentation():
-            self.custom_variables["D(G(X)) | X"] = np.array([self._D_G_X_as_X_training_gauge.compute()])
-            self.custom_variables["D(G(X)) | X Valid"] = np.array([self._D_G_X_as_X_validation_gauge.compute()])
-            self.custom_variables["D(G(X)) | X Test"] = np.array([self._D_G_X_as_X_test_gauge.compute()])
-            self.custom_variables["Mean Hausdorff Distance"] = np.array(
-                [self._class_hausdorff_distance_gauge.compute().mean()])
-            self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
-                                                            [self._class_dice_gauge.compute(),
-                                                             self._class_hausdorff_distance_gauge.compute()])
-            self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
-                ["CSF", "Grey Matter", "White Matter"],
-                ["DSC", "HD"],
-                [[self._iSEG_dice_gauge.compute(),
-                  self._iSEG_hausdorff_gauge.compute()],
-                 [self._MRBrainS_dice_gauge.compute(),
-                  self._MRBrainS_hausdorff_gauge.compute()]],
-                ["iSEG", "MRBrainS"])
-            self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
-                                                                       ["JS Divergence"],
-                                                                       [self._js_div_inputs_gauge.compute().numpy(),
-                                                                        self._js_div_gen_gauge.compute().numpy()])
-            self.custom_variables["Confusion Matrix"] = np.array(
-                np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-
-            if self._iSEG_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["iSEG Confusion Matrix"] = np.array(
-                    np.rot90(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
+                self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
                 self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
-
-            if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
-                    np.rot90(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
                 self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
 
-            self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array(
-                [self._js_div_inputs_gauge.compute().numpy()])
-            self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array(
-                [self._js_div_gen_gauge.compute().numpy()])
+                self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array([0.0])
+                self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array([0.0])
+
+            if self._should_activate_segmentation():
+                self.custom_variables["D(G(X)) | X"] = np.array([self._D_G_X_as_X_training_gauge.compute()])
+                self.custom_variables["D(G(X)) | X Valid"] = np.array([self._D_G_X_as_X_validation_gauge.compute()])
+                self.custom_variables["D(G(X)) | X Test"] = np.array([self._D_G_X_as_X_test_gauge.compute()])
+                self.custom_variables["Mean Hausdorff Distance"] = np.array(
+                    [self._class_hausdorff_distance_gauge.compute().mean()])
+                self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
+                                                                [self._class_dice_gauge.compute(),
+                                                                 self._class_hausdorff_distance_gauge.compute()])
+                self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
+                    ["CSF", "Grey Matter", "White Matter"],
+                    ["DSC", "HD"],
+                    [[self._iSEG_dice_gauge.compute(),
+                      self._iSEG_hausdorff_gauge.compute()],
+                     [self._MRBrainS_dice_gauge.compute(),
+                      self._MRBrainS_hausdorff_gauge.compute()]],
+                    ["iSEG", "MRBrainS"])
+                self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
+                                                                           ["JS Divergence"],
+                                                                           [self._js_div_inputs_gauge.compute().numpy(),
+                                                                            self._js_div_gen_gauge.compute().numpy()])
+                self.custom_variables["Confusion Matrix"] = np.array(
+                    np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+
+                if self._iSEG_confusion_matrix_gauge._num_examples != 0:
+                    self.custom_variables["iSEG Confusion Matrix"] = np.array(
+                        np.rot90(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                else:
+                    self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
+
+                if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
+                    self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
+                        np.rot90(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                else:
+                    self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
+
+                self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array(
+                    [self._js_div_inputs_gauge.compute().numpy()])
+                self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array(
+                    [self._js_div_gen_gauge.compute().numpy()])
 
         self._D_G_X_as_X_training_gauge.reset()
         self._D_G_X_as_X_validation_gauge.reset()
@@ -566,8 +566,8 @@ class DeepNormalizeTrainer(Trainer):
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
-        metric = self._discriminator.compute_metric(pred, target)
-        self._discriminator.update_train_metric(metric)
+        metric = self._discriminator.compute_metrics(pred, target)
+        self._discriminator.update_train_metrics(metric)
 
         return disc_loss, pred
 
@@ -598,13 +598,13 @@ class DeepNormalizeTrainer(Trainer):
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)
 
-        metric = self._discriminator.compute_metric(pred, target)
+        metric = self._discriminator.compute_metrics(pred, target)
         if test:
             self._discriminator.update_test_loss(disc_loss)
-            self._discriminator.update_test_metric(metric)
+            self._discriminator.update_test_metrics(metric)
         else:
             self._discriminator.update_valid_loss(disc_loss)
-            self._discriminator.update_valid_metric(metric)
+            self._discriminator.update_valid_metrics(metric)
 
         return disc_loss, pred
 

@@ -10,15 +10,16 @@ from deepNormalize.utils.image_slicer import ImageReconstructor
 from torchvision.transforms import Compose
 import matplotlib.pyplot as plt
 
+
 class ImageReconstructorTest(unittest.TestCase):
-    PATH = "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized/T1/6"
-    TARGET_PATH = "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized/label/6"
-    FULL_IMAGE_PATH = "/mnt/md0/Data/Preprocessed/iSEG/Normalized/T1/subject-6-T1.nii"
+    PATH = "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11"
+    # TARGET_PATH = "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned/label/6"
+    FULL_IMAGE_PATH = "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Aligned/T1/subject-11-T1.nii"
 
     def setUp(self) -> None:
-        self._dataset = iSEGSegmentationFactory.create(self.PATH, self.TARGET_PATH, modality=Modality.T1,
+        self._dataset = iSEGSegmentationFactory.create(self.PATH, None, modality=Modality.T1,
                                                        dataset_id=0)
-        self._reconstructor = ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8])
+        self._reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8])
         transforms = Compose([ToNumpyArray(), PadToPatchShape([1, 32, 32, 32], [1, 8, 8, 8])])
         self._full_image = transforms(self.FULL_IMAGE_PATH)
 

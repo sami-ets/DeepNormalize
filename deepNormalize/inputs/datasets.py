@@ -54,24 +54,39 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
     def create(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
                transforms: List[Callable] = None):
 
-        source_paths, target_paths = extract_file_paths(source_dir), extract_file_paths(target_dir)
+        if target_dir is not None:
+            source_paths, target_paths = extract_file_paths(source_dir), extract_file_paths(target_dir)
 
-        source_paths = np.array(sorted(source_paths,
-                                       key=lambda x: int(
-                                           os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
-        target_paths = np.array(sorted(target_paths,
-                                       key=lambda x: int(
-                                           os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+            source_paths = np.array(sorted(source_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+            target_paths = np.array(sorted(target_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
 
-        test_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths,
-                target_paths))
+            test_samples = list(
+                map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths,
+                    target_paths))
 
-        if transforms is not None:
-            return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                       Compose([transform for transform in transforms]))
+            if transforms is not None:
+                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
+                                           Compose([transform for transform in transforms]))
+            else:
+                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id)
         else:
-            return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id)
+            source_paths = extract_file_paths(source_dir)
+
+            source_paths = np.array(sorted(source_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+            test_samples = list(
+                map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
+
+            if transforms is not None:
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+                                           Compose([transform for transform in transforms]))
+            else:
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id)
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int, test_size: float):

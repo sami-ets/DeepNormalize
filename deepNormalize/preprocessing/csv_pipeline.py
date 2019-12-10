@@ -10,7 +10,7 @@ from samitorch.utils.files import extract_file_paths
 from torchvision.transforms import Compose
 
 
-class ToCSVPipeline(object):
+class ToCSViSEGPipeline(object):
 
     def __init__(self, root_dir: str, target_dir: str, output_dir: str):
         self._source_dir = root_dir
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    ToCSVPipeline(os.path.join(args.path_iseg, "T1"), output_dir=args.path_iseg,
-                  target_dir=os.path.join(args.path_iseg, "label")).run()
+    ToCSViSEGPipeline(os.path.join(args.path_iseg, "T1"), output_dir=args.path_iseg,
+                      target_dir=os.path.join(args.path_iseg, "label")).run()
     ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
                           target_dir=args.path_mrbrains).run()

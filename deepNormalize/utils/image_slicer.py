@@ -19,8 +19,9 @@ from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from samitorch.inputs.sample import Sample
 from samitorch.utils.slice_builder import SliceBuilder
-from samitorch.inputs.transformers import ToNumpyArray
+from samitorch.inputs.transformers import ToNumpyArray, ToNDTensor
 from torchvision.transforms import Compose
 
 from deepNormalize.inputs.images import SliceType
@@ -68,10 +69,11 @@ class AdaptedImageSlicer(object):
 
 class ImageReconstructor(object):
 
-    def __init__(self, image_size: List[int], patch_size: List[int], step: List[int]):
+    def __init__(self, image_size: List[int], patch_size: List[int], step: List[int], model: torch.nn.Module = None):
         self._patch_size = patch_size
         self._image_size = image_size
         self._step = step
+        self._model = model
         self._transform = Compose([ToNumpyArray()])
 
     def reconstruct_from_patches_3d(self, patches: List[np.ndarray]):
@@ -85,8 +87,14 @@ class ImageReconstructor(object):
         for p, (z, y, x) in zip(patches, product(range(0, n_d, self._step[0]),
                                                  range(0, n_h, self._step[1]),
                                                  range(0, n_w, self._step[2]))):
-            img[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += self._transform(p)[
-                0]
+            p = self._transform(p)
+            p = np.expand_dims(p, 0)
+
+            if self._model is not None:
+                p = torch.Tensor().new_tensor(p, device="cuda:0")
+                p = self._model.forward(p).cpu().detach().numpy()
+
+            img[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += p[0][0]
             divisor[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += 1
 
         return img / divisor

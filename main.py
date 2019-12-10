@@ -21,11 +21,12 @@ import numpy as np
 
 import torch
 import torch.backends.cudnn as cudnn
-from kerosene.config.parsers import YamlConfigurationParser
-from kerosene.config.trainers import RunConfiguration
-from kerosene.dataloaders.dataloaders import DataloaderFactory
-from kerosene.events import Event
-from kerosene.events.handlers.checkpoints import ModelCheckpointIfBetter
+from samitorch.inputs.images import Modality
+from torch.utils.data.dataloader import DataLoader
+from kerosene.configs.parsers import YamlConfigurationParser
+from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
+from kerosene.events import Event, MonitorMode
+from kerosene.events.handlers.checkpoints import Checkpoint
 from kerosene.events.handlers.console import PrintTrainingStatus, PrintModelTrainersStatus
 from kerosene.events.handlers.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotGradientFlow
 from kerosene.loggers.visdom import PlotType, PlotFrequency
@@ -35,7 +36,7 @@ from kerosene.training.trainers import ModelTrainerFactory
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
 
-from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType, DatasetConfigurationParser
+from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory
@@ -55,10 +56,11 @@ if __name__ == '__main__':
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
     # Create configurations.
-    run_config = RunConfiguration(args.use_amp, args.amp_opt_level, args.local_rank, args.num_workers)
+    run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
-    dataset_config = DatasetConfigurationParser().parse(args.config_file)
-    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_config)),
+    dataset_configs = YamlConfigurationParser().parse_section(args.config_file, "dataset")
+    dataset_configs = list(map(lambda dataset_config: DatasetConfiguration(dataset_config), dataset_configs))
+    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs)),
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
@@ -71,24 +73,24 @@ if __name__ == '__main__':
     MRBrainS_test = None
     MRBrainS_CSV = None
 
-    if "iSEG" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+    if "iSEG" in [dataset_config.name for dataset_config in dataset_configs]:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_config[0].path,
-            target_dir=dataset_config[0].path + "/label",
+            source_dir=dataset_configs[0].path,
+            target_dir=dataset_configs[0].path + "/label",
             modality=args.modality,
             dataset_id=ISEG_ID,
-            test_size=dataset_config[0].validation_split)
+            test_size=dataset_configs[0].validation_split)
 
-    if "MRBrainS" in [dataset_config[i].dataset_name for i in range(len(dataset_config))]:
+    if "MRBrainS" in [dataset_config.name for dataset_config in dataset_configs]:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
-            target_dir=dataset_config[1 if len(dataset_config) == 2 else 0].path,
+            source_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
+            target_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
             modality=args.modality,
             dataset_id=MRBRAINS_ID,
-            test_size=dataset_config[1 if len(dataset_config) == 2 else 0].validation_split)
+            test_size=dataset_configs[1 if len(dataset_configs) == 2 else 0].validation_split)
 
     # Concat datasets.
-    if len(dataset_config) == 2:
+    if len(dataset_configs) == 2:
         training_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
         validation_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
         test_dataset = torch.utils.data.ConcatDataset((iSEG_test, MRBrainS_test))
@@ -97,16 +99,21 @@ if __name__ == '__main__':
         validation_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
         test_dataset = iSEG_test if iSEG_test is not None else MRBrainS_test
 
+    reconstruction_dataset = iSEGSegmentationFactory.create(
+        "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
+        None, Modality.T1, ISEG_ID)
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory(run_config))
-    model_trainers = list(map(lambda config: model_trainer_factory.create(config, run_config), model_trainer_configs))
+    model_trainers = model_trainer_factory.create(model_trainer_configs)
 
     # Create loaders.
-    train_loader, valid_loader, test_loader = DataloaderFactory(training_dataset, validation_dataset,
-                                                                test_dataset).create(run_config,
-                                                                                     training_config,
-                                                                                     collate_fn=sample_collate)
+    dataloaders = list(map(lambda dataset: DataLoader(dataset,
+                                                      training_config.batch_size,
+                                                      shuffle=True,
+                                                      num_workers=4,
+                                                      collate_fn=sample_collate, pin_memory=True),
+                           [training_dataset, validation_dataset, test_dataset]))
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
@@ -129,11 +136,12 @@ if __name__ == '__main__':
                 "opts": {"title": "Center Voxel Class Count", "stacked": True, "legend": ["CSF", "GM", "WM"]}}))
 
         save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
-        [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True) for model in
+        [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
+         for model in
          ["Discriminator", "Generator", "Segmenter"]]
 
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, test_loader,
-                                       run_config) \
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
+                                       reconstruction_dataset, run_config) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintModelTrainersStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
@@ -267,13 +275,14 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(ModelCheckpointIfBetter(save_folder), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
+                       mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
 
-
     else:
-        trainer = DeepNormalizeTrainer(training_config, model_trainers, train_loader, valid_loader, test_loader,
-                                       run_config) \
+        trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
+                                       reconstruction_dataset, run_config) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank)}},

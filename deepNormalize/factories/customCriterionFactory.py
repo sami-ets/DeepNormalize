@@ -18,7 +18,7 @@ from typing import Union
 
 import numpy as np
 import torch
-from kerosene.config.trainers import RunConfiguration
+from kerosene.configs.configs import RunConfiguration
 from kerosene.nn.criterions import CriterionFactory, CriterionType
 
 from deepNormalize.nn.criterions import MeanLoss

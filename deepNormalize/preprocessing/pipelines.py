@@ -14,17 +14,18 @@
 # limitations under the License.
 # ==============================================================================
 
-import abc
 import argparse
 import logging
+from typing import Tuple
+
+import abc
+import matplotlib.pyplot as plt
+import nibabel as nib
+import numpy as np
 import os
 import re
 import shutil
 from functools import reduce
-from typing import Tuple
-
-import nibabel as nib
-import numpy as np
 from samitorch.inputs.images import Image
 from samitorch.inputs.patch import Patch, CenterCoordinate
 from samitorch.inputs.sample import Sample
@@ -32,7 +33,7 @@ from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1I
     ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti, PadToPatchShape
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
-import matplotlib.pyplot as plt
+
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     """
@@ -230,7 +231,7 @@ class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
         return reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), image_shapes)
 
 
-class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
+class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PatchExtraction")
 
     def __init__(self, root_dir: str, output_dir: str, patch_size: Tuple[int, int, int, int],
@@ -241,7 +242,7 @@ class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._step = step
         self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
-    def run(self, prefix=""):
+    def run(self, prefix="", keep_forground_only=True):
 
         for root, dirs, files in os.walk(self._source_dir):
             root_dir_number = os.path.basename(os.path.normpath(root))
@@ -259,20 +260,10 @@ class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                 transformed_image = self._transforms(os.path.join(root, file))
                 transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
                     np.int8)
-                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
-                slices = SliceBuilder(sample.x.shape, patch_size=self._patch_size, step=self._step).build_slices()
+                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
 
-                patches = list()
-
-                for slice in slices:
-                    if np.count_nonzero(sample.x[slice]) > 0:
-                        center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
-                        patches.append(
-                            Patch(slice, 0, center_coordinate))
-                    else:
-                        pass
-
-                patches = np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+                patches = MRBrainSPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step,
+                                                                         keep_foreground_only=keep_forground_only)
 
                 for i, patch in enumerate(patches):
                     x = transformed_image[tuple(patch.slice)]
@@ -280,6 +271,21 @@ class PatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                         os.path.join(os.path.join(os.path.join(self._output_dir, root_dir_number), modality),
                                      str(i) + ".nii.gz"))])
                     transform_(x)
+
+    @staticmethod
+    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True):
+        slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
+
+        patches = list()
+
+        for slice in slices:
+            center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+            patches.append(Patch(slice, 0, center_coordinate))
+
+        if keep_foreground_only:
+            return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+        else:
+            return patches
 
 
 class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
@@ -293,7 +299,7 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._step = step
         self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
-    def run(self, prefix=""):
+    def run(self, prefix="", keep_foreground_only=True, keep_labels=True):
 
         for root, dirs, files in os.walk(self._source_dir):
             root_dir_number = os.path.basename(os.path.normpath(root))
@@ -306,50 +312,125 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
             for file in files:
                 modality_path = os.path.join(self._output_dir, root_dir_number)
                 subject = re.search(r"-(?P<subject_no>.*)-", file).group("subject_no")
-                label_path = os.path.join(os.path.join(self._output_dir, "label"), subject)
+                if keep_labels:
+                    label_path = os.path.join(os.path.join(self._output_dir, "label"), subject)
 
-                if not os.path.exists(label_path):
-                    os.makedirs(label_path)
+                    if not os.path.exists(label_path):
+                        os.makedirs(label_path)
 
                 if not os.path.exists(os.path.join(modality_path, subject)):
                     os.makedirs(os.path.join(modality_path, subject))
 
                 current_path = os.path.join(modality_path, subject)
                 transformed_image = self._transforms(os.path.join(root, file))
-                plt.imshow(transformed_image[0, 64, :, :])
-                plt.show()
-                transformed_labels = self._transforms(os.path.join(os.path.join(self._source_dir, "label"),
-                                                                   "subject-" + subject + "-label.nii")).astype(np.int8)
-                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=False)
 
-                patches = iSEGPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step)
+                if keep_labels:
+                    transformed_labels = self._transforms(os.path.join(os.path.join(self._source_dir, "label"),
+                                                                       "subject-" + subject + "-label.nii")).astype(
+                        np.int8)
+                    sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
+                else:
+                    sample = Sample(x=transformed_image, dataset_id=None, is_labeled=False)
+                patches = iSEGPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step,
+                                                                     keep_foreground_only=keep_foreground_only,
+                                                                     keep_labels=keep_labels)
 
                 for i, patch in enumerate(patches):
                     x = transformed_image[tuple(patch.slice)]
                     transform_ = transforms.Compose(
                         [ToNifti1Image(), NiftiToDisk(os.path.join(current_path, str(i) + ".nii.gz"))])
                     transform_(x)
-                    y = transformed_labels[tuple(patch.slice)]
-                    transform_ = transforms.Compose(
-                        [ToNifti1Image(), NiftiToDisk(os.path.join(label_path, str(i) + ".nii.gz"))])
-                    transform_(y)
+
+                    if keep_labels:
+                        y = transformed_labels[tuple(patch.slice)]
+                        transform_ = transforms.Compose(
+                            [ToNifti1Image(), NiftiToDisk(os.path.join(label_path, str(i) + ".nii.gz"))])
+                        transform_(y)
 
     @staticmethod
-    def get_patches(sample, patch_size, step):
+    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels=True):
         slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
 
         patches = list()
 
         for slice in slices:
-            # if np.count_nonzero(sample.x[slice]) > 0:
-            center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
-            patches.append(
-                Patch(slice, 0, center_coordinate))
-            # else:
-            #     pass
+            if keep_labels:
+                center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+                patches.append(Patch(slice, 0, center_coordinate))
+            else:
+                patches.append(Patch(slice, 0, None))
 
-        return patches
-        # return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+        if keep_foreground_only:
+            return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+        else:
+            return patches
+
+
+class AlignPipeline(AbstractPreProcessingPipeline):
+    LOGGER = logging.getLogger("PreProcessingPipeline")
+
+    def __init__(self, root_dir: str, output_dir: str, transforms, params: dict = None):
+        self._root_dir = root_dir
+        self._output_dir = output_dir
+        self._transforms = transforms
+        self._params = params
+
+    def run(self, prefix=""):
+        images_np = list()
+        headers = list()
+        file_names = list()
+        root_dirs = list()
+
+        for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+            root_dir_number = os.path.basename(os.path.normpath(root))
+            for file in files:
+                if not os.path.exists(os.path.join(self._output_dir, root_dir_number)):
+                    os.makedirs(os.path.join(self._output_dir, root_dir_number))
+
+                try:
+                    self.LOGGER.info("Processing: {}".format(file))
+                    file_names.append(file)
+                    root_dirs.append(root_dir_number)
+                    images_np.append(self._transforms(os.path.join(root, file)))
+                    headers.append(self._get_image_header(os.path.join(root, file)))
+
+                except Exception as e:
+                    self.LOGGER.warning(e)
+
+        for i, header in enumerate(headers):
+            transforms_ = transforms.Compose([ToNifti1Image(),
+                                              NiftiToDisk(
+                                                  os.path.join(
+                                                      os.path.join(
+                                                          self._output_dir,
+                                                          root_dirs[i]),
+                                                      prefix + file_names[i]))])
+
+            transforms_(images_np[i])
+
+
+class Transpose(object):
+    def __init__(self, axis):
+        self._axis = axis
+
+    def __call__(self, input: np.ndarray) -> np.ndarray:
+        return np.transpose(input, axes=self._axis)
+
+
+class Rotate(object):
+    def __init__(self, k):
+        self._k = k
+
+    def __call__(self, input: np.ndarray):
+        return np.expand_dims(np.rot90(input.squeeze(0), k=self._k), axis=0)
+
+
+class FlipLR(object):
+    def __init__(self):
+        pass
+
+    def __call__(self, input: np.ndarray):
+        return np.fliplr(input)
 
 
 if __name__ == "__main__":
@@ -358,19 +439,32 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
 
     args = parser.parse_args()
-    # iSEGPreProcessingPipeline(root_dir=args.path_iseg,
-    #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    # MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
-    #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
-    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
-    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized").run()
-    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
-    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized").run()
-    # PatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Normalized",
-    #                            output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized",
-    #                            patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Normalized",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized",
-                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    iSEGPreProcessingPipeline(root_dir=args.path_iseg,
+                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
+    MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
+
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
+                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
+                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized").run()
+
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 FlipLR()]),
+                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned"
+                  ).run()
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 Transpose((0, 2, 3, 1))]),
+                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned"
+                  ).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
+                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
 
     print("Preprocessing pipeline completed successfully.")

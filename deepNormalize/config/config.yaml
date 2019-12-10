@@ -11,29 +11,27 @@ models:
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
       num_groups: !!null
-      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      padding: !python/tuple [1, 1, 1, 1, 1, 1]
       activation: "ReLU"
       interpolation: True
-      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-    optimizer:
-      type: "FusedSGD"
-      max_grad_norm: !!null
-      params:
-        lr: 0.00001
-        momentum: 0.9
-        weight_decay: 0.1
-    scheduler:
-      type: "ReduceLROnPlateau"
-      params:
-        mode: "min"
-        factor: 0.1
-        patience: 100
+      scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    optimizers:
+      - type: "FusedSGD"
+        params:
+          lr: 0.00001
+          momentum: 0.9
+          weight_decay: 0.001
+    schedulers:
+      - type: "ReduceLROnPlateau"
+        params:
+          mode: "min"
+          factor: 0.1
+          patience: 100
     criterion:
       type: "MSELoss"
       params:
-    metric:
-      type: "Accuracy"
-      params:
+    metrics:
+      - type: "Accuracy"
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
@@ -46,37 +44,36 @@ models:
       pool_kernel_size: 2
       pooling_type: "MaxPool3d"
       num_groups: !!null
-      padding: !!python/tuple [1, 1, 1, 1, 1, 1]
+      padding: !python/tuple [1, 1, 1, 1, 1, 1]
       activation: "ReLU"
       interpolation: True
-      scale_factor: !!python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
-    optimizer:
-      type: "FusedSGD"
-      max_grad_norm: !!null
-      params:
-        lr: 0.0001
-        momentum: 0.9
-        weight_decay: 0.1
-    scheduler:
-      type: "ReduceLROnPlateau"
-      params:
-        mode: "min"
-        factor: 0.1
-        patience: 3
+      scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
+    optimizers:
+      - type: "FusedSGD"
+        params:
+          lr: 0.0001
+          momentum: 0.9
+          weight_decay: 0.001
+    schedulers:
+      - type: "ReduceLROnPlateau"
+        params:
+          mode: "min"
+          factor: 0.1
+          patience: 3
     criterion:
       type: "DiceLoss"
       params:
         reduction: !!null
         ignore_index: -100
-        weight: !!python/tuple [0.22141935, 0.28180645, 0.23845161, 0.25832258]
-    metric:
-      type: "Dice"
-      params:
-        num_classes: 4
-        reduction: !!null
-        ignore_index: 0
-        average: !!null
-        weight: !!null
+        weight: !torch/tensor [0.22141935, 0.28180645, 0.23845161, 0.25832258]
+    metrics:
+      - type: "Dice"
+        params:
+          num_classes: 4
+          reduction: !!null
+          ignore_index: 0
+          average: !!null
+          weight: !!null
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
@@ -90,29 +87,27 @@ models:
       activation: "ReLU"
       zero_init_residual: False
       replace_stride_with_dilation: !!null
-    optimizer:
-      type: "FusedSGD"
-      max_grad_norm: !!null
-      params:
-        lr: 0.0001
-        momentum: 0.9
-        weight_decay: 0.1
-    scheduler:
-      type: "ReduceLROnPlateau"
-      params:
-        mode: "min"
-        factor: 0.1
-        patience: 100
+    optimizers:
+      - type: "FusedSGD"
+        params:
+          lr: 0.0001
+          momentum: 0.9
+          weight_decay: 0.1
+    schedulers:
+      - type: "ReduceLROnPlateau"
+        params:
+          mode: "min"
+          factor: 0.1
+          patience: 100
     criterion:
       type: "NLLLoss"
       params:
-    metric:
-      type: "Accuracy"
-      params:
+    metrics:
+      - type: "Accuracy"
 
 dataset:
-  iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Normalized"
+  - name: iSEG
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -123,8 +118,8 @@ dataset:
     test:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Normalized"
+  - name: MRBrainS
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -149,7 +144,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_exp_home_GAN_dual_disc_ratio_1.0_NLLLoss"
+  env: "deepNormalize_test_kerosene_v1.1"
 
 logger:
   path: "/tmp/ml/tests"
