@@ -3,6 +3,7 @@ from typing import List, Optional, Callable
 import numpy as np
 import os
 import pandas
+from samitorch.inputs.augmentation.strategies import DataAugmentationStrategy
 from samitorch.inputs.datasets import AbstractDatasetFactory, SegmentationDataset, MultimodalSegmentationDataset
 from samitorch.inputs.images import Modality
 from samitorch.inputs.sample import Sample
@@ -52,7 +53,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-               transforms: List[Callable] = None):
+               transforms: List[Callable] = None, augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_dir is not None:
             source_paths, target_paths = extract_file_paths(source_dir), extract_file_paths(target_dir)
@@ -84,9 +85,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
             if transforms is not None:
                 return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
-                                           Compose([transform for transform in transforms]))
+                                           Compose([transform for transform in transforms]), augmentation_strategy)
             else:
-                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id)
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+                                           augmentation_strategy)
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int, test_size: float):
@@ -117,7 +119,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-                                test_size: float):
+                                test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a SegmentationDataset object for both training and validation.
 
@@ -157,19 +159,20 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                 source_paths[test_ids], target_paths[test_ids]))
 
         training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
-
+                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                               augmentation_strategy)
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]))
+                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         return training_dataset, valid_dataset, test_dataset, csv
 
     @staticmethod
     def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                           dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float,
+                                           augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
 
@@ -214,14 +217,13 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         training_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
                                                          modality_1.value, modality_2.value, dataset_id,
-                                                         Compose([ToNumpyArray(), ToNDTensor()]))
-
+                                                         Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
                                                       modality_1.value, modality_2.value, dataset_id,
-                                                      Compose([ToNumpyArray(), ToNDTensor()]))
+                                                      Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
                                                      modality_1.value, modality_2.value, dataset_id,
-                                                     Compose([ToNumpyArray(), ToNDTensor()]))
+                                                     Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         return training_dataset, valid_dataset, test_dataset, csv
 
@@ -230,7 +232,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-                          test_size: float):
+                          test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_dir = os.path.join(os.path.join(source_dir, "*"), "T1_1mm")
@@ -249,10 +251,11 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                 source_paths[test_ids], target_paths[test_ids]))
 
         training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                               augmentation_strategy)
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]))
+                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         return training_dataset, test_dataset, csv
 
@@ -281,7 +284,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-                                test_size: float):
+                                test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a SegmentationDataset object for both training and validation.
 
@@ -319,19 +322,21 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                 source_paths[test_ids], target_paths[test_ids]))
 
         training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                               augmentation_strategy)
 
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]))
+                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         return training_dataset, valid_dataset, test_dataset, csv
 
     @staticmethod
     def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                           dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float,
+                                           augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
 
@@ -376,13 +381,14 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         training_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
                                                          modality_1.value, modality_2.value, dataset_id,
-                                                         Compose([ToNumpyArray(), ToNDTensor()]))
+                                                         Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
                                                       modality_1.value, modality_2.value, dataset_id,
-                                                      Compose([ToNumpyArray(), ToNDTensor()]))
+                                                      Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
                                                      modality_1.value, modality_2.value, dataset_id,
-                                                     Compose([ToNumpyArray(), ToNDTensor()]))
+                                                     Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         return training_dataset, valid_dataset, test_dataset, csv

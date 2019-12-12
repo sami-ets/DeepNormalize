@@ -16,15 +16,13 @@
 
 import logging
 import multiprocessing
-import os
-import numpy as np
 
+import numpy as np
+import os
 import torch
 import torch.backends.cudnn as cudnn
-from samitorch.inputs.images import Modality
-from torch.utils.data.dataloader import DataLoader
-from kerosene.configs.parsers import YamlConfigurationParser
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
+from kerosene.configs.parsers import YamlConfigurationParser
 from kerosene.events import Event, MonitorMode
 from kerosene.events.handlers.checkpoints import Checkpoint
 from kerosene.events.handlers.console import PrintTrainingStatus, PrintModelTrainersStatus
@@ -33,8 +31,14 @@ from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
+from kerosene.utils.devices import on_multiple_gpus
+from samitorch.inputs.augmentation.strategies import AugmentInput
+from samitorch.inputs.augmentation.transformers import AddNoise
+from samitorch.inputs.images import Modality
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import DataLoader
+from torchvision.transforms import Compose
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
@@ -73,13 +77,15 @@ if __name__ == '__main__':
     MRBrainS_test = None
     MRBrainS_CSV = None
 
+    data_augmentation = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician")]))
+
     if "iSEG" in [dataset_config.name for dataset_config in dataset_configs]:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs[0].path,
             target_dir=dataset_configs[0].path + "/label",
             modality=args.modality,
             dataset_id=ISEG_ID,
-            test_size=dataset_configs[0].validation_split)
+            test_size=dataset_configs[0].validation_split, augmentation_strategy=data_augmentation)
 
     if "MRBrainS" in [dataset_config.name for dataset_config in dataset_configs]:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
@@ -87,16 +93,17 @@ if __name__ == '__main__':
             target_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
             modality=args.modality,
             dataset_id=MRBRAINS_ID,
-            test_size=dataset_configs[1 if len(dataset_configs) == 2 else 0].validation_split)
+            test_size=dataset_configs[1 if len(dataset_configs) == 2 else 0].validation_split,
+            augmentation_strategy=data_augmentation)
 
     # Concat datasets.
     if len(dataset_configs) == 2:
-        training_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
-        validation_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
+        train_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
+        valid_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
         test_dataset = torch.utils.data.ConcatDataset((iSEG_test, MRBrainS_test))
     else:
-        training_dataset = iSEG_train if iSEG_train is not None else MRBrainS_train
-        validation_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
+        train_dataset = iSEG_train if iSEG_train is not None else MRBrainS_train
+        valid_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
         test_dataset = iSEG_test if iSEG_test is not None else MRBrainS_test
 
     reconstruction_dataset = iSEGSegmentationFactory.create(
@@ -107,13 +114,26 @@ if __name__ == '__main__':
                                                 criterion_factory=CustomCriterionFactory(run_config))
     model_trainers = model_trainer_factory.create(model_trainer_configs)
 
+    # Create samplers
+    if on_multiple_gpus(run_config.devices):
+        train_sampler = torch.utils.data.DistributedSampler(train_dataset, run_config.world_size,
+                                                            run_config.local_rank)
+        valid_sampler = torch.utils.data.DistributedSampler(valid_dataset, run_config.world_size,
+                                                            run_config.local_rank)
+        test_sampler = torch.utils.data.DistributedSampler(test_dataset, run_config.world_size,
+                                                           run_config.local_rank)
+    else:
+        train_sampler, valid_sampler, test_sampler = None, None, None
+
     # Create loaders.
-    dataloaders = list(map(lambda dataset: DataLoader(dataset,
-                                                      training_config.batch_size,
-                                                      shuffle=True,
-                                                      num_workers=4,
-                                                      collate_fn=sample_collate, pin_memory=True),
-                           [training_dataset, validation_dataset, test_dataset]))
+    dataloaders = list(map(lambda dataset, sampler: DataLoader(dataset,
+                                                               training_config.batch_size,
+                                                               sampler=sampler,
+                                                               shuffle=False if sampler is not None else True,
+                                                               num_workers=4,
+                                                               collate_fn=sample_collate, pin_memory=True),
+                           [train_dataset, valid_dataset, test_dataset],
+                           [train_sampler, valid_sampler, test_sampler]))
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
@@ -148,29 +168,40 @@ if __name__ == '__main__':
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4,
-                                                            "opts": {"store_history": True,
+                                                            "opts": {"store_history": False,
                                                                      "title": "Generated Patches"}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4,
-                                                            "opts": {"store_history": True,
+                                                            "opts": {"store_history": False,
                                                                      "title": "Input Patches"}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Segmented Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4,
-                                                            "opts": {"store_history": True,
+                                                            "opts": {"store_history": False,
                                                                      "title": "Segmented Patches"}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Reconstructed Image", PlotType.IMAGE_PLOT,
-                                                    params={"opts": {"store_history": True,
-                                                                     "title": "Reconstructed Image"}},
-                                                    every=100), Event.ON_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": True,
+                                        "opts": {"store_history": False,
                                                  "title": "Ground Truth Patches"}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented Image"}},
+                                every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input Image"}},
+                                every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized Image"}},
+                                every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
@@ -222,30 +253,24 @@ if __name__ == '__main__':
                                                                      "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
-                                                    params={"name": "training", "opts": {"title": "Loss D(G(X)) | X"}},
-                                                    every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Valid", PlotType.LINE_PLOT,
-                                                    params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X Validation"}},
-                                                    every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X Test", PlotType.LINE_PLOT,
-                                                    params={"name": "validation",
-                                                            "opts": {"title": "Loss D(G(X)) | X Test"}},
+                                                    params={"opts": {"title": "Loss D(G(X)) | X",
+                                                                     "legend": ["Training",
+                                                                                "Validation",
+                                                                                "Test"]}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence Inputs", PlotType.LINE_PLOT,
-                                params={"opts": {"title": "Jensen-Shannon Divergence Inputs"}},
-                                every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence Generated", PlotType.LINE_PLOT,
-                                params={"opts": {"title": "Jensen-Shannon Divergence Generated"}},
+            PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence", PlotType.LINE_PLOT,
+                                params={"opts": {"title": "Jensen-Shannon Divergence",
+                                                 "legend": ["Inputs", "Normalized"]}},
                                 every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Mean Hausdorff Distance"}},
+                                                    params={"opts": {"title": "Mean Hausdorff Distance",
+                                                                     "legend": ["Test"]}},
                                                     every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
-                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank)}},
+                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
+                                                 "legend": ["Total", "Free", "Used"]}},
                                 every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
@@ -271,6 +296,12 @@ if __name__ == '__main__':
                                                                      "rownames": ["Background", "CSF", "GM", "WM"],
                                                                      "title": "MRBrainS Confusion Matrix"}},
                                                     every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                params={"opts": {"columnnames": ["iSEG", "MRBrainS", "Generated"],
+                                                 "rownames": ["Generated", "MRBrainS", "iSEG"],
+                                                 "title": "Discriminator Confusion Matrix"}},
+                                every=1), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_EPOCH_END) \
@@ -285,6 +316,7 @@ if __name__ == '__main__':
                                        reconstruction_dataset, run_config) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
-                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank)}},
+                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
+                                                 "legend": ["Total", "Free", "Used"]}},
                                 every=1), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)

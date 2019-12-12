@@ -19,7 +19,9 @@ from datetime import timedelta
 from typing import List
 
 import numpy as np
+import pynvml
 import torch
+from fastai.utils.mem import gpu_mem_get
 from ignite.metrics.confusion_matrix import ConfusionMatrix
 from kerosene.configs.configs import RunConfiguration
 from kerosene.metrics.gauges import AverageGauge
@@ -33,7 +35,7 @@ from torch.utils.data import DataLoader
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
 from deepNormalize.utils.constants import ISEG, MRBrainS
-from deepNormalize.utils.image_slicer import AdaptedImageSlicer, SegmentationSlicer, ImageReconstructor
+from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
 
 
@@ -48,11 +50,15 @@ class DeepNormalizeTrainer(Trainer):
         self._training_config = training_config
         self._run_config = run_config
         self._patience_segmentation = training_config.patience_segmentation
-        self._slicer = AdaptedImageSlicer()
+        self._slicer = ImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._reconstruction_dataset = reconstruction_dataset
-        self._reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
-                                                 self._model_trainers[GENERATOR])
+        self._normalized_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
+                                                            [self._model_trainers[GENERATOR]], normalize=True)
+        self._segmented_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
+                                                           [self._model_trainers[GENERATOR],
+                                                            self._model_trainers[SEGMENTER]], segment=True)
+        self._input_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8])
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
@@ -72,11 +78,13 @@ class DeepNormalizeTrainer(Trainer):
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
+        self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=3)
         self._start_time = 0
         self._stop_time = 0
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
                                                       sum(p.numel() for p in self._discriminator.parameters())))
+        pynvml.nvmlInit()
 
     def train_step(self, inputs, target):
         disc_pred = None
@@ -266,7 +274,7 @@ class DeepNormalizeTrainer(Trainer):
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
             self._generator.update_test_loss(gen_loss.loss)
 
-            self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
+            _, disc_pred = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
@@ -352,6 +360,10 @@ class DeepNormalizeTrainer(Trainer):
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
+            self._discriminator_confusion_matrix_gauge.update((
+                to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1), num_classes=3),
+                torch.squeeze(target[DATASET_ID].long(), dim=1)))
+
             inputs_reshaped = inputs.reshape(inputs.shape[0],
                                              inputs.shape[1] * inputs.shape[2] * inputs.shape[3] * inputs.shape[4])
 
@@ -386,9 +398,9 @@ class DeepNormalizeTrainer(Trainer):
 
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
         self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
-        self._custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+        self.custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                        segmenter_predictions)
-        self._custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+        self.custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
                                                                                                        target)
 
     def scheduler_step(self):
@@ -429,26 +441,50 @@ class DeepNormalizeTrainer(Trainer):
         pass
 
     def on_epoch_end(self):
-        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = np.array(
-            [torch.cuda.memory_allocated() / (1024.0 * 1024.0)])
+        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = \
+            [np.array(gpu_mem_get(self._run_config.local_rank))]
 
         if self._run_config.local_rank == 0:
-
-            all_patches = []
-            all_labels = []
-            for current_batch, input in enumerate(self._reconstruction_dataset):
-                all_patches.append(input.x)
-                all_labels.append(input.y)
-            img = self._reconstructor.reconstruct_from_patches_3d(all_patches)
-            self._custom_variables["Reconstructed Image"] = img[64, :, :]
+            all_patches = [sample.x for _, sample in enumerate(self._reconstruction_dataset)]
+            img = self._normalized_reconstructor.reconstruct_from_patches_3d(all_patches)
+            img_input = self._input_reconstructor.reconstruct_from_patches_3d(all_patches)
+            img_seg = self._segmented_reconstructor.reconstruct_from_patches_3d(all_patches)
+            self._custom_variables["Reconstructed Normalized Image"] = self._normalize(
+                self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(img, 0)))
+            self._custom_variables["Reconstructed Segmented Image"] = self._normalize(
+                self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                   np.expand_dims(img_seg, 0))).squeeze(0)
+            self._custom_variables["Reconstructed Input Image"] = self._normalize(
+                self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(img_input, 0)))
 
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 
+            if self._general_confusion_matrix_gauge._num_examples != 0:
+                self.custom_variables["Confusion Matrix"] = np.array(
+                    np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+            else:
+                self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
+
+            if self._iSEG_confusion_matrix_gauge._num_examples != 0:
+                self.custom_variables["iSEG Confusion Matrix"] = np.array(
+                    np.rot90(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+            else:
+                self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
+
+            if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
+                self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
+                    np.rot90(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+            else:
+                self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
+
+            if self._discriminator_confusion_matrix_gauge._num_examples != 0:
+                self.custom_variables["Discriminator Confusion Matrix"] = np.array(
+                    np.rot90(self._discriminator_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+            else:
+                self.custom_variables["Discriminator Confusion Matrix"] = np.zeros((3, 3))
+
             if self._should_activate_autoencoder():
-                self.custom_variables["D(G(X)) | X"] = np.array([0])
-                self.custom_variables["D(G(X)) | X Valid"] = np.array([0])
-                self.custom_variables["D(G(X)) | X Test"] = np.array([0])
-                self.custom_variables["Mean Hausdorff Distance"] = np.array([0])
+                self.custom_variables["D(G(X)) | X"] = [np.array([0, 0, 0])]
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
                                                                 [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
                 self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
@@ -462,20 +498,14 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
                                                                            ["JS Divergence"],
                                                                            [0.0, 0.0])
-
-                self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
-                self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
-                self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
-
-                self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array([0.0])
-                self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array([0.0])
+                self.custom_variables["Jensen-Shannon Divergence"] = np.zeros((2,))
+                self.custom_variables["Mean Hausdorff Distance"] = np.zeros((1,))
 
             if self._should_activate_segmentation():
-                self.custom_variables["D(G(X)) | X"] = np.array([self._D_G_X_as_X_training_gauge.compute()])
-                self.custom_variables["D(G(X)) | X Valid"] = np.array([self._D_G_X_as_X_validation_gauge.compute()])
-                self.custom_variables["D(G(X)) | X Test"] = np.array([self._D_G_X_as_X_test_gauge.compute()])
-                self.custom_variables["Mean Hausdorff Distance"] = np.array(
-                    [self._class_hausdorff_distance_gauge.compute().mean()])
+                self.custom_variables["D(G(X)) | X"] = [np.array([self._D_G_X_as_X_training_gauge.compute(),
+                                                                  self._D_G_X_as_X_validation_gauge.compute(),
+                                                                  self._D_G_X_as_X_test_gauge.compute()])]
+
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"], ["DSC", "HD"],
                                                                 [self._class_dice_gauge.compute(),
                                                                  self._class_hausdorff_distance_gauge.compute()])
@@ -491,25 +521,11 @@ class DeepNormalizeTrainer(Trainer):
                                                                            ["JS Divergence"],
                                                                            [self._js_div_inputs_gauge.compute().numpy(),
                                                                             self._js_div_gen_gauge.compute().numpy()])
-                self.custom_variables["Confusion Matrix"] = np.array(
-                    np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                self.custom_variables["Jensen-Shannon Divergence"] = np.array(
+                    [self._js_div_inputs_gauge.compute().numpy(), self._js_div_gen_gauge.compute().numpy()])
 
-                if self._iSEG_confusion_matrix_gauge._num_examples != 0:
-                    self.custom_variables["iSEG Confusion Matrix"] = np.array(
-                        np.rot90(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-                else:
-                    self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
-
-                if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
-                    self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
-                        np.rot90(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-                else:
-                    self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
-
-                self.custom_variables["Jensen-Shannon Divergence Inputs"] = np.array(
-                    [self._js_div_inputs_gauge.compute().numpy()])
-                self.custom_variables["Jensen-Shannon Divergence Generated"] = np.array(
-                    [self._js_div_gen_gauge.compute().numpy()])
+                self.custom_variables["Mean Hausdorff Distance"] = np.array(
+                    [self._class_hausdorff_distance_gauge.compute().mean()])
 
         self._D_G_X_as_X_training_gauge.reset()
         self._D_G_X_as_X_validation_gauge.reset()
@@ -517,6 +533,7 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge.reset()
         self._iSEG_confusion_matrix_gauge.reset()
         self._general_confusion_matrix_gauge.reset()
+        self._discriminator_confusion_matrix_gauge.reset()
         self._class_hausdorff_distance_gauge.reset()
         self._class_dice_gauge.reset()
         self._js_div_inputs_gauge.reset()
@@ -619,45 +636,3 @@ class DeepNormalizeTrainer(Trainer):
                     flatten(target[:, channel, ...]).cpu().detach().numpy(),
                     flatten(seg_pred[:, channel, ...]).cpu().detach().numpy())[0])
         return distances
-
-    def finalize(self):
-        pass
-
-    def on_batch_end(self):
-        pass
-
-    def on_test_batch_begin(self):
-        pass
-
-    def on_test_batch_end(self):
-        pass
-
-    def on_test_epoch_begin(self):
-        pass
-
-    def on_test_epoch_end(self):
-        pass
-
-    def on_train_batch_begin(self):
-        pass
-
-    def on_train_batch_end(self):
-        pass
-
-    def on_train_epoch_begin(self):
-        pass
-
-    def on_train_epoch_end(self):
-        pass
-
-    def on_valid_batch_begin(self):
-        pass
-
-    def on_valid_batch_end(self):
-        pass
-
-    def on_validation_epoch_begin(self):
-        pass
-
-    def on_validation_epoch_end(self):
-        pass
