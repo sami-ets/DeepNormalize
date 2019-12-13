@@ -85,7 +85,8 @@ if __name__ == '__main__':
             target_dir=dataset_configs[0].path + "/label",
             modality=args.modality,
             dataset_id=ISEG_ID,
-            test_size=dataset_configs[0].validation_split, augmentation_strategy=data_augmentation)
+            test_size=dataset_configs[0].validation_split,
+            augmentation_strategy=data_augmentation)
 
     if "MRBrainS" in [dataset_config.name for dataset_config in dataset_configs]:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(

@@ -242,7 +242,7 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._step = step
         self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
-    def run(self, prefix="", keep_forground_only=True):
+    def run(self, prefix="", keep_foreground_only=True):
 
         for root, dirs, files in os.walk(self._source_dir):
             root_dir_number = os.path.basename(os.path.normpath(root))
@@ -263,7 +263,7 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                 sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
 
                 patches = MRBrainSPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step,
-                                                                         keep_foreground_only=keep_forground_only)
+                                                                         keep_foreground_only=keep_foreground_only)
 
                 for i, patch in enumerate(patches):
                     x = transformed_image[tuple(patch.slice)]

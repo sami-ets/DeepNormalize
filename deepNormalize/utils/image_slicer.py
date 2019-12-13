@@ -23,6 +23,7 @@ from samitorch.inputs.transformers import ToNumpyArray
 from torchvision.transforms import Compose
 
 from deepNormalize.inputs.images import SliceType
+from deepNormalize.utils.constants import EPSILON
 
 
 class SegmentationSlicer(object):
@@ -31,20 +32,23 @@ class SegmentationSlicer(object):
     def __init__(self, colormap=None):
         self._colormap = colormap if colormap is not None else self.DEFAULT_COLOR_MAP
 
+    @staticmethod
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
+
     def get_colored_slice(self, slice_type, seg_map):
+        seg_map = self._normalize(seg_map)
+
         if slice_type == SliceType.SAGITAL:
             colored_slice = self._colormap(np.rot90(seg_map[:, :, :, :, int(seg_map.shape[4] / 2)]), 2)
         elif slice_type == SliceType.CORONAL:
             colored_slice = self._colormap(np.rot90(seg_map[:, :, :, int(seg_map.shape[3] / 2), :]), 2)
         elif slice_type == SliceType.AXIAL:
-            colored_slice = self._colormap(np.rot90(seg_map[:, :, int(seg_map.shape[2] / 2), :, :]), 2)
+            colored_slice = self._colormap((seg_map[:, :, int(seg_map.shape[2] / 2), :, :])).squeeze(1)
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
-        if len(colored_slice.shape) == 5:
-            colored_slice = colored_slice.squeeze(0)
-            return np.transpose(np.uint8(colored_slice[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
-        else:
-            return np.transpose(np.uint8(colored_slice[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
+
+        return np.transpose(np.uint8(colored_slice[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
 
 
 class ImageSlicer(object):
@@ -53,13 +57,18 @@ class ImageSlicer(object):
         pass
 
     @staticmethod
-    def get_slice(slice_type, image):
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
+
+    def get_slice(self, slice_type, image):
+        image = self._normalize(image)
+
         if slice_type == SliceType.SAGITAL:
-            slice = np.rot90(image[:, :, :, :, int(image.shape[4] / 2)], 2)
+            slice = image[:, :, :, :, int(image.shape[4] / 2)]
         elif slice_type == SliceType.CORONAL:
-            slice = np.rot90(image[:, :, :, int(image.shape[3] / 2), :], 2)
+            slice = image[:, :, :, int(image.shape[3] / 2), :]
         elif slice_type == SliceType.AXIAL:
-            slice = np.rot90(image[:, :, int(image.shape[2] / 2), :, :], 2)
+            slice = image[:, :, int(image.shape[2] / 2), :, :]
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
@@ -74,9 +83,13 @@ class ImageReconstructor(object):
         self._image_size = image_size
         self._step = step
         self._models = models
-        self._normalize = normalize
-        self._segment = segment
+        self._do_normalize = normalize
+        self._do_segment = segment
         self._transform = Compose([ToNumpyArray()])
+
+    @staticmethod
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
     def reconstruct_from_patches_3d(self, patches: List[np.ndarray]):
         img = np.zeros(self._image_size)
@@ -95,9 +108,9 @@ class ImageReconstructor(object):
             if self._models is not None:
                 p = torch.Tensor().new_tensor(p, device="cuda:0")
 
-                if self._normalize:
+                if self._do_normalize:
                     p = self._models[0].forward(p).cpu().detach().numpy()
-                elif self._segment:
+                elif self._do_segment:
                     p = self._models[0].forward(p)
                     p = torch.argmax(torch.nn.functional.softmax(self._models[1].forward(p), dim=1), dim=1,
                                      keepdim=True).float().cpu().detach().numpy()
@@ -105,4 +118,7 @@ class ImageReconstructor(object):
             img[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += p[0][0]
             divisor[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += 1
 
-        return img / divisor
+        if self._do_segment:
+            return np.floor(img / divisor)
+        else:
+            return img / divisor

@@ -28,12 +28,13 @@ from kerosene.metrics.gauges import AverageGauge
 from kerosene.nn.functional import js_div
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
+from kerosene.utils.devices import on_multiple_gpus
 from kerosene.utils.tensors import flatten, to_onehot
 from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, EPSILON
+from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID
 from deepNormalize.utils.constants import ISEG, MRBrainS
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
@@ -184,28 +185,29 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Pie Plot"] = count
             self.custom_variables["Pie Plot True"] = real_count
 
-        if self.current_train_step % 100 == 0:
-            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
-                               target[IMAGE_TARGET].cpu().detach())
+        if self._run_config.local_rank == 0:
+            if self.current_train_step % 100 == 0:
+                self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
+                                   target[IMAGE_TARGET].cpu().detach())
 
-        self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
-        self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
-        self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
-        self.custom_variables["CSF Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
-        self.custom_variables["GM Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
-        self.custom_variables["WM Generated Intensity Histogram"] = gen_pred[
-            torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
-        self.custom_variables["Background Input Intensity Histogram"] = inputs[
-            torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
-        self.custom_variables["CSF Input Intensity Histogram"] = inputs[
-            torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
-        self.custom_variables["GM Input Intensity Histogram"] = inputs[
-            torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
-        self.custom_variables["WM Input Intensity Histogram"] = inputs[
-            torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
+            self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
+            self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
+            self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
+                torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
+            self.custom_variables["CSF Generated Intensity Histogram"] = gen_pred[
+                torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
+            self.custom_variables["GM Generated Intensity Histogram"] = gen_pred[
+                torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
+            self.custom_variables["WM Generated Intensity Histogram"] = gen_pred[
+                torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
+            self.custom_variables["Background Input Intensity Histogram"] = inputs[
+                torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
+            self.custom_variables["CSF Input Intensity Histogram"] = inputs[
+                torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
+            self.custom_variables["GM Input Intensity Histogram"] = inputs[
+                torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
+            self.custom_variables["WM Input Intensity Histogram"] = inputs[
+                torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
 
     def validate_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
@@ -391,17 +393,12 @@ class DeepNormalizeTrainer(Trainer):
 
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
-        inputs = self._normalize(inputs)
-        generator_predictions = self._normalize(generator_predictions)
-        segmenter_predictions = self._normalize(segmenter_predictions)
-        target = self._normalize(target)
-
         self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
         self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
         self.custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                       segmenter_predictions)
+                                                                                      segmenter_predictions)
         self.custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                                       target)
+                                                                                                      target)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
@@ -409,10 +406,6 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_segmentation():
             self._discriminator.scheduler_step()
             self._segmenter.scheduler_step()
-
-    @staticmethod
-    def _normalize(img):
-        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
     @staticmethod
     def average_gradients(model):
@@ -445,19 +438,20 @@ class DeepNormalizeTrainer(Trainer):
             [np.array(gpu_mem_get(self._run_config.local_rank))]
 
         if self._run_config.local_rank == 0:
+            self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
+
             all_patches = [sample.x for _, sample in enumerate(self._reconstruction_dataset)]
             img = self._normalized_reconstructor.reconstruct_from_patches_3d(all_patches)
             img_input = self._input_reconstructor.reconstruct_from_patches_3d(all_patches)
             img_seg = self._segmented_reconstructor.reconstruct_from_patches_3d(all_patches)
-            self._custom_variables["Reconstructed Normalized Image"] = self._normalize(
-                self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(img, 0)))
-            self._custom_variables["Reconstructed Segmented Image"] = self._normalize(
-                self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                   np.expand_dims(img_seg, 0))).squeeze(0)
-            self._custom_variables["Reconstructed Input Image"] = self._normalize(
-                self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(img_input, 0)))
-
-            self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
+            self.custom_variables["Reconstructed Normalized Image"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                             np.expand_dims(
+                                                                                                 np.expand_dims(img, 0),
+                                                                                                 0))
+            self.custom_variables["Reconstructed Segmented Image"] = self._seg_slicer.get_colored_slice(
+                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg, 0), 0)).squeeze(0)
+            self.custom_variables["Reconstructed Input Image"] = self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(
+                np.expand_dims(img_input, 0), 0))
 
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(
@@ -527,6 +521,9 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Mean Hausdorff Distance"] = np.array(
                     [self._class_hausdorff_distance_gauge.compute().mean()])
 
+        if on_multiple_gpus(self._run_config.devices):
+            torch.distributed.barrier()
+
         self._D_G_X_as_X_training_gauge.reset()
         self._D_G_X_as_X_validation_gauge.reset()
         self._D_G_X_as_X_test_gauge.reset()
@@ -538,6 +535,9 @@ class DeepNormalizeTrainer(Trainer):
         self._class_dice_gauge.reset()
         self._js_div_inputs_gauge.reset()
         self._js_div_gen_gauge.reset()
+
+        if on_multiple_gpus(self._run_config.devices):
+            torch.distributed.barrier()
 
     @staticmethod
     def count(tensor, n_classes):

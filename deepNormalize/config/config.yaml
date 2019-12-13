@@ -29,9 +29,12 @@ models:
           patience: 100
     criterion:
       type: "MSELoss"
-      params:
     metrics:
       - type: "Accuracy"
+    gradients:
+      clipping_strategy: "value"
+      params:
+        clip_value: 25.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
@@ -146,7 +149,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_test_kerosene_v1.1"
+  env: "deepNormalize_test_kerosene_v1.1_2"
 
 logger:
   path: "/tmp/ml/tests"
