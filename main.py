@@ -108,9 +108,12 @@ if __name__ == '__main__':
         valid_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
         test_dataset = iSEG_test if iSEG_test is not None else MRBrainS_test
 
-    reconstruction_dataset = iSEGSegmentationFactory.create(
+    iSEG_reconstruction_dataset = iSEGSegmentationFactory.create(
         "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
         None, Modality.T1, ISEG_ID)
+    MRBrainS_reconstruction_dataset = MRBrainSSegmentationFactory.create(
+        "/mnt/md0/Data/Preprocessed/MRBrainS/TesTData/Patches/Aligned/T1/1", None, Modality.T1, MRBRAINS_ID)
+    reconstruction_datasets = [iSEG_reconstruction_dataset, MRBrainS_reconstruction_dataset]
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -164,7 +167,7 @@ if __name__ == '__main__':
          ["Discriminator", "Generator", "Segmenter"]]
 
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       reconstruction_dataset, run_config) \
+                                       reconstruction_datasets, run_config) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintModelTrainersStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
@@ -316,7 +319,7 @@ if __name__ == '__main__':
 
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       reconstruction_dataset, run_config) \
+                                       iSEG_reconstruction_dataset, run_config) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),

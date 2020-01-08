@@ -31,7 +31,7 @@ from kerosene.training.trainers import Trainer
 from kerosene.utils.devices import on_multiple_gpus
 from kerosene.utils.tensors import flatten, to_onehot
 from scipy.spatial.distance import directed_hausdorff
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID
@@ -44,7 +44,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
-                 reconstruction_dataset, run_config: RunConfiguration):
+                 reconstruction_datasets: List[Dataset], run_config: RunConfiguration):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    test_data_loader, model_trainers, run_config)
 
@@ -53,7 +53,7 @@ class DeepNormalizeTrainer(Trainer):
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = ImageSlicer()
         self._seg_slicer = SegmentationSlicer()
-        self._reconstruction_dataset = reconstruction_dataset
+        self._reconstruction_datasets = reconstruction_datasets
         self._normalized_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
                                                             [self._model_trainers[GENERATOR]], normalize=True)
         self._segmented_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
@@ -440,19 +440,40 @@ class DeepNormalizeTrainer(Trainer):
         if self._run_config.local_rank == 0:
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 
-            all_patches = [sample.x for _, sample in enumerate(self._reconstruction_dataset)]
-            img = self._normalized_reconstructor.reconstruct_from_patches_3d(all_patches)
-            img_input = self._input_reconstructor.reconstruct_from_patches_3d(all_patches)
-            img_seg = self._segmented_reconstructor.reconstruct_from_patches_3d(all_patches)
-            self.custom_variables["Reconstructed Normalized Image"] = self._slicer.get_slice(SliceType.AXIAL,
-                                                                                             np.expand_dims(
-                                                                                                 np.expand_dims(img, 0),
-                                                                                                 0))
-            self.custom_variables["Reconstructed Segmented Image"] = self._seg_slicer.get_colored_slice(
-                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg, 0), 0)).squeeze(0)
-            self.custom_variables["Reconstructed Input Image"] = self._slicer.get_slice(SliceType.AXIAL, np.expand_dims(
-                np.expand_dims(img_input, 0), 0))
+            all_patches = list(
+                map(lambda dataset: [sample.x for _, sample in enumerate(dataset)], self._reconstruction_datasets))
+            img = list(
+                map(lambda patches: self._normalized_reconstructor.reconstruct_from_patches_3d(patches), all_patches))
+            img_input = list(
+                map(lambda patches: self._normalized_reconstructor.reconstruct_from_patches_3d(patches), all_patches))
+            img_seg = list(
+                map(lambda patches: self._normalized_reconstructor.reconstruct_from_patches_3d(patches), all_patches))
 
+            self.custom_variables["Reconstructed Normalized iSEG Image"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                                  np.expand_dims(
+                                                                                                      np.expand_dims(
+                                                                                                          img[0], 0),
+                                                                                                      0))
+            self.custom_variables["Reconstructed Segmented iSEG Image"] = self._seg_slicer.get_colored_slice(
+                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[0], 0), 0)).squeeze(0)
+            self.custom_variables["Reconstructed Input iSEG Image"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                             np.expand_dims(
+                                                                                                 np.expand_dims(
+                                                                                                     img_input[0], 0),
+                                                                                                 0))
+
+            self.custom_variables["Reconstructed Normalized MRBrainS Image"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                                      np.expand_dims(
+                                                                                                          np.expand_dims(
+                                                                                                              img[1],
+                                                                                                              0), 0))
+            self.custom_variables["Reconstructed Segmented MRBrainS Image"] = self._seg_slicer.get_colored_slice(
+                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[1], 0), 0)).squeeze(0)
+            self.custom_variables["Reconstructed Input MRBrainS Image"] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                                 np.expand_dims(
+                                                                                                     np.expand_dims(
+                                                                                                         img_input[1],
+                                                                                                         0), 0))
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(
                     np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
