@@ -1,4 +1,4 @@
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Union
 
 import numpy as np
 import os
@@ -91,7 +91,45 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                            augmentation_strategy)
 
     @staticmethod
-    def create_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int, test_size: float):
+    def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
+                          dataset_id: int, test_size: float):
+
+        if isinstance(modalities, list):
+            return iSEGSegmentationFactory._create_multimodal_train_test(source_dir, target_dir, modalities,
+                                                                         dataset_id, test_size)
+        else:
+            return iSEGSegmentationFactory._create_single_modality_train_test(source_dir, target_dir, modalities,
+                                                                              dataset_id, test_size)
+
+    @staticmethod
+    def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
+                                dataset_id: int, test_size: float,
+                                augmentation_strategy: DataAugmentationStrategy = None):
+        """
+        Create a SegmentationDataset object for both training and validation.
+
+        Args:
+           source_dir (str): Path to source directory.
+           target_dir (str): Path to target directory.
+           modalities (List of :obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
+           dataset_id (int): An integer representing the ID of the data set.
+           test_size (float): The size in percentage of the validation set over total number of samples.
+
+        Returns:
+           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
+        """
+
+        if isinstance(modalities, list):
+            return iSEGSegmentationFactory._create_multimodal_train_valid_test(source_dir, target_dir, modalities,
+                                                                               dataset_id, test_size)
+        else:
+            return iSEGSegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir, modalities,
+                                                                                    dataset_id, test_size)
+
+    @staticmethod
+    def _create_single_modality_train_test(source_dir: str, target_dir: str, modality: Modality,
+                                           dataset_id: int, test_size: float):
+
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_dir = os.path.join(source_dir, str(modality)) + "/*"
@@ -109,30 +147,19 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[valid_ids], target_paths[valid_ids]))
 
-        training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+        train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
-        return training_dataset, valid_dataset, csv
+        return train_dataset, valid_dataset, csv
 
     @staticmethod
-    def create_train_valid_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-                                test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
-        """
-        Create a SegmentationDataset object for both training and validation.
+    def _create_single_modality_train_valid_test(source_dir: str, target_dir: str, modality: Modality,
+                                                 dataset_id: int, test_size: float,
+                                                 augmentation_strategy: DataAugmentationStrategy = None):
 
-        Args:
-           source_dir (str): Path to source directory.
-           target_dir (str): Path to target directory.
-           modality (:obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
-           dataset_id (int): An integer representing the ID of the data set.
-           test_size (float): The size in percentage of the validation set over total number of samples.
-
-        Returns:
-           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
-        """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_dir = os.path.join(source_dir, str(modality)) + "/*"
@@ -158,21 +185,21 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[test_ids], target_paths[test_ids]))
 
-        training_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                               dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                               augmentation_strategy)
+        train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                            augmentation_strategy)
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
                                            Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
-        return training_dataset, valid_dataset, test_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, csv
 
     @staticmethod
-    def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                           dataset_id: int, test_size: float,
-                                           augmentation_strategy: DataAugmentationStrategy = None):
+    def _create_multimodal_train_test(source_dir: str, target_dir: str, modalities: List[Modality],
+                                      dataset_id: int, test_size: float,
+                                      augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
 
@@ -189,15 +216,58 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir_modality_1 = os.path.join(source_dir, str(modality_1)) + "/*"
-        source_dir_modality_2 = os.path.join(source_dir, str(modality_2)) + "/*"
+        source_dirs = list(map(lambda modality: os.path.join(source_dir, str(modality)) + "/*", modalities))
 
-        source_paths_modality_1, target_paths = np.array(extract_file_paths(source_dir_modality_1)), np.array(
-            extract_file_paths(target_dir))
-        source_paths_modality_2, target_paths = np.array(extract_file_paths(source_dir_modality_2)), np.array(
-            extract_file_paths(target_dir))
+        source_paths = list(map(lambda source_dir: np.array(extract_file_paths(source_dir)), source_dirs))
+        target_paths = np.array(extract_file_paths(target_dir + "/*"))
 
-        source_paths = np.stack((source_paths_modality_1, source_paths_modality_2), axis=1)
+        source_paths = np.stack((modality for modality in source_paths), axis=1)
+
+        train_ids, test_ids = next(
+            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
+        train_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[train_ids], target_paths[train_ids]))
+        test_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[test_ids], target_paths[test_ids]))
+
+        train_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples, modalities,
+                                                      dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
+
+        test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples, modalities,
+                                                     dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                     augmentation_strategy)
+
+        return train_dataset, test_dataset, csv
+
+    @staticmethod
+    def _create_multimodal_train_valid_test(source_dir: str, target_dir: str, modalities: List[Modality],
+                                            dataset_id: int, test_size: float,
+                                            augmentation_strategy: DataAugmentationStrategy = None):
+        """
+        Create a MultimodalDataset object for both training and validation.
+
+        Args:
+           source_dir (str): Path to source directory.
+           target_dir (str): Path to target directory.
+           modality_1 (:obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
+           modality_2 (:obj:`samitorch.inputs.images.Modalities`): The second modality of the data set.
+           dataset_id (int): An integer representing the ID of the data set.
+           test_size (float): The size in percentage of the validation set over total number of samples.
+
+        Returns:
+           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
+        """
+        csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
+
+        source_dirs = list(map(lambda modality: os.path.join(source_dir, str(modality)) + "/*", modalities))
+
+        source_paths = list(map(lambda source_dir: np.array(extract_file_paths(source_dir)), source_dirs))
+        target_paths = np.array(extract_file_paths(target_dir + "/*"))
+
+        source_paths = np.stack((modality for modality in source_paths), axis=1)
 
         train_valid_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
@@ -215,27 +285,109 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[test_ids], target_paths[test_ids]))
 
-        training_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
-                                                         modality_1.value, modality_2.value, dataset_id,
-                                                         Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+        train_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
-                                                      modality_1.value, modality_2.value, dataset_id,
-                                                      Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
-                                                     modality_1.value, modality_2.value, dataset_id,
-                                                     Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                     augmentation_strategy)
 
-        return training_dataset, valid_dataset, test_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, csv
 
 
 class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
-    def create_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
+    def create(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
+               transforms: List[Callable] = None):
+
+        if target_dir is not None:
+
+            source_paths, target_paths = extract_file_paths(source_dir), extract_file_paths(target_dir)
+
+            source_paths = np.array(sorted(source_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+            target_paths = np.array(sorted(target_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+
+            test_samples = list(
+                map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths,
+                    target_paths))
+
+            if transforms is not None:
+                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
+                                           Compose([transform for transform in transforms]))
+            else:
+                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id)
+        else:
+            source_paths = extract_file_paths(source_dir)
+
+            source_paths = np.array(sorted(source_paths,
+                                           key=lambda x: int(
+                                               os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
+            test_samples = list(
+                map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
+
+            if transforms is not None:
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+                                           Compose([transform for transform in transforms]))
+            else:
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id)
+
+    @staticmethod
+    def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
+                          dataset_id: int,
                           test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
+
+        if isinstance(modalities, list):
+            return MRBrainSSegmentationFactory._create_multimodal_train_test(source_dir, target_dir, modalities,
+                                                                             dataset_id, test_size,
+                                                                             augmentation_strategy)
+        else:
+            return MRBrainSSegmentationFactory._create_single_modality_train_test(source_dir, target_dir, modalities,
+                                                                                  dataset_id, test_size,
+                                                                                  augmentation_strategy)
+
+    @staticmethod
+    def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
+                                dataset_id: int, test_size: float,
+                                augmentation_strategy: DataAugmentationStrategy = None):
+        """
+        Create a SegmentationDataset object for both training and validation.
+
+        Args:
+           source_dir (str): Path to source directory.
+           target_dir (str): Path to target directory.
+           modality (:obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
+           dataset_id (int): An integer representing the ID of the data set.
+           test_size (float): The size in percentage of the validation set over total number of samples.
+
+        Returns:
+           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
+        """
+
+        if isinstance(modalities, list):
+            return MRBrainSSegmentationFactory._create_multimodal_train_valid_test(source_dir, target_dir, modalities,
+                                                                                   dataset_id, test_size,
+                                                                                   augmentation_strategy)
+        else:
+            return MRBrainSSegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir,
+                                                                                        modalities,
+                                                                                        dataset_id, test_size,
+                                                                                        augmentation_strategy)
+
+    @staticmethod
+    def _create_single_modality_train_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
+                                           test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
+
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir = os.path.join(os.path.join(source_dir, "*"), "T1_1mm")
+        source_dir = os.path.join(os.path.join(source_dir, "*"), str(modality))
         target_dir = os.path.join(os.path.join(target_dir, "*"), "LabelsForTesting")
 
         source_paths, target_paths = np.array(extract_file_paths(source_dir)), np.array(extract_file_paths(target_dir))
@@ -260,47 +412,13 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         return training_dataset, test_dataset, csv
 
     @staticmethod
-    def create(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-               transforms: List[Callable] = None):
+    def _create_single_modality_train_valid_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
+                                                 test_size: float,
+                                                 augmentation_strategy: DataAugmentationStrategy = None):
 
-        source_paths, target_paths = extract_file_paths(source_dir), extract_file_paths(target_dir)
-
-        source_paths = np.array(sorted(source_paths,
-                                       key=lambda x: int(
-                                           os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
-        target_paths = np.array(sorted(target_paths,
-                                       key=lambda x: int(
-                                           os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0])))
-
-        test_samples = list(
-            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id), source_paths,
-                target_paths))
-
-        if transforms is not None:
-            return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                       Compose([transform for transform in transforms]))
-        else:
-            return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id)
-
-    @staticmethod
-    def create_train_valid_test(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-                                test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
-        """
-        Create a SegmentationDataset object for both training and validation.
-
-        Args:
-           source_dir (str): Path to source directory.
-           target_dir (str): Path to target directory.
-           modality (:obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
-           dataset_id (int): An integer representing the ID of the data set.
-           test_size (float): The size in percentage of the validation set over total number of samples.
-
-        Returns:
-           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
-        """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir = os.path.join(os.path.join(source_dir, "*"), "T1_1mm")
+        source_dir = os.path.join(os.path.join(source_dir, "*"), str(modality))
         target_dir = os.path.join(os.path.join(target_dir, "*"), "LabelsForTesting")
 
         source_paths, target_paths = np.array(extract_file_paths(source_dir)), np.array(extract_file_paths(target_dir))
@@ -334,17 +452,16 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         return training_dataset, valid_dataset, test_dataset, csv
 
     @staticmethod
-    def create_multimodal_train_valid_test(source_dir: str, target_dir: str, modality_1: Modality, modality_2: Modality,
-                                           dataset_id: int, test_size: float,
-                                           augmentation_strategy: DataAugmentationStrategy = None):
+    def _create_multimodal_train_test(source_dir: str, target_dir: str, modalities: List[Modality],
+                                      dataset_id: int, test_size: float,
+                                      augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
 
         Args:
            source_dir (str): Path to source directory.
            target_dir (str): Path to target directory.
-           modality_1 (:obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
-           modality_2 (:obj:`samitorch.inputs.images.Modalities`): The second modality of the data set.
+           modalities (List of :obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
            dataset_id (int): An integer representing the ID of the data set.
            test_size (float): The size in percentage of the validation set over total number of samples.
 
@@ -353,15 +470,59 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir_modality_1 = os.path.join(source_dir, str(modality_1)) + "/*"
-        source_dir_modality_2 = os.path.join(source_dir, str(modality_2)) + "/*"
+        source_dirs = list(map(lambda modality: os.path.join(os.path.join(source_dir, "*"), str(modality)), modalities))
+        target_dir = os.path.join(os.path.join(target_dir, "*"), "LabelsForTesting")
 
-        source_paths_modality_1, target_paths = np.array(extract_file_paths(source_dir_modality_1)), np.array(
-            extract_file_paths(target_dir))
-        source_paths_modality_2, target_paths = np.array(extract_file_paths(source_dir_modality_2)), np.array(
-            extract_file_paths(target_dir))
+        source_paths = list(map(lambda source_dir: np.array(extract_file_paths(source_dir)), source_dirs))
+        target_paths = np.array(extract_file_paths(target_dir))
 
-        source_paths = np.stack((source_paths_modality_1, source_paths_modality_2), axis=1)
+        source_paths = np.stack((modality for modality in source_paths), axis=1)
+
+        train_ids, test_ids = next(
+            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
+
+        train_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[train_ids], target_paths[test_ids]))
+        test_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                source_paths[test_ids], target_paths[test_ids]))
+
+        train_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
+        test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                     augmentation_strategy)
+
+        return train_dataset, test_dataset, csv
+
+    @staticmethod
+    def _create_multimodal_train_valid_test(source_dir: str, target_dir: str, modalities: List[Modality],
+                                            dataset_id: int, test_size: float,
+                                            augmentation_strategy: DataAugmentationStrategy = None):
+        """
+        Create a MultimodalDataset object for both training and validation.
+
+        Args:
+           source_dir (str): Path to source directory.
+           target_dir (str): Path to target directory.
+           modalities (List of :obj:`samitorch.inputs.images.Modalities`): The first modality of the data set.
+           dataset_id (int): An integer representing the ID of the data set.
+           test_size (float): The size in percentage of the validation set over total number of samples.
+
+        Returns:
+           Tuple of :obj:`torch.utils.data.dataset`: A tuple containing both training and validation dataset.
+        """
+        csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
+
+        source_dirs = list(map(lambda modality: os.path.join(os.path.join(source_dir, "*"), str(modality)), modalities))
+        target_dir = os.path.join(os.path.join(target_dir, "*"), "LabelsForTesting")
+
+        source_paths = list(map(lambda source_dir: np.array(extract_file_paths(source_dir)), source_dirs))
+        target_paths = np.array(extract_file_paths(target_dir))
+
+        source_paths = np.stack((modality for modality in source_paths), axis=1)
 
         train_valid_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
@@ -379,16 +540,14 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[test_ids], target_paths[test_ids]))
 
-        training_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
-                                                         modality_1.value, modality_2.value, dataset_id,
-                                                         Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
-
+        train_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), train_samples,
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
-                                                      modality_1.value, modality_2.value, dataset_id,
-                                                      Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
-
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                      augmentation_strategy)
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
-                                                     modality_1.value, modality_2.value, dataset_id,
-                                                     Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
+                                                     augmentation_strategy)
 
-        return training_dataset, valid_dataset, test_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, csv

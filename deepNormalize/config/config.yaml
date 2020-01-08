@@ -113,6 +113,7 @@ models:
 dataset:
   - name: iSEG
     path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned"
+    modalities: ["T1", "T2"]
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -125,6 +126,7 @@ dataset:
       step: [1, 32, 32, 32]
   - name: MRBrainS
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned"
+    modalities: ["T1", "T2_FLAIR"]
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]

@@ -33,7 +33,7 @@ from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
-from samitorch.inputs.augmentation.transformers import AddNoise
+from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField
 from samitorch.inputs.images import Modality
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     # Create configurations.
     run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
-    dataset_configs = YamlConfigurationParser().parse_section(args.config_file, "dataset")
+    dataset_configs = YamlConfigurationParser.parse_section(args.config_file, "dataset")
     dataset_configs = list(map(lambda dataset_config: DatasetConfiguration(dataset_config), dataset_configs))
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs)),
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
@@ -77,13 +77,14 @@ if __name__ == '__main__':
     MRBrainS_test = None
     MRBrainS_CSV = None
 
-    data_augmentation = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician")]))
+    data_augmentation = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
+                                              AddBiasField(exec_probability=0.3)]))
 
     if "iSEG" in [dataset_config.name for dataset_config in dataset_configs]:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs[0].path,
             target_dir=dataset_configs[0].path + "/label",
-            modality=args.modality,
+            modalities=dataset_configs[0].modalities,
             dataset_id=ISEG_ID,
             test_size=dataset_configs[0].validation_split,
             augmentation_strategy=data_augmentation)
@@ -92,7 +93,7 @@ if __name__ == '__main__':
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
             target_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
-            modality=args.modality,
+            modalities=dataset_configs[1].modalities,
             dataset_id=MRBRAINS_ID,
             test_size=dataset_configs[1 if len(dataset_configs) == 2 else 0].validation_split,
             augmentation_strategy=data_augmentation)
@@ -110,6 +111,7 @@ if __name__ == '__main__':
     reconstruction_dataset = iSEGSegmentationFactory.create(
         "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
         None, Modality.T1, ISEG_ID)
+
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
                                                 criterion_factory=CustomCriterionFactory(run_config))

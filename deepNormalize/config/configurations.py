@@ -21,12 +21,13 @@ from samitorch.configs.configurations import Configuration
 
 
 class DatasetConfiguration(Configuration):
-    def __init__(self, dataset_name, path, validation_split, training_patch_size, training_patch_step,
+    def __init__(self, dataset_name, path, modalities, validation_split, training_patch_size, training_patch_step,
                  validation_patch_size, validation_patch_step, test_patch_size, test_patch_step):
         super(DatasetConfiguration, self).__init__()
 
         self._dataset_name = dataset_name
         self._path = path
+        self._modalities = modalities
         self._validation_split = validation_split
         self._training_patch_size = training_patch_size
         self._training_patch_step = training_patch_step
@@ -48,6 +49,16 @@ class DatasetConfiguration(Configuration):
             str: The dataset's path.
         """
         return self._path
+
+    @property
+    def modalities(self):
+        """
+        Dataset's modalities.
+
+        Returns:
+            str or List of str: The dataset's modalities.
+        """
+        return self._modalities
 
     @property
     def validation_split(self) -> int:
