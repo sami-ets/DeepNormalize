@@ -16,23 +16,25 @@
 
 import argparse
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 
 import abc
-import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
 import os
 import re
 import shutil
 from functools import reduce
+from nipype.interfaces import freesurfer
 from samitorch.inputs.images import Image
 from samitorch.inputs.patch import Patch, CenterCoordinate
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
-    ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti, PadToPatchShape
+    ResampleNiftiImageToTemplate, CropToContent, PadToShape, LoadNifti, PadToPatchShape, Squeeze
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
+
+print(os.getenv("FREESURFER_HOME"))
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -409,62 +411,241 @@ class AlignPipeline(AbstractPreProcessingPipeline):
             transforms_(images_np[i])
 
 
+class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
+    """
+    An ABIDE data pre-processing pipeline. Extract necessary tissues for brain segmentation among other transformations.
+    """
+    LOGGER = logging.getLogger("PreProcessingPipeline")
+
+    def __init__(self, root_dir: str):
+        """
+        Pre-processing pipeline constructor.
+
+        Args:
+            root_dir: Root directory where all files are located.
+        """
+        self._root_dir = root_dir
+        self._transforms = None
+        # self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
+        self._normalized_shape = (1, 212, 211, 189)
+        self._transform_crop = transforms.Compose([ToNumpyArray(),
+                                                   CropToContent(),
+                                                   PadToShape(self._normalized_shape)])
+        self._transform_align = transforms.Compose([ToNumpyArray(),
+                                                    Transpose((0, 2, 3, 1)),
+                                                    Rotate(k=2, axes=(3, 2))
+                                                    ])
+
+    def run(self, prefix: str = ""):
+        for root, dirs, files in os.walk(self._root_dir):
+            for dir in dirs:
+                self._extract_labels(os.path.join(self._root_dir, dir))
+                self._crop_to_content(os.path.join(self._root_dir, dir))
+                self._align(os.path.join(self._root_dir, dir))
+
+    def _align(self, root):
+        for root, dirs, files in os.walk(root):
+            for file in list(filter(lambda path: Image.is_nifti(path) and "cropped_" in path, files)):
+                try:
+                    self.LOGGER.info("Processing: {}".format(file))
+                    sample = Sample(x=os.path.join(root, "cropped_brainmask.nii.gz"),
+                                    y=os.path.join(root, "cropped_labels.nii.gz"),
+                                    is_labeled=True)
+                    transformed_sample = self._transform_align(sample)
+
+                    transforms_ = transforms.Compose([Squeeze(-1),
+                                                      ToNifti1Image(),
+                                                      NiftiToDisk([
+                                                          os.path.join(root, "aligned_brainmask.nii.gz"),
+                                                          os.path.join(root, "aligned_labels.nii.gz")])])
+                    transforms_(transformed_sample)
+
+                except Exception as e:
+                    self.LOGGER.warning(e)
+
+    def _extract_labels(self, root):
+        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
+                           os.path.join(root, "mri", "wm_mask.mgz"),
+                           "wm")
+
+        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
+                           os.path.join(root, "mri", "gm_mask.mgz"),
+                           "gm")
+        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
+                           os.path.join(root, "mri", "csf_mask.mgz"),
+                           "csf")
+
+        self._remap_labels(os.path.join(root, "mri", "gm_mask.mgz"),
+                           os.path.join(root, "mri", "remapped_gm_mask.nii.gz"),
+                           1, 2)
+        self._remap_labels(os.path.join(root, "mri", "wm_mask.mgz"),
+                           os.path.join(root, "mri", "remapped_wm_mask.nii.gz"),
+                           1, 3)
+
+        transform_ = transforms.Compose([ToNumpyArray()])
+        wm_vol = transform_(os.path.join(root, "mri", "remapped_wm_mask.nii.gz"))
+        gm_vol = transform_(os.path.join(root, "mri", "remapped_gm_mask.nii.gz"))
+        csf_vol = transform_(os.path.join(root, "mri", "csf_mask.mgz"))
+
+        merged = self._merge_volumes(wm_vol, gm_vol, csf_vol)
+
+        transform_ = transforms.Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(root, "mri", "labels.nii.gz"))])
+        transform_(merged)
+
+    def _crop_to_content(self, root):
+        for root, dirs, files in os.walk(os.path.join(root)):
+            for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
+                try:
+                    self.LOGGER.info("Processing: {}".format(file))
+                    sample = Sample(x=os.path.join(root, "brainmask.mgz"),
+                                    y=os.path.join(root, "labels.nii.gz"),
+                                    is_labeled=True)
+                    transformed_image = self._transform_crop(sample)
+                    sample = Sample.from_sample(transformed_image)
+                    transforms_ = transforms.Compose([Squeeze(0),
+                                                      ToNifti1Image(),
+                                                      NiftiToDisk([
+                                                          os.path.join(root, "cropped_brainmask.nii.gz"),
+                                                          os.path.join(root, "cropped_labels.nii.gz")])])
+                    transforms_(sample)
+
+                except Exception as e:
+                    self.LOGGER.warning(e)
+
+    def _compute_normalized_shape_from_images_in(self, root_dir):
+        image_shapes = []
+
+        for root, dirs, files in os.walk(root_dir):
+            for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
+                try:
+                    self.LOGGER.debug("Computing the bounding box of {}".format(file))
+                    c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
+                        ToNumpyArray()(os.path.join(root, file)))
+                    image_shapes.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
+                except Exception as e:
+                    self.LOGGER.warning(
+                        "Error while computing the content bounding box for {} with error {}".format(file, e))
+
+        return reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])), image_shapes)
+
+    @staticmethod
+    def _mri_binarize(input, output, tissue):
+        if tissue == "wm":
+            freesurfer.Binarize(in_file=input, wm=True, binary_file=output).run()
+        elif tissue == "gm":
+            freesurfer.Binarize(in_file=input, args="--gm", binary_file=output).run()
+        elif tissue == "csf":
+            freesurfer.Binarize(in_file=input, match=[4, 5, 24, 31, 43, 44, 63, 122, 221], binary_file=output).run()
+        else:
+            raise NotImplementedError("Invalid tissue to binarize.")
+
+    @staticmethod
+    def _remap_labels(input, output, old_value, remapped_value):
+        remap_transform = transforms.Compose([ToNumpyArray(),
+                                              RemapClassIDs([old_value], [remapped_value]),
+                                              ToNifti1Image(),
+                                              NiftiToDisk(output)])
+        return remap_transform(input)
+
+    @staticmethod
+    def _merge_volumes(volume_1, volume_2, volume_3):
+        return volume_1 + volume_2 + volume_3
+
+
 class Transpose(object):
     def __init__(self, axis):
         self._axis = axis
 
-    def __call__(self, input: np.ndarray) -> np.ndarray:
-        return np.transpose(input, axes=self._axis)
+    def __call__(self, input: Union[Sample, np.ndarray]) -> Union[Sample, np.ndarray]:
+        if isinstance(input, np.ndarray):
+            return np.transpose(input, axes=self._axis)
+        elif isinstance(input, Sample):
+            sample = input
+
+            if not isinstance(sample.x, np.ndarray):
+                raise TypeError("Only Numpy arrays are supported.")
+            transformed_sample = Sample.from_sample(sample)
+            transformed_sample.x = np.transpose(sample.x, axes=self._axis)
+            transformed_sample.y = np.transpose(sample.y, axes=self._axis)
+
+            return sample.update(transformed_sample)
 
 
 class Rotate(object):
-    def __init__(self, k):
+    def __init__(self, k, axes):
         self._k = k
+        self._axes = axes
 
     def __call__(self, input: np.ndarray):
-        return np.expand_dims(np.rot90(input.squeeze(0), k=self._k), axis=0)
+        if isinstance(input, np.ndarray):
+            return np.expand_dims(np.rot90(input.squeeze(0), k=self._k), axis=0)
+        elif isinstance(input, Sample):
+            sample = input
+
+            if not isinstance(sample.x, np.ndarray):
+                raise TypeError("Only Numpy arrays are supported.")
+            transformed_sample = Sample.from_sample(sample)
+            transformed_sample.x = np.rot90(sample.x, self._k, self._axes)
+            transformed_sample.y = np.rot90(sample.y, self._k, self._axes)
+
+            return sample.update(transformed_sample)
 
 
 class FlipLR(object):
     def __init__(self):
         pass
 
-    def __call__(self, input: np.ndarray):
-        return np.fliplr(input)
+    def __call__(self, input: Union[Sample, np.ndarray]) -> Union[Sample, np.ndarray]:
+        if isinstance(input, np.ndarray):
+            return np.fliplr(input)
+        elif isinstance(input, Sample):
+            sample = input
+
+            if not isinstance(sample.x, np.ndarray):
+                raise TypeError("Only Numpy arrays are supported.")
+            transformed_sample = Sample.from_sample(sample)
+            transformed_sample.x = np.fliplr(sample.x)
+            transformed_sample.y = np.fliplr(sample.y)
+
+            return sample.update(transformed_sample)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--path-iseg', type=str, help='Path to the iSEG preprocessed directory.', required=True)
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
-
+    parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
-    iSEGPreProcessingPipeline(root_dir=args.path_iseg,
-                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
-                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
 
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
-                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized").run()
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
-                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized").run()
+    # iSEGPreProcessingPipeline(root_dir=args.path_iseg,
+    #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
+    # MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+    #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
+    #
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized").run()
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized").run()
+    #
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              FlipLR()]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned"
+    #               ).run()
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              Transpose((0, 2, 3, 1))]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned"
+    #               ).run()
+    #
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned",
+    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned",
+    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
 
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 FlipLR()]),
-                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned"
-                  ).run()
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 Transpose((0, 2, 3, 1))]),
-                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned"
-                  ).run()
-
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned",
-                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned",
-                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+    ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
 
     print("Preprocessing pipeline completed successfully.")
