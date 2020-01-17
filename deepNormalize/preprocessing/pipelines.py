@@ -417,7 +417,7 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
     """
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
-    def __init__(self, root_dir: str):
+    def __init__(self, root_dir: str, patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)):
         """
         Pre-processing pipeline constructor.
 
@@ -426,92 +426,148 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         """
         self._root_dir = root_dir
         self._transforms = None
-        # self._normalized_shape = self.compute_normalized_shape_from_images_in(root_dir)
-        self._normalized_shape = (1, 212, 211, 189)
+        self._patch_size = patch_size
+        self._step = step
+        self._normalized_shape = self._compute_normalized_shape_from_images_in(root_dir)
         self._transform_crop = transforms.Compose([ToNumpyArray(),
                                                    CropToContent(),
                                                    PadToShape(self._normalized_shape)])
         self._transform_align = transforms.Compose([ToNumpyArray(),
                                                     Transpose((0, 2, 3, 1)),
-                                                    Rotate(k=2, axes=(3, 2))
+                                                    Rotate(k=1, axes=(2, 3))
                                                     ])
+        self._transform_patch = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
     def run(self, prefix: str = ""):
         for root, dirs, files in os.walk(self._root_dir):
             for dir in dirs:
-                self._extract_labels(os.path.join(self._root_dir, dir))
-                self._crop_to_content(os.path.join(self._root_dir, dir))
-                self._align(os.path.join(self._root_dir, dir))
+                if os.path.exists(os.path.join(self._root_dir, dir, "mri", "aparc+aseg.mgz")):
+                    self._extract_labels(os.path.join(self._root_dir, dir, "mri"))
+                    self._crop_to_content(os.path.join(self._root_dir, dir, "mri"))
+                    self._align(os.path.join(self._root_dir, dir, "mri"))
+                    self._apply_mask(os.path.join(self._root_dir, dir, "mri"))
+                    self._extract_patches(os.path.join(self._root_dir, dir, "mri"),
+                                          os.path.join(self._root_dir, dir, "mri/patches"))
+
+    def _extract_patches(self, root, output_dir, keep_foreground_only=True, keep_labels=True):
+        if not os.path.exists(os.path.join(output_dir, "image")):
+            os.makedirs(os.path.join(output_dir, "image"))
+        if not os.path.exists(os.path.join(output_dir, "labels")):
+            os.makedirs(os.path.join(output_dir, "labels"))
+
+        transformed_image = Sample(x=os.path.join(root, "real_brainmask.nii.gz"),
+                                   y=os.path.join(root, "aligned_labels.nii.gz"),
+                                   is_labeled=True)
+        self._transform_patch(transformed_image)
+
+        patches = ABIDEPreprocessingPipeline.get_patches(transformed_image, self._patch_size, self._step,
+                                                         keep_foreground_only)
+
+        for i, patch in enumerate(patches):
+            x = transformed_image.x[tuple(patch.slice)]
+            transform_ = transforms.Compose(
+                [ToNifti1Image(), NiftiToDisk(os.path.join(os.path.join(output_dir, "image"), str(i) + ".nii.gz"))])
+            transform_(x)
+
+            if keep_labels:
+                y = transformed_image.y[tuple(patch.slice)]
+                transform_ = transforms.Compose(
+                    [ToNifti1Image(),
+                     NiftiToDisk(os.path.join(os.path.join(output_dir, "labels"), str(i) + ".nii.gz"))])
+                transform_(y)
+
+    @staticmethod
+    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels=True):
+        slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
+
+        patches = list()
+
+        for slice in slices:
+            if keep_labels:
+                center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+                patches.append(Patch(slice, 0, center_coordinate))
+            else:
+                patches.append(Patch(slice, 0, None))
+
+        if keep_foreground_only:
+            return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+        else:
+            return patches
+
+    def _apply_mask(self, root):
+        try:
+            self._transform_mask = transforms.Compose(
+                [LoadNifti(),
+                 ApplyMask(os.path.join(root, "aligned_labels.nii.gz")),
+                 NiftiToDisk(os.path.join(root, "real_brainmask.nii.gz"))])
+            self._transform_mask(os.path.join(root, "aligned_brainmask.nii.gz"))
+
+        except Exception as e:
+            self.LOGGER.warning(e)
 
     def _align(self, root):
-        for root, dirs, files in os.walk(root):
-            for file in list(filter(lambda path: Image.is_nifti(path) and "cropped_" in path, files)):
-                try:
-                    self.LOGGER.info("Processing: {}".format(file))
-                    sample = Sample(x=os.path.join(root, "cropped_brainmask.nii.gz"),
-                                    y=os.path.join(root, "cropped_labels.nii.gz"),
-                                    is_labeled=True)
-                    transformed_sample = self._transform_align(sample)
+        try:
+            sample = Sample(x=os.path.join(root, "cropped_brainmask.nii.gz"),
+                            y=os.path.join(root, "cropped_labels.nii.gz"),
+                            is_labeled=True)
+            transformed_sample = self._transform_align(sample)
 
-                    transforms_ = transforms.Compose([Squeeze(-1),
-                                                      ToNifti1Image(),
-                                                      NiftiToDisk([
-                                                          os.path.join(root, "aligned_brainmask.nii.gz"),
-                                                          os.path.join(root, "aligned_labels.nii.gz")])])
-                    transforms_(transformed_sample)
+            transforms_ = transforms.Compose([Squeeze(0),
+                                              ToNifti1Image(),
+                                              NiftiToDisk([
+                                                  os.path.join(root, "aligned_brainmask.nii.gz"),
+                                                  os.path.join(root, "aligned_labels.nii.gz")])])
+            transforms_(transformed_sample)
 
-                except Exception as e:
-                    self.LOGGER.warning(e)
+        except Exception as e:
+            self.LOGGER.warning(e)
 
     def _extract_labels(self, root):
-        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
-                           os.path.join(root, "mri", "wm_mask.mgz"),
+        self._mri_binarize(os.path.join(root, "aparc+aseg.mgz"),
+                           os.path.join(root, "wm_mask.mgz"),
                            "wm")
 
-        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
-                           os.path.join(root, "mri", "gm_mask.mgz"),
+        self._mri_binarize(os.path.join(root, "aparc+aseg.mgz"),
+                           os.path.join(root, "gm_mask.mgz"),
                            "gm")
-        self._mri_binarize(os.path.join(root, "mri", "aparc+aseg.mgz"),
-                           os.path.join(root, "mri", "csf_mask.mgz"),
+        self._mri_binarize(os.path.join(root, "aparc+aseg.mgz"),
+                           os.path.join(root, "csf_mask.mgz"),
                            "csf")
 
-        self._remap_labels(os.path.join(root, "mri", "gm_mask.mgz"),
-                           os.path.join(root, "mri", "remapped_gm_mask.nii.gz"),
+        self._remap_labels(os.path.join(root, "gm_mask.mgz"),
+                           os.path.join(root, "remapped_gm_mask.nii.gz"),
                            1, 2)
-        self._remap_labels(os.path.join(root, "mri", "wm_mask.mgz"),
-                           os.path.join(root, "mri", "remapped_wm_mask.nii.gz"),
+        self._remap_labels(os.path.join(root, "wm_mask.mgz"),
+                           os.path.join(root, "remapped_wm_mask.nii.gz"),
                            1, 3)
 
         transform_ = transforms.Compose([ToNumpyArray()])
-        wm_vol = transform_(os.path.join(root, "mri", "remapped_wm_mask.nii.gz"))
-        gm_vol = transform_(os.path.join(root, "mri", "remapped_gm_mask.nii.gz"))
-        csf_vol = transform_(os.path.join(root, "mri", "csf_mask.mgz"))
+        wm_vol = transform_(os.path.join(root, "remapped_wm_mask.nii.gz"))
+        gm_vol = transform_(os.path.join(root, "remapped_gm_mask.nii.gz"))
+        csf_vol = transform_(os.path.join(root, "csf_mask.mgz"))
 
         merged = self._merge_volumes(wm_vol, gm_vol, csf_vol)
 
         transform_ = transforms.Compose(
-            [ToNifti1Image(), NiftiToDisk(os.path.join(root, "mri", "labels.nii.gz"))])
+            [ToNifti1Image(), NiftiToDisk(os.path.join(root, "labels.nii.gz"))])
         transform_(merged)
 
     def _crop_to_content(self, root):
-        for root, dirs, files in os.walk(os.path.join(root)):
-            for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
-                try:
-                    self.LOGGER.info("Processing: {}".format(file))
-                    sample = Sample(x=os.path.join(root, "brainmask.mgz"),
-                                    y=os.path.join(root, "labels.nii.gz"),
-                                    is_labeled=True)
-                    transformed_image = self._transform_crop(sample)
-                    sample = Sample.from_sample(transformed_image)
-                    transforms_ = transforms.Compose([Squeeze(0),
-                                                      ToNifti1Image(),
-                                                      NiftiToDisk([
-                                                          os.path.join(root, "cropped_brainmask.nii.gz"),
-                                                          os.path.join(root, "cropped_labels.nii.gz")])])
-                    transforms_(sample)
+        try:
+            sample = Sample(x=os.path.join(root, "brainmask.mgz"),
+                            y=os.path.join(root, "labels.nii.gz"),
+                            is_labeled=True)
+            transformed_image = self._transform_crop(sample)
+            sample = Sample.from_sample(transformed_image)
+            transforms_ = transforms.Compose([Squeeze(0),
+                                              ToNifti1Image(),
+                                              NiftiToDisk([
+                                                  os.path.join(root, "cropped_brainmask.nii.gz"),
+                                                  os.path.join(root, "cropped_labels.nii.gz")])])
+            transforms_(sample)
 
-                except Exception as e:
-                    self.LOGGER.warning(e)
+        except Exception as e:
+            self.LOGGER.warning(e)
 
     def _compute_normalized_shape_from_images_in(self, root_dir):
         image_shapes = []
