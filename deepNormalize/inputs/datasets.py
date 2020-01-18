@@ -93,14 +93,15 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
-                          dataset_id: int, test_size: float):
+                          dataset_id: int, test_size: float, augmentation_strategy):
 
         if isinstance(modalities, list):
             return iSEGSegmentationFactory._create_multimodal_train_test(source_dir, target_dir, modalities,
-                                                                         dataset_id, test_size)
+                                                                         dataset_id, test_size, augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_test(source_dir, target_dir, modalities,
-                                                                              dataset_id, test_size)
+                                                                              dataset_id, test_size,
+                                                                              augmentation_strategy)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
@@ -122,14 +123,16 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         if isinstance(modalities, list):
             return iSEGSegmentationFactory._create_multimodal_train_valid_test(source_dir, target_dir, modalities,
-                                                                               dataset_id, test_size)
+                                                                               dataset_id, test_size,
+                                                                               augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir, modalities,
-                                                                                    dataset_id, test_size)
+                                                                                    dataset_id, test_size,
+                                                                                    augmentation_strategy)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, target_dir: str, modality: Modality,
-                                           dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float, augmentation_strategy):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
@@ -149,7 +152,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                 source_paths[valid_ids], target_paths[valid_ids]))
 
         train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
@@ -190,10 +193,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
                                             augmentation_strategy)
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                           Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, valid_dataset, test_dataset, csv
 
@@ -238,8 +241,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                       augmentation_strategy)
 
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples, modalities,
-                                                     dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                     augmentation_strategy)
+                                                     dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, test_dataset, csv
 
@@ -290,11 +292,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                       modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
                                                       augmentation_strategy)
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
-                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                      augmentation_strategy)
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
-                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                     augmentation_strategy)
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, valid_dataset, test_dataset, csv
 
@@ -408,7 +408,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                augmentation_strategy)
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                           Compose([ToNumpyArray(), ToNDTensor()]))
 
         return training_dataset, test_dataset, csv
 
@@ -445,10 +445,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                augmentation_strategy)
 
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                           Compose([ToNumpyArray(), ToNDTensor()]))
 
         return training_dataset, valid_dataset, test_dataset, csv
 
@@ -493,8 +493,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                       modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
                                                       augmentation_strategy)
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
-                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                     augmentation_strategy)
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, test_dataset, csv
 
@@ -529,7 +528,8 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                          csv["center_class"][train_valid_ids]))
+                                                                          np.asarray(csv["center_class"])[
+                                                                              train_valid_ids]))
 
         train_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
@@ -545,11 +545,9 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                       modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
                                                       augmentation_strategy)
         valid_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), valid_samples,
-                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                      augmentation_strategy)
+                                                      modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
         test_dataset = MultimodalSegmentationDataset(list(source_paths), list(target_paths), test_samples,
-                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
-                                                     augmentation_strategy)
+                                                     modalities, dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, valid_dataset, test_dataset, csv
 
@@ -578,10 +576,10 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
             map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
 
         if transforms is not None:
-            return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+            return SegmentationDataset(list(source_paths), target_paths, test_samples, modality, dataset_id,
                                        Compose([transform for transform in transforms]), augmentation_strategy)
         else:
-            return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+            return SegmentationDataset(list(source_paths), target_paths, test_samples, modality, dataset_id,
                                        augmentation_strategy)
 
     @staticmethod
@@ -596,7 +594,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
-                                dataset_id: int, test_size: float,
+                                dataset_id: int, test_size: float, sites: List[str],
                                 augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a SegmentationDataset object for both training and validation.
@@ -616,22 +614,22 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
             raise NotImplementedError("ABIDE only contain T1 modality.")
         else:
             return ABIDESegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir, modalities,
-                                                                                     dataset_id, test_size)
+                                                                                     dataset_id, test_size, sites,
+                                                                                     augmentation_strategy)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality,
-                                           dataset_id: int, test_size: float):
+                                           dataset_id: int, test_size: float, augmentation_strategy):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_paths = list()
         target_paths = list()
-        for root, dirs, files in os.walk(source_dir):
-            for dir in dirs:
-                source_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image"))))
-                target_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels"))))
+        for dir in sorted(os.listdir(source_dir)):
+            source_paths.append(
+                np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image"))))
+            target_paths.append(
+                np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels"))))
         source_paths = sorted([item for sublist in source_paths for item in sublist])
         target_paths = sorted([item for sublist in target_paths for item in sublist])
 
@@ -646,7 +644,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                 source_paths[valid_ids], target_paths[valid_ids]))
 
         train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
 
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
@@ -655,25 +653,25 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, target_dir: str, modality: Modality,
-                                                 dataset_id: int, test_size: float,
+                                                 dataset_id: int, test_size: float, sites: List[str],
                                                  augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_paths = list()
         target_paths = list()
-        for root, dirs, files in os.walk(source_dir):
-            for dir in dirs:
-                source_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image"))))
-                target_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels"))))
-        source_paths = sorted([item for sublist in source_paths for item in sublist])
-        target_paths = sorted([item for sublist in target_paths for item in sublist])
+        dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
+        csv = csv[csv["filename"].str.contains("|".join(sites))]
+        for dir in sorted(dirs):
+            source_paths.append(
+                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image")))
+            target_paths.append(
+                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels")))
+        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
+        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 
         train_valid_ids, test_ids = next(
-            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
-                                                                          np.asarray(csv["center_class"])))
+            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
                                                                           np.asarray(csv["center_class"])[
@@ -693,9 +691,9 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
                                             augmentation_strategy)
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
-                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                            dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
 
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
+                                           Compose([ToNumpyArray(), ToNDTensor()]))
 
         return train_dataset, valid_dataset, test_dataset, csv

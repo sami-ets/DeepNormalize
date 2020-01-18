@@ -1,0 +1,3 @@
+ISEG_ID = 0
+MRBRAINS_ID = 1
+ABIDE_ID = 2

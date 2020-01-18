@@ -101,12 +101,11 @@ class ToCSVABIDEipeline(object):
         center_class = list()
         source_paths = list()
         target_paths = list()
-        for root, dirs, files in os.walk(self._source_dir):
-            for dir in dirs:
-                source_paths.append(
-                    np.array(extract_file_paths(os.path.join(self._source_dir, dir, "mri/patches/image"))))
-                target_paths.append(
-                    np.array(extract_file_paths(os.path.join(self._source_dir, dir, "mri/patches/labels"))))
+        for dir in sorted(os.listdir(self._source_dir)):
+            source_paths.append(
+                np.array(extract_file_paths(os.path.join(self._source_dir, dir, "mri/patches/image"))))
+            target_paths.append(
+                np.array(extract_file_paths(os.path.join(self._source_dir, dir, "mri/patches/labels"))))
 
         source_paths = sorted([item for sublist in source_paths for item in sublist])
         target_paths = sorted([item for sublist in target_paths for item in sublist])

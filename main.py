@@ -43,11 +43,10 @@ from torchvision.transforms import Compose
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
-from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory
+from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 
-ISEG_ID = 0
-MRBRAINS_ID = 1
+from constants import ISEG_ID, MRBRAINS_ID, ABIDE_ID
 
 cudnn.benchmark = True
 cudnn.enabled = True
@@ -68,17 +67,12 @@ if __name__ == '__main__':
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
-    iSEG_train = None
-    iSEG_valid = None
-    iSEG_test = None
-    iSEG_CSV = None
-    MRBrainS_train = None
-    MRBrainS_valid = None
-    MRBrainS_test = None
-    MRBrainS_CSV = None
+    train_datasets = list()
+    valid_datasets = list()
+    test_datasets = list()
 
-    data_augmentation = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
-                                              AddBiasField(exec_probability=0.3)]))
+    augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
+                                                  AddBiasField(exec_probability=0.3)]))
 
     if "iSEG" in [dataset_config.name for dataset_config in dataset_configs]:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
@@ -87,26 +81,45 @@ if __name__ == '__main__':
             modalities=dataset_configs[0].modalities,
             dataset_id=ISEG_ID,
             test_size=dataset_configs[0].validation_split,
-            augmentation_strategy=data_augmentation)
+            augmentation_strategy=augmentation_strategy)
+        train_datasets.append(iSEG_train)
+        valid_datasets.append(iSEG_valid)
+        test_datasets.append(iSEG_test)
 
     if "MRBrainS" in [dataset_config.name for dataset_config in dataset_configs]:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
-            target_dir=dataset_configs[1 if len(dataset_configs) == 2 else 0].path,
+            source_dir=dataset_configs[1 if len(dataset_configs) == 3 else 0].path,
+            target_dir=dataset_configs[1 if len(dataset_configs) == 3 else 0].path,
             modalities=dataset_configs[1].modalities,
             dataset_id=MRBRAINS_ID,
-            test_size=dataset_configs[1 if len(dataset_configs) == 2 else 0].validation_split,
-            augmentation_strategy=data_augmentation)
+            test_size=dataset_configs[1 if len(dataset_configs) == 3 else 0].validation_split,
+            augmentation_strategy=augmentation_strategy)
+        train_datasets.append(MRBrainS_train)
+        valid_datasets.append(MRBrainS_valid)
+        test_datasets.append(MRBrainS_test)
+
+    if "ABIDE" in [dataset_config.name for dataset_config in dataset_configs]:
+        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
+            source_dir=dataset_configs[2 if len(dataset_configs) == 3 else 0].path,
+            target_dir=dataset_configs[2 if len(dataset_configs) == 3 else 0].path,
+            modalities=dataset_configs[2].modalities,
+            dataset_id=ABIDE_ID,
+            sites=dataset_configs[2 if len(dataset_configs) == 3 else 0].sites,
+            test_size=dataset_configs[2 if len(dataset_configs) == 2 else 0].validation_split,
+            augmentation_strategy=augmentation_strategy)
+        train_datasets.append(ABIDE_train)
+        valid_datasets.append(ABIDE_valid)
+        test_datasets.append(ABIDE_test)
 
     # Concat datasets.
-    if len(dataset_configs) == 2:
-        train_dataset = torch.utils.data.ConcatDataset((iSEG_train, MRBrainS_train))
-        valid_dataset = torch.utils.data.ConcatDataset((iSEG_valid, MRBrainS_valid))
-        test_dataset = torch.utils.data.ConcatDataset((iSEG_test, MRBrainS_test))
+    if len(dataset_configs) > 1:
+        train_dataset = torch.utils.data.ConcatDataset(train_datasets)
+        valid_dataset = torch.utils.data.ConcatDataset(valid_datasets)
+        test_dataset = torch.utils.data.ConcatDataset(test_datasets)
     else:
-        train_dataset = iSEG_train if iSEG_train is not None else MRBrainS_train
-        valid_dataset = iSEG_valid if iSEG_valid is not None else MRBrainS_valid
-        test_dataset = iSEG_test if iSEG_test is not None else MRBrainS_test
+        train_dataset = train_datasets[0]
+        valid_dataset = valid_datasets[0]
+        test_dataset = test_datasets[0]
 
     iSEG_reconstruction_dataset = iSEGSegmentationFactory.create(
         "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
@@ -136,7 +149,7 @@ if __name__ == '__main__':
                                                                training_config.batch_size,
                                                                sampler=sampler,
                                                                shuffle=False if sampler is not None else True,
-                                                               num_workers=4,
+                                                               num_workers=2,
                                                                collate_fn=sample_collate, pin_memory=True),
                            [train_dataset, valid_dataset, test_dataset],
                            [train_sampler, valid_sampler, test_sampler]))

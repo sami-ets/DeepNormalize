@@ -113,7 +113,7 @@ models:
 dataset:
   - name: iSEG
     path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned"
-    modalities: ["T1", "T2"]
+    modalities: "T1"
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -126,7 +126,21 @@ dataset:
       step: [1, 32, 32, 32]
   - name: MRBrainS
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned"
-    modalities: ["T1", "T2_FLAIR"]
+    modalities: "T1_1mm"
+    validation_split: 0.2
+    training:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+    validation:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 8, 8, 8]
+    test:
+      patch_size: [1, 32, 32, 32]
+      step: [1, 32, 32, 32]
+  - name: ABIDE
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    modalities: "T1"
+    sites: ["CMU", "Caltech", "Stanford"]
     validation_split: 0.2
     training:
       patch_size: [1, 32, 32, 32]
@@ -141,7 +155,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 50
-  patience_segmentation: 10
+  patience_segmentation: 1
   variables:
     disc_ratio: 1.0
     seg_ratio: 1.0
