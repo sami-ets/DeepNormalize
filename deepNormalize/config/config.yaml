@@ -31,10 +31,10 @@ models:
       type: "MSELoss"
     metrics:
       - type: "Accuracy"
-    gradients:
-      clipping_strategy: "value"
-      params:
-        clip_value: 25.0
+#    gradients:
+#      clipping_strategy: "value"
+#      params:
+#        clip_value: 25.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
