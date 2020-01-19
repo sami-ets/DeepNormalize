@@ -20,7 +20,6 @@ from typing import List
 
 import numpy as np
 import pynvml
-from pynvml.smi import nvidia_smi
 import torch
 from fastai.utils.mem import gpu_mem_get
 from ignite.metrics.confusion_matrix import ConfusionMatrix
@@ -83,18 +82,12 @@ class DeepNormalizeTrainer(Trainer):
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=3)
         self._start_time = 0
         self._stop_time = 0
-        self._previous_GPU_memory = 0
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
                                                       sum(p.numel() for p in self._discriminator.parameters())))
         pynvml.nvmlInit()
 
     def train_step(self, inputs, target):
-        current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-        if current_memory != self._previous_GPU_memory:
-            print(self.current_train_step)
-            print(current_memory)
-            self._previous_GPU_memory = current_memory
 
         disc_pred = None
         seg_pred = torch.Tensor().new_zeros(
@@ -108,7 +101,7 @@ class DeepNormalizeTrainer(Trainer):
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._generator.compute_loss(gen_pred, inputs)
-                self._generator.update_train_loss(gen_loss.loss)
+                self._generator.update_train_loss(float(gen_loss.loss))
                 gen_loss.backward()
 
                 self._generator.step()
@@ -123,7 +116,7 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_train_loss(seg_loss.mean().loss)
+            self._segmenter.update_train_loss(float(seg_loss.mean().loss))
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
@@ -139,63 +132,37 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.zero_grad()
 
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
-            self._generator.update_train_loss(gen_loss.loss)
+            self._generator.update_train_loss(float(gen_loss.loss))
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_train_loss(seg_loss.mean().loss)
+            self._segmenter.update_train_loss(float(seg_loss.mean().loss))
 
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
             self._segmenter.update_train_metrics(metric)
 
-            if current_memory != self._previous_GPU_memory:
-                print(self.current_train_step)
-                print("Before train_generator_every")
-                print(current_memory)
-                self._previous_GPU_memory = current_memory
-
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps_seg"] == 0:
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
                                                                    size=(inputs.size(0),),
-                                                                   fill_value=2,
+                                                                   fill_value=3,
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
                 self._D_G_X_as_X_training_gauge.update(float(disc_loss_as_X.loss))
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("After gauge update.")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
+
                 total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
                              self._training_config.variables["seg_ratio"] * seg_loss.mean()
 
                 total_loss.backward()
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("After total_loss.backward()")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
 
                 self._segmenter.step()
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("After segmenter.step")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
-                self._generator.step()
-                current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("After generator.step")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
 
+                self._generator.step()
 
             else:
                 seg_loss.mean().backward()
@@ -203,44 +170,23 @@ class DeepNormalizeTrainer(Trainer):
                 self._segmenter.step()
                 self._generator.step()
 
-                current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("Inside 'else' not training generator")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
-
             self._discriminator.zero_grad()
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
 
-            current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-            if current_memory != self._previous_GPU_memory:
-                print(self.current_train_step)
-                print("After discriminator backward")
-                print(current_memory)
-                self._previous_GPU_memory = current_memory
-
             self._discriminator.step()
 
         if disc_pred is not None:
-            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), 3)
+            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), 4)
             real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
                 size=(inputs.size(0) // 2,),
-                fill_value=2,
+                fill_value=3,
                 dtype=torch.long,
                 device="cpu",
                 requires_grad=False)), dim=0), 3)
             self.custom_variables["Pie Plot"] = count
             self.custom_variables["Pie Plot True"] = real_count
-
-            current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-            if current_memory != self._previous_GPU_memory:
-                print(self.current_train_step)
-                print("inside if disc_pred")
-                print(current_memory)
-                self._previous_GPU_memory = current_memory
 
         if self._run_config.local_rank == 0:
             if self.current_train_step % 100 == 0:
@@ -265,19 +211,12 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["WM Input Intensity Histogram"] = inputs[
                     torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
 
-                current_memory = nvidia_smi.getInstance().DeviceQuery("memory.used")
-                if current_memory != self._previous_GPU_memory:
-                    print(self.current_train_step)
-                    print("Inside logging every 100 steps")
-                    print(current_memory)
-                    self._previous_GPU_memory = current_memory
-
     def validate_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
 
         if self._should_activate_autoencoder():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
-            self._generator.update_valid_loss(gen_loss.loss)
+            self._generator.update_valid_loss(float(gen_loss.loss))
 
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 
@@ -293,7 +232,7 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
-            self._generator.update_valid_loss(gen_loss.loss)
+            self._generator.update_valid_loss(float(gen_loss.loss))
 
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
 

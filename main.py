@@ -23,10 +23,11 @@ import torch
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
 from kerosene.configs.parsers import YamlConfigurationParser
-from kerosene.events import Event, MonitorMode
+from kerosene.training.events import Event
+from kerosene.events import MonitorMode
 from kerosene.events.handlers.checkpoints import Checkpoint
-from kerosene.events.handlers.console import PrintTrainingStatus, PrintModelTrainersStatus
-from kerosene.events.handlers.visdom import PlotAllModelStateVariables, PlotLR, PlotCustomVariables, PlotGradientFlow
+from kerosene.events.handlers.console import PrintTrainingStatus
+from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVariables, PlotAvgGradientPerLayer
 from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
@@ -59,7 +60,7 @@ if __name__ == '__main__':
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
 
     # Create configurations.
-    run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank)
+    run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank, amp_opt_level=args.amp_opt_level)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_configs = YamlConfigurationParser.parse_section(args.config_file, "dataset")
     dataset_configs = list(map(lambda dataset_config: DatasetConfiguration(dataset_config), dataset_configs))
@@ -182,8 +183,7 @@ if __name__ == '__main__':
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                        reconstruction_datasets, run_config) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
-            .with_event_handler(PrintModelTrainersStatus(every=25), Event.ON_BATCH_END) \
-            .with_event_handler(PlotAllModelStateVariables(visdom_logger), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
                                                     params={"nrow": 4,
@@ -324,7 +324,7 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotGradientFlow(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
                        mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
