@@ -23,5 +23,7 @@ DATASET_ID = 1
 
 EPSILON = 1e-15
 
-ISEG = 0
-MRBrainS = 1
+ISEG_ID = 0
+MRBRAINS_ID = 1
+ABIDE_ID = 2
+

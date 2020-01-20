@@ -20,13 +20,14 @@ import multiprocessing
 import numpy as np
 import os
 import torch
+import random
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
 from kerosene.configs.parsers import YamlConfigurationParser
 from kerosene.training.events import Event
 from kerosene.events import MonitorMode
 from kerosene.events.handlers.checkpoints import Checkpoint
-from kerosene.events.handlers.console import PrintTrainingStatus
+from kerosene.events.handlers.console import PrintTrainingStatus, PrintMonitors
 from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVariables, PlotAvgGradientPerLayer
 from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
@@ -46,8 +47,7 @@ from deepNormalize.factories.customCriterionFactory import CustomCriterionFactor
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
-
-from constants import ISEG_ID, MRBRAINS_ID, ABIDE_ID
+from deepNormalize.utils.constants import *
 
 cudnn.benchmark = True
 cudnn.enabled = True
@@ -63,54 +63,67 @@ if __name__ == '__main__':
     run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank, amp_opt_level=args.amp_opt_level)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_configs = YamlConfigurationParser.parse_section(args.config_file, "dataset")
-    dataset_configs = list(map(lambda dataset_config: DatasetConfiguration(dataset_config), dataset_configs))
-    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs)),
+    dataset_configs = {k: DatasetConfiguration(v) for k, v, in dataset_configs.items()}
+    config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs.values())),
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
     train_datasets = list()
     valid_datasets = list()
     test_datasets = list()
+    reconstruction_datasets = list()
 
     augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
                                                   AddBiasField(exec_probability=0.3)]))
 
-    if "iSEG" in [dataset_config.name for dataset_config in dataset_configs]:
+    if dataset_configs.get("iSEG", None) is not None:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_configs[0].path,
-            target_dir=dataset_configs[0].path + "/label",
-            modalities=dataset_configs[0].modalities,
+            source_dir=dataset_configs["iSEG"].path,
+            target_dir=dataset_configs["iSEG"].path + "/label",
+            modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
-            test_size=dataset_configs[0].validation_split,
+            test_size=dataset_configs["iSEG"].validation_split,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
+        reconstruction_datasets.append(iSEGSegmentationFactory.create(
+            "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
+            None, Modality.T1, ISEG_ID))
 
-    if "MRBrainS" in [dataset_config.name for dataset_config in dataset_configs]:
+    if dataset_configs.get("MRBrainS", None) is not None:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
-            source_dir=dataset_configs[1 if len(dataset_configs) == 3 else 0].path,
-            target_dir=dataset_configs[1 if len(dataset_configs) == 3 else 0].path,
-            modalities=dataset_configs[1].modalities,
+            source_dir=dataset_configs["MRBrainS"].path,
+            target_dir=dataset_configs["MRBrainS"].path,
+            modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
-            test_size=dataset_configs[1 if len(dataset_configs) == 3 else 0].validation_split,
+            test_size=dataset_configs["MRBrainS"].validation_split,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
+        reconstruction_datasets.append(MRBrainSSegmentationFactory.create(
+            "/mnt/md0/Data/Preprocessed/MRBrainS/TesTData/Patches/Aligned/T1/1", None, Modality.T1, MRBRAINS_ID))
 
-    if "ABIDE" in [dataset_config.name for dataset_config in dataset_configs]:
+    if dataset_configs.get("ABIDE", None) is not None:
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
-            source_dir=dataset_configs[2 if len(dataset_configs) == 3 else 0].path,
-            target_dir=dataset_configs[2 if len(dataset_configs) == 3 else 0].path,
-            modalities=dataset_configs[2].modalities,
+            source_dir=dataset_configs["ABIDE"].path,
+            target_dir=dataset_configs["ABIDE"].path,
+            modalities=dataset_configs["ABIDE"].modalities,
             dataset_id=ABIDE_ID,
-            sites=dataset_configs[2 if len(dataset_configs) == 3 else 0].sites,
-            test_size=dataset_configs[2 if len(dataset_configs) == 2 else 0].validation_split,
+            sites=dataset_configs["ABIDE"].sites,
+            max_subjects=dataset_configs["ABIDE"].max_subjects,
+            test_size=dataset_configs["ABIDE"].validation_split,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
+        random_ABIDE_site = random.choice(dataset_configs["ABIDE"].sites)
+        dirs = [dir for dir in sorted(os.listdir(dataset_configs["ABIDE"].path)) if any(substring in dir for substring in [random_ABIDE_site])]
+        random_subject = random.choice(dirs)
+        reconstruction_datasets.append(ABIDESegmentationFactory.create(
+            os.path.join(dataset_configs["ABIDE"].path, format(str(random_subject))), Modality.T1, ABIDE_ID))
+
 
     # Concat datasets.
     if len(dataset_configs) > 1:
@@ -122,12 +135,6 @@ if __name__ == '__main__':
         valid_dataset = valid_datasets[0]
         test_dataset = test_datasets[0]
 
-    iSEG_reconstruction_dataset = iSEGSegmentationFactory.create(
-        "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
-        None, Modality.T1, ISEG_ID)
-    MRBrainS_reconstruction_dataset = MRBrainSSegmentationFactory.create(
-        "/mnt/md0/Data/Preprocessed/MRBrainS/TesTData/Patches/Aligned/T1/1", None, Modality.T1, MRBRAINS_ID)
-    reconstruction_datasets = [iSEG_reconstruction_dataset, MRBrainS_reconstruction_dataset]
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -165,14 +172,17 @@ if __name__ == '__main__':
                                  config_html))
         visdom_logger(VisdomData("Experiment", "Patch count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
                                  x=[len(iSEG_train) if iSEG_train is not None else 0,
-                                    len(MRBrainS_train) if MRBrainS_train is not None else 0],
-                                 y=["iSEG", "MRBrainS"], params={"opts": {"title": "Patch count"}}))
+                                    len(MRBrainS_train) if MRBrainS_train is not None else 0,
+                                    len(ABIDE_train) if ABIDE_train is not None else 0],
+                                 y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
                                  x=[np.asarray(
                                      iSEG_CSV.groupby('center_class').count()) if iSEG_train is not None else 0,
                                     np.asarray(MRBrainS_CSV.groupby(
-                                        'center_class').count()) if MRBrainS_train is not None else 0],
-                                 y=["iSEG", "MRBrainS"], params={
+                                        'center_class').count()) if MRBrainS_train is not None else 0,
+                                    np.asarray(ABIDE_CSV.groupby(
+                                        'center_class').count()) if ABIDE_train is not None else 0],
+                                 y=["iSEG", "MRBrainS", "ABIDE"], params={
                 "opts": {"title": "Center Voxel Class Count", "stacked": True, "legend": ["CSF", "GM", "WM"]}}))
 
         save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
@@ -183,6 +193,7 @@ if __name__ == '__main__':
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                        reconstruction_datasets, run_config) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
+            .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
@@ -265,11 +276,17 @@ if __name__ == '__main__':
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
+                                                                     "legend": ["iSEG",
+                                                                                "MRBrainS",
+                                                                                "ABIDE",
+                                                                                "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG", "MRBrainS", "Fake Class"]}},
+                                                                     "legend": ["iSEG",
+                                                                                "MRBrainS",
+                                                                                "ABIDE",
+                                                                                "Fake Class"]}},
                                                     every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Loss D(G(X)) | X",
@@ -332,7 +349,7 @@ if __name__ == '__main__':
 
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       iSEG_reconstruction_dataset, run_config) \
+                                       reconstruction_datasets, run_config) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),

@@ -5,21 +5,21 @@ import numpy as np
 from samitorch.inputs.images import Modality
 from samitorch.inputs.transformers import ToNumpyArray, PadToPatchShape
 
-from deepNormalize.inputs.datasets import iSEGSegmentationFactory
+from deepNormalize.inputs.datasets import iSEGSegmentationFactory, ABIDESegmentationFactory
 from deepNormalize.utils.image_slicer import ImageReconstructor
 from torchvision.transforms import Compose
 import matplotlib.pyplot as plt
 
 
 class ImageReconstructorTest(unittest.TestCase):
-    PATH = "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11"
+    PATH = "/home/pierre-luc-delisle/ABIDE/5.1/Stanford_0051160"
     # TARGET_PATH = "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned/label/6"
-    FULL_IMAGE_PATH = "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Aligned/T1/subject-11-T1.nii"
+    FULL_IMAGE_PATH = "/home/pierre-luc-delisle/ABIDE/5.1/Stanford_0051160/mri/aligned_brainmask.nii.gz"
 
     def setUp(self) -> None:
-        self._dataset = iSEGSegmentationFactory.create(self.PATH, None, modality=Modality.T1,
+        self._dataset = ABIDESegmentationFactory.create(self.PATH, Modality.T1,
                                                        dataset_id=0)
-        self._reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8])
+        self._reconstructor = ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8])
         transforms = Compose([ToNumpyArray(), PadToPatchShape([1, 32, 32, 32], [1, 8, 8, 8])])
         self._full_image = transforms(self.FULL_IMAGE_PATH)
 

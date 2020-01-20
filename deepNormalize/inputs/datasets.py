@@ -13,6 +13,7 @@ from samitorch.utils.files import extract_file_paths
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms import Compose
+import random
 
 
 class TestDataset(Dataset):
@@ -86,10 +87,11 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
             if transforms is not None:
                 return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
-                                           Compose([transform for transform in transforms]), augmentation_strategy)
+                                           Compose([transform for transform in transforms]),
+                                           augment=augmentation_strategy)
             else:
                 return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
-                                           augmentation_strategy)
+                                           augment=augmentation_strategy)
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
@@ -303,7 +305,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create(source_dir: str, target_dir: str, modality: Modality, dataset_id: int,
-               transforms: List[Callable] = None):
+               transforms: List[Callable] = None, augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_dir is not None:
 
@@ -322,9 +324,11 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
             if transforms is not None:
                 return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
-                                           Compose([transform for transform in transforms]))
+                                           Compose([transform for transform in transforms]),
+                                           augment=augmentation_strategy)
             else:
-                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id)
+                return SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
+                                           augment=augmentation_strategy)
         else:
             source_paths = extract_file_paths(source_dir)
 
@@ -336,9 +340,11 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
             if transforms is not None:
                 return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
-                                           Compose([transform for transform in transforms]))
+                                           Compose([transform for transform in transforms]),
+                                           augment=augmentation_strategy)
             else:
-                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id)
+                return SegmentationDataset(list(source_paths), None, test_samples, modality, dataset_id,
+                                           augment=augmentation_strategy)
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
@@ -560,12 +566,11 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         source_paths = list()
         target_paths = list()
-        for root, dirs, files in os.walk(source_dir):
-            for dir in dirs:
-                source_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image"))))
-                target_paths.append(
-                    np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels"))))
+
+        source_paths.append(
+            extract_file_paths(os.path.join(source_dir, "mri/patches/image")))
+        target_paths.append(
+            extract_file_paths(os.path.join(source_dir, "mri/patches/labels")))
         source_paths = sorted([item for sublist in source_paths for item in sublist])
         target_paths = sorted([item for sublist in target_paths for item in sublist])
 
@@ -577,10 +582,10 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         if transforms is not None:
             return SegmentationDataset(list(source_paths), target_paths, test_samples, modality, dataset_id,
-                                       Compose([transform for transform in transforms]), augmentation_strategy)
+                                       Compose([transform for transform in transforms]), augment=augmentation_strategy)
         else:
             return SegmentationDataset(list(source_paths), target_paths, test_samples, modality, dataset_id,
-                                       augmentation_strategy)
+                                       augment=augmentation_strategy)
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
@@ -594,7 +599,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
-                                dataset_id: int, test_size: float, sites: List[str],
+                                dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
                                 augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a SegmentationDataset object for both training and validation.
@@ -615,23 +620,43 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         else:
             return ABIDESegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir, modalities,
                                                                                      dataset_id, test_size, sites,
+                                                                                     max_subjects,
                                                                                      augmentation_strategy)
 
     @staticmethod
-    def _create_single_modality_train_test(source_dir: str, modality: Modality,
-                                           dataset_id: int, test_size: float, augmentation_strategy):
+    def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
+                                           sites: List[str] = None, max_subjects: int = None,
+                                           augmentation_strategy=None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_paths = list()
         target_paths = list()
-        for dir in sorted(os.listdir(source_dir)):
+
+        if sites is not None:
+            dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
+            csv = csv[csv["filename"].str.contains("|".join(sites))]
+        else:
+            dirs = [dir for dir in sorted(os.listdir(source_dir))]
+
+        if max_subjects is not None:
+            choices = np.random.choice(len(dirs), max_subjects, replace=False)
+            dirs = np.array(dirs)[choices]
+            csv = csv[csv["filename"].str.contains("|".join(dirs))]
+
+        for dir in sorted(dirs):
             source_paths.append(
-                np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image"))))
+                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image")))
             target_paths.append(
-                np.array(extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels"))))
-        source_paths = sorted([item for sublist in source_paths for item in sublist])
-        target_paths = sorted([item for sublist in target_paths for item in sublist])
+                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels")))
+
+        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
+        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
+
+        if max_subjects is not None:
+            choices = np.random.choice(len(source_paths), (50,), replace=False)
+            source_paths = source_paths[choices]
+            target_paths = target_paths[choices]
 
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
@@ -653,20 +678,32 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, target_dir: str, modality: Modality,
-                                                 dataset_id: int, test_size: float, sites: List[str],
+                                                 dataset_id: int, test_size: float, sites: List[str] = None,
+                                                 max_subjects: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
         source_paths = list()
         target_paths = list()
-        dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
-        csv = csv[csv["filename"].str.contains("|".join(sites))]
+
+        if sites is not None:
+            dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
+            csv = csv[csv["filename"].str.contains("|".join(sites))]
+        else:
+            dirs = [dir for dir in sorted(os.listdir(source_dir))]
+
+        if max_subjects is not None:
+            choices = np.random.choice(len(dirs), max_subjects, replace=False)
+            dirs = np.array(dirs)[choices]
+            csv = csv[csv["filename"].str.contains("|".join(dirs))]
+
         for dir in sorted(dirs):
             source_paths.append(
                 extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image")))
             target_paths.append(
                 extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels")))
+
         source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
         target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 

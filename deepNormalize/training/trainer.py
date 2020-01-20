@@ -35,9 +35,11 @@ from torch.utils.data import DataLoader, Dataset
 
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID
-from deepNormalize.utils.constants import ISEG, MRBrainS
+from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
+
+pynvml.nvmlInit()
 
 
 class DeepNormalizeTrainer(Trainer):
@@ -54,8 +56,13 @@ class DeepNormalizeTrainer(Trainer):
         self._slicer = ImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._reconstruction_datasets = reconstruction_datasets
-        self._normalized_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
-                                                            [self._model_trainers[GENERATOR]], normalize=True)
+        self._normalized_reconstructor = [ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
+                                                            [self._model_trainers[GENERATOR]], normalize=True),
+                                          ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
+                                                             [self._model_trainers[GENERATOR]], normalize=True),
+                                          ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8],
+                                                             [self._model_trainers[GENERATOR]], normalize=True)
+                                          ]
         self._segmented_reconstructor = ImageReconstructor([128, 160, 160], [32, 32, 32], [8, 8, 8],
                                                            [self._model_trainers[GENERATOR],
                                                             self._model_trainers[SEGMENTER]], segment=True)
@@ -88,7 +95,6 @@ class DeepNormalizeTrainer(Trainer):
         pynvml.nvmlInit()
 
     def train_step(self, inputs, target):
-
         disc_pred = None
         seg_pred = torch.Tensor().new_zeros(
             size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
@@ -98,6 +104,7 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
             self._discriminator.zero_grad()
+            self._segmenter.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
                 gen_loss = self._generator.compute_loss(gen_pred, inputs)
@@ -108,7 +115,6 @@ class DeepNormalizeTrainer(Trainer):
 
             disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
             disc_loss.backward()
-
             self._discriminator.step()
 
             # Pretrain segmenter.
@@ -123,7 +129,6 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_train_metrics(metric)
 
             seg_loss.mean().backward()
-
             self._segmenter.step()
 
         if self._should_activate_segmentation():
@@ -157,11 +162,9 @@ class DeepNormalizeTrainer(Trainer):
 
                 total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
                              self._training_config.variables["seg_ratio"] * seg_loss.mean()
-
                 total_loss.backward()
 
                 self._segmenter.step()
-
                 self._generator.step()
 
             else:
@@ -224,7 +227,7 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_valid_loss(seg_loss.mean())
+            self._segmenter.update_valid_loss(float(seg_loss.mean().loss))
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
@@ -240,7 +243,7 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_valid_loss(seg_loss.mean())
+            self._segmenter.update_valid_loss(float(seg_loss.mean()))
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
@@ -260,7 +263,7 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_autoencoder():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
-            self._generator.update_test_loss(gen_loss.loss)
+            self._generator.update_test_loss(float(gen_loss.loss))
 
             self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
 
@@ -268,7 +271,7 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_test_loss(seg_loss.mean())
+            self._segmenter.update_test_loss(float(seg_loss.mean().loss))
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
@@ -276,15 +279,15 @@ class DeepNormalizeTrainer(Trainer):
 
         if self._should_activate_segmentation():
             gen_loss = self._generator.compute_loss(gen_pred, inputs)
-            self._generator.update_test_loss(gen_loss.loss)
+            self._generator.update_test_loss(float(gen_loss.loss))
 
-            _, disc_pred = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
+            disc_loss, disc_pred = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss(torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_test_loss(seg_loss.mean())
+            self._segmenter.update_test_loss(float(seg_loss.mean()))
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
@@ -292,55 +295,55 @@ class DeepNormalizeTrainer(Trainer):
 
             self._class_dice_gauge.update(np.array(metric.numpy()))
 
-            if seg_pred[torch.where(target[DATASET_ID] == ISEG)].shape[0] != 0:
+            if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
                 self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
-                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
-                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)],
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)], dim=1),
+                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)],
                                   dim=1).long()).numpy()))
 
                 self._iSEG_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
                     to_onehot(
                         torch.argmax(
-                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)], dim=1),
                             dim=1), num_classes=4),
                     to_onehot(
-                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)], dim=1).long(),
+                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)], dim=1).long(),
                         num_classes=4))[-3:])
 
                 self._iSEG_confusion_matrix_gauge.update((
                     to_onehot(
                         torch.argmax(
-                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG)], dim=1),
+                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)], dim=1),
                             dim=1, keepdim=False),
                         num_classes=4),
-                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG)].long(), dim=1)))
+                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)].long(), dim=1)))
 
             else:
                 self._iSEG_dice_gauge.update(np.zeros((3,)))
                 self._iSEG_hausdorff_gauge.update(np.zeros((3,)))
 
-            if seg_pred[torch.where(target[DATASET_ID] == MRBrainS)].shape[0] != 0:
+            if seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)].shape[0] != 0:
                 self._MRBrainS_dice_gauge.update(np.array(self._segmenter.compute_metrics(
-                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBrainS)], dim=1),
-                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBrainS)],
+                    torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)], dim=1),
+                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)],
                                   dim=1).long()).numpy()))
 
                 self._MRBrainS_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
                     to_onehot(
                         torch.argmax(
-                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBrainS)], dim=1),
+                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)], dim=1),
                             dim=1), num_classes=4),
                     to_onehot(
-                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBrainS)], dim=1).long(),
+                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)], dim=1).long(),
                         num_classes=4))[-3:])
 
                 self._MRBrainS_confusion_matrix_gauge.update((
                     to_onehot(
                         torch.argmax(
-                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBrainS)], dim=1),
+                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)], dim=1),
                             dim=1, keepdim=False),
                         num_classes=4),
-                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBrainS)].long(), dim=1)))
+                    torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)].long(), dim=1)))
             else:
                 self._MRBrainS_dice_gauge.update(np.zeros((3,)))
                 self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
@@ -411,7 +414,7 @@ class DeepNormalizeTrainer(Trainer):
 
     @staticmethod
     def average_gradients(model):
-        size = float(torch.distributed.get_world_size())
+        size = int(torch.distributed.get_world_size())
         for param in model.parameters():
             torch.distributed.all_reduce(param.grad.data, op=torch.distributed.ReduceOp.SUM)
             param.grad.data /= size
@@ -435,7 +438,7 @@ class DeepNormalizeTrainer(Trainer):
     def on_epoch_begin(self):
         pass
 
-    def on_epoch_end(self):
+    def on_test_epoch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = \
             [np.array(gpu_mem_get(self._run_config.local_rank))]
 
@@ -640,10 +643,10 @@ class DeepNormalizeTrainer(Trainer):
 
         metric = self._discriminator.compute_metrics(pred, target)
         if test:
-            self._discriminator.update_test_loss(disc_loss)
+            self._discriminator.update_test_loss(float(disc_loss.loss))
             self._discriminator.update_test_metrics(metric)
         else:
-            self._discriminator.update_valid_loss(disc_loss)
+            self._discriminator.update_valid_loss(float(disc_loss.loss))
             self._discriminator.update_valid_metrics(metric)
 
         return disc_loss, pred

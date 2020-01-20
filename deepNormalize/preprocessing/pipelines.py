@@ -244,7 +244,7 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._step = step
         self._transforms = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
-    def run(self, prefix="", keep_foreground_only=True):
+    def run(self, prefix="", keep_foreground_only=True, keep_labels=True):
 
         for root, dirs, files in os.walk(self._source_dir):
             root_dir_number = os.path.basename(os.path.normpath(root))
@@ -260,29 +260,42 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                     os.makedirs(modality_path)
 
                 transformed_image = self._transforms(os.path.join(root, file))
-                transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
-                    np.int8)
-                sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
+
+                if keep_labels:
+                    transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
+                        np.int8)
+                    sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
+                else:
+                    sample = Sample(x=transformed_image, dataset_id=None, is_labeled=False)
 
                 patches = MRBrainSPatchPreProcessingPipeline.get_patches(sample, self._patch_size, self._step,
-                                                                         keep_foreground_only=keep_foreground_only)
+                                                                         keep_foreground_only=keep_foreground_only,
+                                                                         keep_labels=keep_labels)
 
                 for i, patch in enumerate(patches):
                     x = transformed_image[tuple(patch.slice)]
                     transform_ = transforms.Compose([ToNifti1Image(), NiftiToDisk(
-                        os.path.join(os.path.join(os.path.join(self._output_dir, root_dir_number), modality),
-                                     str(i) + ".nii.gz"))])
+                        os.path.join(self._output_dir, root_dir_number, modality, str(i) + ".nii.gz"))])
                     transform_(x)
 
+                    if keep_labels:
+                        y = transformed_labels[tuple(patch.slice)]
+                        transform_ = transforms.Compose(
+                            [ToNifti1Image(), NiftiToDisk(os.path.join(root, "LabelsForTesting", str(i) + ".nii.gz"))])
+                        transform_(y)
+
     @staticmethod
-    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True):
+    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels: bool = True):
         slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
 
         patches = list()
 
         for slice in slices:
-            center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
-            patches.append(Patch(slice, 0, center_coordinate))
+            if keep_labels:
+                center_coordinate = CenterCoordinate(sample.x[tuple(slice)], sample.y[tuple(slice)])
+                patches.append(Patch(slice, 0, center_coordinate))
+            else:
+                patches.append(Patch(slice, 0, None))
 
         if keep_foreground_only:
             return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
@@ -350,7 +363,7 @@ class iSEGPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                         transform_(y)
 
     @staticmethod
-    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels=True):
+    def get_patches(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels: bool = True):
         slices = SliceBuilder(sample.x.shape, patch_size=patch_size, step=step).build_slices()
 
         patches = list()
@@ -674,9 +687,9 @@ if __name__ == "__main__":
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
 
-    # iSEGPreProcessingPipeline(root_dir=args.path_iseg,
+    # iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
     #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    # MRBrainsPreProcessingPipeline(root_dir=args.path_mrbrains,
+    # MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
     #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
     #
     # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
@@ -702,6 +715,30 @@ if __name__ == "__main__":
     #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned",
     #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
 
-    ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
+    AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
+                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
+                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized").run()
+
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 FlipLR()]),
+                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned"
+                  ).run()
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 Transpose((0, 2, 3, 1))]),
+                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned"
+                  ).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned",
+                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Aligned",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+                                                                                          keep_labels=False)
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Aligned",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+                                                                                      keep_labels=False)
+    # ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
 
     print("Preprocessing pipeline completed successfully.")
