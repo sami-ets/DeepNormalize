@@ -110,7 +110,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned"
     modalities: "T1"
     validation_split: 0.2
     training:
@@ -123,7 +123,7 @@ dataset:
       patch_size: [1, 32, 32, 32]
       step: [1, 32, 32, 32]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned"
     modalities: "T1_1mm"
     validation_split: 0.2
     training:

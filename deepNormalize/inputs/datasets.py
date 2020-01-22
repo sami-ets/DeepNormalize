@@ -95,19 +95,24 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
-                          dataset_id: int, test_size: float, augmentation_strategy):
+                          dataset_id: int, test_size: float, reconstruction_dir: str, max_subject: int = None,
+                          augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             return iSEGSegmentationFactory._create_multimodal_train_test(source_dir, target_dir, modalities,
-                                                                         dataset_id, test_size, augmentation_strategy)
+                                                                         dataset_id, test_size, reconstruction_dir,
+                                                                         max_subject,
+                                                                         augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_test(source_dir, target_dir, modalities,
-                                                                              dataset_id, test_size,
+                                                                              dataset_id, test_size, reconstruction_dir,
+                                                                              max_subject,
                                                                               augmentation_strategy)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, target_dir: str, modalities: Union[Modality, List[Modality]],
-                                dataset_id: int, test_size: float,
+                                dataset_id: int, test_size: float, reconstruction_dir: str = None,
+                                max_subjects: int = None,
                                 augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a SegmentationDataset object for both training and validation.
@@ -126,22 +131,52 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         if isinstance(modalities, list):
             return iSEGSegmentationFactory._create_multimodal_train_valid_test(source_dir, target_dir, modalities,
                                                                                dataset_id, test_size,
+                                                                               reconstruction_dir, max_subjects,
                                                                                augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_valid_test(source_dir, target_dir, modalities,
                                                                                     dataset_id, test_size,
+                                                                                    reconstruction_dir, max_subjects,
                                                                                     augmentation_strategy)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, target_dir: str, modality: Modality,
-                                           dataset_id: int, test_size: float, augmentation_strategy):
+                                           dataset_id: int, test_size: float, reconstruction_dir: str,
+                                           max_subjects: int = None,
+                                           augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir = os.path.join(source_dir, str(modality)) + "/*"
+        all_dirs = [os.path.join(source_dir, str(modality), dir) for dir in
+                    sorted(os.listdir(os.path.join(source_dir, str(modality))))]
+        all_target_dirs = [os.path.join(target_dir, dir) for dir in
+                           sorted(os.listdir(target_dir))]
 
-        source_paths, target_paths = np.array(extract_file_paths(source_dir)), np.array(
-            extract_file_paths(target_dir + "/*"))
+        if max_subjects is not None:
+            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
+        dirs = sorted(np.array(all_dirs)[choices])
+        target_dirs = sorted(np.array(all_target_dirs)[choices])
+        csv = csv[csv["filename"].str.contains("|".join(dirs))]
+
+        source_paths = list()
+        target_paths = list()
+
+        reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
+
+        reconstruction_paths, reconstruction_targets = np.array(
+            extract_file_paths(os.path.join(reconstruction_dir, str(modality), str(reconstruction_choice)))), np.array(
+            extract_file_paths(os.path.join(reconstruction_dir, "label", str(reconstruction_choice))))
+
+        for dir, target_dir_ in zip(dirs, target_dirs):
+            source_paths.append(
+                extract_file_paths(dir))
+            target_paths.append(
+                extract_file_paths(target_dir_))
+
+        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
+        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
@@ -152,26 +187,58 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         valid_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[valid_ids], target_paths[valid_ids]))
+        reconstruction_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                reconstruction_paths, reconstruction_targets))
 
         train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]), augmentation_strategy)
-
         valid_dataset = SegmentationDataset(list(source_paths), list(target_paths), valid_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]))
+        reconstruction_dataset = SegmentationDataset(list(reconstruction_paths), list(reconstruction_targets),
+                                                     reconstruction_samples, modality, dataset_id,
+                                                     Compose([ToNumpyArray(), ToNDTensor()]))
 
-        return train_dataset, valid_dataset, csv
+        return train_dataset, valid_dataset, reconstruction_dataset, csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, target_dir: str, modality: Modality,
-                                                 dataset_id: int, test_size: float,
+                                                 dataset_id: int, test_size: float, reconstruction_dir: str,
+                                                 max_subjects: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dir = os.path.join(source_dir, str(modality)) + "/*"
+        all_dirs = [os.path.join(source_dir, str(modality), dir) for dir in
+                    sorted(os.listdir(os.path.join(source_dir, str(modality))))]
+        all_target_dirs = [os.path.join(target_dir, dir) for dir in
+                           sorted(os.listdir(target_dir))]
 
-        source_paths, target_paths = np.array(extract_file_paths(source_dir)), np.array(
-            extract_file_paths(target_dir + "/*"))
+        if max_subjects is not None:
+            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
+        dirs = sorted(np.array(all_dirs)[choices])
+        target_dirs = sorted(np.array(all_target_dirs)[choices])
+        csv = csv[csv["filename"].str.contains("|".join(dirs))]
+
+        source_paths = list()
+        target_paths = list()
+
+        reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
+
+        reconstruction_paths, reconstruction_targets = np.array(
+            extract_file_paths(os.path.join(reconstruction_dir, str(modality), str(reconstruction_choice)))), np.array(
+            extract_file_paths(os.path.join(reconstruction_dir, "label", str(reconstruction_choice))))
+
+        for dir, target_dir_ in zip(dirs, target_dirs):
+            source_paths.append(
+                extract_file_paths(dir))
+            target_paths.append(
+                extract_file_paths(target_dir_))
+
+        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
+        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 
         train_valid_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
@@ -190,6 +257,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         test_samples = list(
             map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
                 source_paths[test_ids], target_paths[test_ids]))
+        reconstruction_samples = list(
+            map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+                reconstruction_paths, reconstruction_targets))
 
         train_dataset = SegmentationDataset(list(source_paths), list(target_paths), train_samples, modality,
                                             dataset_id, Compose([ToNumpyArray(), ToNDTensor()]),
@@ -200,11 +270,16 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         test_dataset = SegmentationDataset(list(source_paths), list(target_paths), test_samples, modality, dataset_id,
                                            Compose([ToNumpyArray(), ToNDTensor()]))
 
-        return train_dataset, valid_dataset, test_dataset, csv
+        reconstruction_dataset = SegmentationDataset(list(reconstruction_paths), list(reconstruction_targets),
+                                                     reconstruction_samples, modality, dataset_id,
+                                                     Compose([ToNumpyArray(), ToNDTensor()]))
+
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, target_dir: str, modalities: List[Modality],
-                                      dataset_id: int, test_size: float,
+                                      dataset_id: int, test_size: float, reconstruction_dir: str,
+                                      max_subject: int = None,
                                       augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
@@ -249,7 +324,8 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, target_dir: str, modalities: List[Modality],
-                                            dataset_id: int, test_size: float,
+                                            dataset_id: int, test_size: float, reconstruction_dir: str,
+                                            max_subjects: int = None,
                                             augmentation_strategy: DataAugmentationStrategy = None):
         """
         Create a MultimodalDataset object for both training and validation.
@@ -267,12 +343,37 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         """
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        source_dirs = list(map(lambda modality: os.path.join(source_dir, str(modality)) + "/*", modalities))
+        all_dirs = dict()
+        for modality in modalities:
+            all_dirs[modality] = ([os.path.join(source_dir, str(modality), dir) for dir in
+                                   sorted(os.listdir(os.path.join(source_dir, str(modality))))])
 
-        source_paths = list(map(lambda source_dir: np.array(extract_file_paths(source_dir)), source_dirs))
-        target_paths = np.array(extract_file_paths(target_dir + "/*"))
+        all_target_dirs = [os.path.join(target_dir, dir) for dir in sorted(os.listdir(target_dir))]
 
-        source_paths = np.stack((modality for modality in source_paths), axis=1)
+        if max_subjects is not None:
+            choices = np.random.choice(np.arange(0, len(all_dirs[modalities[0]])), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(all_dirs[modalities[0]])), len(all_dirs[modalities[0]]) - 1,
+                                       replace=False)
+        all_chosen_dirs = dict()
+        for modality in modalities:
+            all_chosen_dirs[modality] = sorted(np.array(all_dirs[modality])[choices])
+
+        chosen_target_dirs = sorted(np.array(all_target_dirs)[choices])
+
+        csv = csv[csv["filename"].str.contains("|".join(all_chosen_dirs[]))]
+
+        source_paths = dict()
+        for modality in modalities:
+            source_paths[modality] = (list(map(lambda subject: extract_file_paths(all_chosen_dirs[modality][subject]),
+                                               np.arange(len(all_chosen_dirs[modality])))))
+            source_paths[modality] = np.array(sorted([item for sublist in source_paths[modality] for item in sublist]))
+
+        target_paths = list(
+            map(lambda subject: np.array(extract_file_paths(chosen_target_dirs[subject])),
+                np.arange(len(chosen_target_dirs))))
+
+        # source_paths = np.stack(list(map(lambda modality: np.array(source_paths[]), axis=1)
 
         train_valid_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))

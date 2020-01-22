@@ -77,19 +77,18 @@ if __name__ == '__main__':
                                                   AddBiasField(exec_probability=0.3)]))
 
     if dataset_configs.get("iSEG", None) is not None:
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             target_dir=dataset_configs["iSEG"].path + "/label",
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
             test_size=dataset_configs["iSEG"].validation_split,
+            max_subjects=9,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
-        reconstruction_datasets.append(iSEGSegmentationFactory.create(
-            "/mnt/md0/Data/Preprocessed/iSEG/TestingData/Patches/Aligned/T1/11",
-            None, Modality.T1, ISEG_ID))
+        reconstruction_datasets.append(iSEG_reconstruction)
 
     if dataset_configs.get("MRBrainS", None) is not None:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(

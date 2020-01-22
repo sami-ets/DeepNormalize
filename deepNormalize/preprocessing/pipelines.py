@@ -89,24 +89,21 @@ class iSEGPreProcessingPipeline(AbstractPreProcessingPipeline):
         if not os.path.exists(os.path.join(self._output_dir, "label")):
             os.makedirs(os.path.join(self._output_dir, "label"))
 
-        for root, dirs, files in os.walk(os.path.join(self._root_dir, "label")):
-            for file in files:
-                self._transforms = transforms.Compose([ToNumpyArray(),
-                                                       RemapClassIDs([10, 150, 250], [1, 2, 3]),
-                                                       ToNifti1Image(),
-                                                       NiftiToDisk(os.path.join(os.path.join(self._output_dir, "label"),
-                                                                                prefix + file))])
-                self._transforms(os.path.join(root, file))
+        for file in os.listdir(os.path.join(self._root_dir, "label")):
+            self._transforms = transforms.Compose([ToNumpyArray(),
+                                                   RemapClassIDs([10, 150, 250], [1, 2, 3]),
+                                                   ToNifti1Image(),
+                                                   NiftiToDisk(
+                                                       os.path.join(self._output_dir, "label", prefix + file))])
+            self._transforms(os.path.join(self._root_dir, "label", file))
 
         for root, dirs, files in os.walk(self._root_dir):
-            root_dir_end = os.path.basename(os.path.normpath(root))
-
-            if "label" in root_dir_end:
-                pass
             for file in files:
-                if not os.path.exists(os.path.join(self._output_dir, root_dir_end)):
-                    os.makedirs(os.path.join(self._output_dir, root_dir_end))
-                shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, root_dir_end))
+                dir = os.path.basename(os.path.normpath(root))
+                if not "label" in file:
+                    if not os.path.exists(os.path.join(self._output_dir, dir)):
+                        os.makedirs(os.path.join(self._output_dir, dir))
+                    shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, dir, file))
 
 
 class MRBrainsPreProcessingPipeline(AbstractPreProcessingPipeline):
@@ -183,6 +180,73 @@ class MRBrainsPreProcessingPipeline(AbstractPreProcessingPipeline):
         self._run_images_transforms(prefix=prefix)
 
 
+class MRBrainsTestPreProcessingPipeline(AbstractPreProcessingPipeline):
+    """
+       A MRBrainS data pre-processing pipeline. Resample images to a Template size.
+    """
+
+    LOGGER = logging.getLogger("PreProcessingPipeline")
+
+    def __init__(self, root_dir: str, output_dir: str):
+        """
+        Pre-processing pipeline constructor.
+
+        Args:
+            root_dir: Root directory where all files are located.
+        """
+        self._root_dir = root_dir
+        self._transforms = None
+        self._output_dir = output_dir
+
+    def _run_images_transforms(self, prefix: str = ""):
+        for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+            root_dir_number = os.path.basename(os.path.normpath(root))
+            images = list(filter(re.compile(r"^T.*\.nii").search, files))
+            for file in images:
+                if not "_1mm" in file:
+                    self._transforms = transforms.Compose([LoadNifti(),
+                                                           ResampleNiftiImageToTemplate(clip=False,
+                                                                                        template=os.path.join(root,
+                                                                                                              "T1_1mm.nii"),
+                                                                                        interpolation="continuous"),
+                                                           NiftiToDisk(os.path.join(self._output_dir, root_dir_number,
+                                                                                    prefix + file))])
+                    if not os.path.exists(os.path.join(self._output_dir, root_dir_number)):
+                        os.makedirs(os.path.join(self._output_dir, root_dir_number))
+
+                    self._transforms(os.path.join(root, file))
+
+                else:
+                    shutil.copy(os.path.join(root, file), os.path.join(self._output_dir, root_dir_number, file))
+
+    def _run_label_transforms(self, prefix: str = ""):
+        for root, dirs, files in os.walk(os.path.join(self._root_dir)):
+            root_dir_number = os.path.basename(os.path.normpath(root))
+            labels = list(filter(re.compile(r"^Labels.*\.nii").search, files))
+
+            for file in labels:
+                if not os.path.exists(os.path.join(self._output_dir, root_dir_number)):
+                    os.makedirs(os.path.join(self._output_dir, root_dir_number))
+                self._transforms = transforms.Compose([LoadNifti(),
+                                                       ResampleNiftiImageToTemplate(clip=True,
+                                                                                    template=root + "/T1_1mm.nii",
+                                                                                    interpolation="linear"),
+                                                       NiftiToDisk(
+                                                           os.path.join(os.path.join(self._output_dir, root_dir_number),
+                                                                        prefix + file))])
+                self._transforms(os.path.join(root, file))
+
+    def run(self, prefix: str = ""):
+        """
+        Apply piepline's transformations.
+
+        Args:
+            prefix (str): Prefix to transformed file.
+        """
+        self._run_label_transforms(prefix=prefix)
+        self._run_images_transforms(prefix=prefix)
+
+
 class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
@@ -207,10 +271,8 @@ class AnatomicalPreProcessingPipeline(AbstractPreProcessingPipeline):
                     transformed_image = self._transforms(os.path.join(root, file))
                     header = self._get_image_header(os.path.join(root, file))
                     transforms_ = transforms.Compose([ToNifti1Image(header),
-                                                      NiftiToDisk(
-                                                          os.path.join(
-                                                              os.path.join(self._output_dir, root_dir_number),
-                                                              prefix + file))])
+                                                      NiftiToDisk(os.path.join(self._output_dir, root_dir_number,
+                                                                               prefix + file))])
                     transforms_(transformed_image)
 
                 except Exception as e:
@@ -262,6 +324,10 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                 transformed_image = self._transforms(os.path.join(root, file))
 
                 if keep_labels:
+                    label_path = os.path.join(self._output_dir, root_dir_number, "LabelsForTesting")
+
+                    if not os.path.exists(label_path):
+                        os.makedirs(label_path)
                     transformed_labels = (np.ceil(self._transforms(os.path.join(root, "LabelsForTesting.nii")))).astype(
                         np.int8)
                     sample = Sample(x=transformed_image, y=transformed_labels, dataset_id=None, is_labeled=True)
@@ -281,7 +347,9 @@ class MRBrainSPatchPreProcessingPipeline(AbstractPreProcessingPipeline):
                     if keep_labels:
                         y = transformed_labels[tuple(patch.slice)]
                         transform_ = transforms.Compose(
-                            [ToNifti1Image(), NiftiToDisk(os.path.join(root, "LabelsForTesting", str(i) + ".nii.gz"))])
+                            [ToNifti1Image(), NiftiToDisk(
+                                os.path.join(self._output_dir, root_dir_number, "LabelsForTesting",
+                                             str(i) + ".nii.gz"))])
                         transform_(y)
 
     @staticmethod
@@ -687,38 +755,50 @@ if __name__ == "__main__":
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
 
-    # iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
-    #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed").run()
-    # MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
-    #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed").run()
-    #
-    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Preprocessed",
-    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized").run()
-    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Preprocessed",
-    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized").run()
-    #
-    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              FlipLR()]),
-    #               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned"
-    #               ).run()
-    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              Transpose((0, 2, 3, 1))]),
-    #               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned"
-    #               ).run()
-    #
-    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
-    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Aligned",
-    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
-    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
-    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Aligned",
-    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+    iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
+                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed").run()
+    MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
+                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled").run()
 
-    AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
-                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed",
+                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled",
+                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized").run()
+
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 FlipLR()]),
+                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned"
+                  ).run()
+    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 Transpose((0, 2, 3, 1))]),
+                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned"
+                  ).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned",
+                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Filtered",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Filtered",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned",
+                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+
+    # Test data
+
+    MRBrainsTestPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
+                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled").run()
+
     AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
                                     output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled",
+                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
 
     AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized",
                   transforms=transforms.Compose([ToNumpyArray(),
@@ -732,13 +812,14 @@ if __name__ == "__main__":
                   ).run()
 
     MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Aligned",
+                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Full",
                                        patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
                                                                                           keep_labels=False)
     iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Aligned",
+                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Full",
                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
                                                                                       keep_labels=False)
+
     # ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
 
     print("Preprocessing pipeline completed successfully.")

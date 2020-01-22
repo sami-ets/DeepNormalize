@@ -140,8 +140,8 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
-    # ToCSViSEGPipeline(os.path.join(args.path_iseg, "T1"), output_dir=args.path_iseg,
-    #                   target_dir=os.path.join(args.path_iseg, "label")).run()
-    # ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
-    #                       target_dir=args.path_mrbrains).run()
-    ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()
+    ToCSViSEGPipeline(os.path.join(args.path_iseg, "T1"), output_dir=args.path_iseg,
+                      target_dir=os.path.join(args.path_iseg, "label")).run()
+    ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
+                          target_dir=args.path_mrbrains).run()
+    # ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()
