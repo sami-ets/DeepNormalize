@@ -667,10 +667,10 @@ class DeepNormalizeTrainer(Trainer):
 
         metric = self._discriminator.compute_metrics(pred, target)
         if test:
-            self._discriminator.update_test_loss("NLLLoss", float(disc_loss.loss))
+            self._discriminator.update_test_loss("NLLLoss", disc_loss)
             self._discriminator.update_test_metrics(metric)
         else:
-            self._discriminator.update_valid_loss("NLLLoss", float(disc_loss.loss))
+            self._discriminator.update_valid_loss("NLLLoss", disc_loss)
             self._discriminator.update_valid_metrics(metric)
 
         return disc_loss, pred
