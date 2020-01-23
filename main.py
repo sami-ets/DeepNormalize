@@ -20,11 +20,9 @@ import multiprocessing
 import numpy as np
 import os
 import torch
-import random
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
 from kerosene.configs.parsers import YamlConfigurationParser
-from kerosene.training.events import Event
 from kerosene.events import MonitorMode
 from kerosene.events.handlers.checkpoints import Checkpoint
 from kerosene.events.handlers.console import PrintTrainingStatus, PrintMonitors
@@ -32,11 +30,11 @@ from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVari
 from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
+from kerosene.training.events import Event
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
 from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField
-from samitorch.inputs.images import Modality
 from samitorch.inputs.utils import sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
@@ -72,6 +70,12 @@ if __name__ == '__main__':
     valid_datasets = list()
     test_datasets = list()
     reconstruction_datasets = list()
+    iSEG_train = None
+    iSEG_CSV = None
+    MRBrainS_train = None
+    MRBrainS_CSV = None
+    ABIDE_train = None
+    ABIDE_CSV = None
 
     augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
                                                   AddBiasField(exec_probability=0.3)]))
@@ -79,11 +83,10 @@ if __name__ == '__main__':
     if dataset_configs.get("iSEG", None) is not None:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
-            target_dir=dataset_configs["iSEG"].path + "/label",
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
             test_size=dataset_configs["iSEG"].validation_split,
-            max_subjects=9,
+            max_subjects=1,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
@@ -91,23 +94,21 @@ if __name__ == '__main__':
         reconstruction_datasets.append(iSEG_reconstruction)
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
-            target_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
             test_size=dataset_configs["MRBrainS"].validation_split,
+            max_subjects=1,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
-        reconstruction_datasets.append(MRBrainSSegmentationFactory.create(
-            "/mnt/md0/Data/Preprocessed/MRBrainS/TesTData/Patches/Aligned/T1/1", None, Modality.T1, MRBRAINS_ID))
+        reconstruction_datasets.append(MRBrainS_reconstruction)
 
     if dataset_configs.get("ABIDE", None) is not None:
-        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
+        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
-            target_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
             dataset_id=ABIDE_ID,
             sites=dataset_configs["ABIDE"].sites,
@@ -117,12 +118,7 @@ if __name__ == '__main__':
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
-        random_ABIDE_site = random.choice(dataset_configs["ABIDE"].sites)
-        dirs = [dir for dir in sorted(os.listdir(dataset_configs["ABIDE"].path)) if any(substring in dir for substring in [random_ABIDE_site])]
-        random_subject = random.choice(dirs)
-        reconstruction_datasets.append(ABIDESegmentationFactory.create(
-            os.path.join(dataset_configs["ABIDE"].path, format(str(random_subject))), Modality.T1, ABIDE_ID))
-
+        reconstruction_datasets.append(ABIDE_reconstruction)
 
     # Concat datasets.
     if len(dataset_configs) > 1:
@@ -133,7 +129,6 @@ if __name__ == '__main__':
         train_dataset = train_datasets[0]
         valid_dataset = valid_datasets[0]
         test_dataset = test_datasets[0]
-
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -176,13 +171,15 @@ if __name__ == '__main__':
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
                                  x=[np.asarray(
-                                     iSEG_CSV.groupby('center_class').count()) if iSEG_train is not None else 0,
-                                    np.asarray(MRBrainS_CSV.groupby(
-                                        'center_class').count()) if MRBrainS_train is not None else 0,
-                                    np.asarray(ABIDE_CSV.groupby(
-                                        'center_class').count()) if ABIDE_train is not None else 0],
+                                     iSEG_CSV.groupby('center_class').count()["labels"] if iSEG_CSV is not None else 0),
+                                     np.asarray(MRBrainS_CSV.groupby(
+                                         'center_class').count()[
+                                                    "LabelsForTraining"] if MRBrainS_CSV is not None else 0),
+                                     np.asarray(ABIDE_CSV.groupby(
+                                         'center_class').count()["labels"] if ABIDE_CSV is not None else [0, 0, 0, 0])],
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={
-                "opts": {"title": "Center Voxel Class Count", "stacked": True, "legend": ["CSF", "GM", "WM"]}}))
+                "opts": {"title": "Center Voxel Class Count", "stacked": True,
+                         "legend": ["Background", "CSF", "GM", "WM"]}}))
 
         save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
         [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
@@ -217,20 +214,35 @@ if __name__ == '__main__':
                                                  "title": "Ground Truth Patches"}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented Image", PlotType.IMAGE_PLOT,
+            PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented Image"}},
-                                every=1), Event.ON_EPOCH_END) \
+                                                 "title": "Reconstructed Input iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input Image", PlotType.IMAGE_PLOT,
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input Image"}},
-                                every=1), Event.ON_EPOCH_END) \
+                                                 "title": "Reconstructed Normalized iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized Image", PlotType.IMAGE_PLOT,
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized Image"}},
-                                every=1), Event.ON_EPOCH_END) \
+                                                 "title": "Reconstructed Segmented iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
@@ -277,16 +289,16 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Classification hit per classes",
                                                                      "legend": ["iSEG",
                                                                                 "MRBrainS",
-                                                                                "ABIDE",
+                                                                                # "ABIDE",
                                                                                 "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+                                                    every=25), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Batch data distribution",
                                                                      "legend": ["iSEG",
                                                                                 "MRBrainS",
-                                                                                "ABIDE",
+                                                                                # "ABIDE",
                                                                                 "Fake Class"]}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
+                                                    every=25), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Loss D(G(X)) | X",
                                                                      "legend": ["Training",
@@ -297,53 +309,50 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence", PlotType.LINE_PLOT,
                                 params={"opts": {"title": "Jensen-Shannon Divergence",
                                                  "legend": ["Inputs", "Normalized"]}},
-                                every=1), Event.ON_EPOCH_END) \
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance",
                                                                      "legend": ["Test"]}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
                                                  "legend": ["Total", "Free", "Used"]}},
-                                every=1), Event.ON_EPOCH_END) \
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Per-Dataset Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Per-Dataset Metric Table"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Jensen-Shannon Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Jensen-Shannon Divergence"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Confusion Matrix", PlotType.HEATMAP_PLOT,
                                                     params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
                                                                      "rownames": ["Background", "CSF", "GM", "WM"],
                                                                      "title": "Confusion Matrix"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "iSEG Confusion Matrix", PlotType.HEATMAP_PLOT,
                                                     params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
                                                                      "rownames": ["Background", "CSF", "GM", "WM"],
                                                                      "title": "iSEG Confusion Matrix"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "MRBrainS Confusion Matrix", PlotType.HEATMAP_PLOT,
                                                     params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
                                                                      "rownames": ["Background", "CSF", "GM", "WM"],
                                                                      "title": "MRBrainS Confusion Matrix"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
                                 params={"opts": {"columnnames": ["iSEG", "MRBrainS", "Generated"],
                                                  "rownames": ["Generated", "MRBrainS", "iSEG"],
                                                  "title": "Discriminator Confusion Matrix"}},
-                                every=1), Event.ON_EPOCH_END) \
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
-                       mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
 
     else:
@@ -355,3 +364,7 @@ if __name__ == '__main__':
                                                  "legend": ["Total", "Free", "Used"]}},
                                 every=1), Event.ON_EPOCH_END) \
             .train(training_config.nb_epochs)
+
+# .with_event_handler(
+# Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
+#            mode=MonitorMode.MIN), Event.ON_EPOCH_END)

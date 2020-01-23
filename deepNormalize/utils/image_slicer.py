@@ -102,8 +102,9 @@ class ImageReconstructor(object):
         for p, (z, y, x) in zip(patches, product(range(0, n_d, self._step[0]),
                                                  range(0, n_h, self._step[1]),
                                                  range(0, n_w, self._step[2]))):
-            p = self._transform(p)
-            p = np.expand_dims(p, 0)
+            if not isinstance(p, np.ndarray):
+                p = self._transform(p)
+                p = np.expand_dims(p, 0)
 
             if self._models is not None:
                 p = torch.Tensor().new_tensor(p, device="cuda:0")

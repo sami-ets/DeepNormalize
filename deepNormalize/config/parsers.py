@@ -205,8 +205,6 @@ class ArgsParserFactory(object):
         parser.add_argument("--local_rank", dest="local_rank", default=0, type=int, help="The local_rank of the GPU.")
 
         if parser_type is ArgsParserType.MODEL_TRAINING:
-            parser.add_argument("--modality", dest="modality", default="T1", type=str,
-                                help="The modality to be used (default: T1).")
             parser.add_argument("--config-file", dest="config_file", required=True)
         elif parser_type is ArgsParserType.BRAIN_EXTRACTION:
             parser.add_argument("--root_dir", dest="root_dir", required=True)

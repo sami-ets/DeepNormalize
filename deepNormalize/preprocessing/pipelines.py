@@ -16,6 +16,7 @@
 
 import argparse
 import logging
+import multiprocessing
 from typing import Tuple, Union
 
 import abc
@@ -509,7 +510,8 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         self._transforms = None
         self._patch_size = patch_size
         self._step = step
-        self._normalized_shape = self._compute_normalized_shape_from_images_in(root_dir)
+        self._normalized_shape = (1, 212, 211, 189)
+        # self._normalized_shape = self._compute_normalized_shape_from_images_in(root_dir)
         self._transform_crop = transforms.Compose([ToNumpyArray(),
                                                    CropToContent(),
                                                    PadToShape(self._normalized_shape)])
@@ -520,15 +522,35 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         self._transform_patch = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
     def run(self, prefix: str = ""):
-        for root, dirs, files in os.walk(self._root_dir):
-            for dir in dirs:
-                if os.path.exists(os.path.join(self._root_dir, dir, "mri", "aparc+aseg.mgz")):
-                    self._extract_labels(os.path.join(self._root_dir, dir, "mri"))
-                    self._crop_to_content(os.path.join(self._root_dir, dir, "mri"))
-                    self._align(os.path.join(self._root_dir, dir, "mri"))
-                    self._apply_mask(os.path.join(self._root_dir, dir, "mri"))
-                    self._extract_patches(os.path.join(self._root_dir, dir, "mri"),
-                                          os.path.join(self._root_dir, dir, "mri/patches"))
+        dirs = sorted(next(os.walk(self._root_dir))[1])
+        self._dispatch_jobs(dirs, 4)
+
+    @staticmethod
+    def chunks(l, n):
+        return [l[i:i + n] for i in range(0, len(l), n)]
+
+    def _dispatch_jobs(self, dirs, job_number):
+        total = len(dirs)
+        chunk_size = int(total / job_number)
+        slices = ABIDEPreprocessingPipeline.chunks(dirs, chunk_size)
+        jobs = []
+
+        for slice in slices:
+            j = multiprocessing.Process(target=self._do_job, args=(slice,))
+            jobs.append(j)
+        for j in jobs:
+            j.start()
+
+    def _do_job(self, dirs):
+        for dir in dirs:
+            if os.path.exists(os.path.join(self._root_dir, dir, "mri", "aparc+aseg.mgz")):
+                self._extract_labels(os.path.join(self._root_dir, dir, "mri"))
+                self._crop_to_content(os.path.join(self._root_dir, dir, "mri"))
+                self._align(os.path.join(self._root_dir, dir, "mri"))
+                self._apply_mask(os.path.join(self._root_dir, dir, "mri"))
+                self._extract_patches(os.path.join(self._root_dir, dir, "mri"),
+                                      os.path.join(self._root_dir, dir, "mri/patches"), keep_labels=True,
+                                      keep_foreground_only=False)
 
     def _extract_patches(self, root, output_dir, keep_foreground_only=True, keep_labels=True):
         if not os.path.exists(os.path.join(output_dir, "image")):
@@ -755,71 +777,64 @@ if __name__ == "__main__":
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
 
-    iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
-                              output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed").run()
-    MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
-                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled").run()
+    # iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
+    #                           output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed").run()
+    # MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
+    #                               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled").run()
+    #
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized").run()
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized").run()
+    #
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              FlipLR()]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned"
+    #               ).run()
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              Transpose((0, 2, 3, 1))]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned"
+    #               ).run()
+    #
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full",
+    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full",
+    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+    #
+    # # Test data
+    #
+    # MRBrainsTestPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
+    #                                   output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled").run()
+    #
+    # AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized").run()
+    # AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled",
+    #                                 output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
+    #
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              FlipLR()]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned"
+    #               ).run()
+    # AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized",
+    #               transforms=transforms.Compose([ToNumpyArray(),
+    #                                              Transpose((0, 2, 3, 1))]),
+    #               output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned"
+    #               ).run()
+    #
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Full",
+    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+    #                                                                                       keep_labels=False)
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Full",
+    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+    #                                                                                   keep_labels=False)
 
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Preprocessed",
-                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized").run()
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Resampled",
-                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized").run()
-
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 FlipLR()]),
-                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned"
-                  ).run()
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 Transpose((0, 2, 3, 1))]),
-                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned"
-                  ).run()
-
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Filtered",
-                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Filtered",
-                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run()
-
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Aligned",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full",
-                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Aligned",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full",
-                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
-
-    # Test data
-
-    MRBrainsTestPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
-                                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled").run()
-
-    AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
-                                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized").run()
-    AnatomicalPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Resampled",
-                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
-
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 FlipLR()]),
-                  output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned"
-                  ).run()
-    AlignPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/SizeNormalized",
-                  transforms=transforms.Compose([ToNumpyArray(),
-                                                 Transpose((0, 2, 3, 1))]),
-                  output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned"
-                  ).run()
-
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Full",
-                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
-                                                                                          keep_labels=False)
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Full",
-                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
-                                                                                      keep_labels=False)
-
-    # ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
+    ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
 
     print("Preprocessing pipeline completed successfully.")

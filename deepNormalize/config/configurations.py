@@ -124,9 +124,9 @@ class DatasetConfiguration(Configuration):
     def from_dict(cls, dataset_name, config_dict):
         return cls(dataset_name, config_dict["path"], config_dict.get("sites", None),
                    config_dict.get("max_subjects", None), config_dict["validation_split"],
-                   config_dict["training"]["patch_size"], config_dict["training"]["step"],
-                   config_dict["validation"]["patch_size"], config_dict["validation"]["step"],
-                   config_dict["test"]["patch_size"], config_dict["test"]["step"])
+                   config_dict.get("training").get("patch_size"), config_dict.get("training").get("step"),
+                   config_dict.get("validation").get("patch_size"), config_dict.get("validation").get("step"),
+                   config_dict.get("test").get("patch_size"), config_dict.get("test").get("step"))
 
     def to_html(self):
         configuration_values = '\n'.join("<p>%s: %s</p>" % item for item in vars(self).items())

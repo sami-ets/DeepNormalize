@@ -16,6 +16,14 @@
 
 import numpy as np
 
+import re
+
+
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
 
 def to_html(classe_names, metric_names, metric_values):
     arr_tuple = tuple(([metric_values[i] for i in range(len(metric_values))]))
@@ -152,7 +160,7 @@ def to_html_time(time):
     days = str(time).split(',')[0].split(' ')[0] if "days" in str(time).split(',')[0] else str(0)
     time = str(time).split(':', 2)
 
-    header= "<!DOCTYPE html> \
+    header = "<!DOCTYPE html> \
                    <html> \
                         <head> \
                             <style> \
@@ -206,7 +214,7 @@ def to_html_time(time):
                             </style> \
                         </head> "
 
-    body =              "<body> \
+    body = "<body> \
                             <div class='container'> \
                                 <h1 id='head'> Runtime </h1> \
                                 <ul> \
