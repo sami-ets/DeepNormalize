@@ -446,6 +446,9 @@ class DeepNormalizeTrainer(Trainer):
         self._stop_time = time.time()
 
     def on_train_epoch_end(self):
+        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = \
+            [np.array(gpu_mem_get(self._run_config.local_rank))]
+            
         if self._run_config.local_rank == 0:
             if self._should_activate_autoencoder():
                 self.custom_variables["D(G(X)) | X"] = [np.array([0])]
@@ -464,9 +467,6 @@ class DeepNormalizeTrainer(Trainer):
         self._D_G_X_as_X_validation_gauge.reset()
 
     def on_test_epoch_end(self):
-        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = \
-            [np.array(gpu_mem_get(self._run_config.local_rank))]
-
         if self._run_config.local_rank == 0:
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 

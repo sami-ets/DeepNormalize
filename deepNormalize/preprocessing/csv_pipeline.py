@@ -144,30 +144,30 @@ class ToCSVABIDEipeline(object):
 
             center_coordinate = CenterCoordinate(sample.x, sample.y)
 
-            file_names.append(source_path)
             center_class.append(int(center_coordinate.class_id))
 
         file_names = np.array(file_names)
+        labels_file_names = np.array(target_paths)
         center_classes = np.array(center_class)
 
-        csv_data = np.vstack((file_names, center_classes))
+        csv_data = np.vstack((file_names, labels_file_names, center_classes))
 
         with open(os.path.join(self._output_dir, 'output.csv'), mode='w') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["filename", "center_class"])
+            writer.writerow(["T1", "labels", "center_class"])
             for item in range(csv_data.shape[1]):
-                writer.writerow([csv_data[0][item], csv_data[1][item]])
+                writer.writerow([csv_data[0][item], csv_data[1][item], csv_data[2][item]])
         output_file.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path-iseg', type=str, help='Path to the iSEG preprocessed directory.', required=True)
-    parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
+    #parser.add_argument('--path-iseg', type=str, help='Path to the iSEG preprocessed directory.', required=True)
+    #parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
-    ToCSViSEGPipeline(os.path.join(args.path_iseg), output_dir=args.path_iseg,
-                      target_dir=os.path.join(args.path_iseg, "label")).run()
-    ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
-                          target_dir=args.path_mrbrains).run()
-    # ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()
+    #ToCSViSEGPipeline(os.path.join(args.path_iseg), output_dir=args.path_iseg,
+    #                 target_dir=os.path.join(args.path_iseg, "label")).run()
+    #ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
+    #                      target_dir=args.path_mrbrains).run()
+    ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()

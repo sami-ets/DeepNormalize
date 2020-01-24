@@ -318,7 +318,7 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
                                                  "legend": ["Total", "Free", "Used"]}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=1), Event.ON_TRAIN_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
@@ -352,7 +352,7 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
     else:
@@ -362,7 +362,7 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
                                                  "legend": ["Total", "Free", "Used"]}},
-                                every=1), Event.ON_EPOCH_END) \
+                                every=1), Event.ON_TRAIN_EPOCH_END) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(
