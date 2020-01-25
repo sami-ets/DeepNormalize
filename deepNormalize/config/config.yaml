@@ -71,7 +71,7 @@ models:
         params:
           reduction: !!null
           ignore_index: -100
-          weight: !torch/tensor [0.22141935, 0.28180645, 0.23845161, 0.25832258]
+          #weight: !torch/tensor [0.22141935, 0.28180645, 0.23845161, 0.25832258]
     metrics:
       Dice:
         type: "Dice"
@@ -135,7 +135,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 70
-  patience_segmentation: 10
+  patience_segmentation: 0
   data_augmentation: False
   variables:
     disc_ratio: 1.0
