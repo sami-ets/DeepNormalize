@@ -71,6 +71,7 @@ models:
         params:
           reduction: !!null
           ignore_index: -100
+          weight: !!null
           #weight: !torch/tensor [0.22141935, 0.28180645, 0.23845161, 0.25832258]
     metrics:
       Dice:
@@ -146,7 +147,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_test_kerosene_v0.2"
+  env: "deepNormalize_test_kerosene_v0.2_2"
 
 logger:
   path: "/tmp/ml/tests"

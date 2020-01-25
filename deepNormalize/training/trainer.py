@@ -168,7 +168,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
-                self._D_G_X_as_X_training_gauge.update(float(disc_loss_as_X.loss))
+                self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.item())
 
                 total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
                              self._training_config.variables["seg_ratio"] * seg_loss.mean()
@@ -352,7 +352,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_validation_gauge.update(float(disc_loss_as_X.loss))
+            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.item())
 
     def test_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
@@ -389,7 +389,7 @@ class DeepNormalizeTrainer(Trainer):
             metric["Dice"] = metric["Dice"].mean()
             self._segmenter.update_test_metrics(metric)
 
-            self._class_dice_gauge.update(np.array(metric))
+            self._class_dice_gauge.update(np.array(metric["Dice"]))
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
                 self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
@@ -454,7 +454,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_test_gauge.update(float(disc_loss_as_X.loss))
+            self._D_G_X_as_X_test_gauge.update(disc_loss_as_X.item())
 
             self._class_hausdorff_distance_gauge.update(
                 self.compute_mean_hausdorff_distance(
