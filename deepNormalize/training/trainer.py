@@ -16,8 +16,9 @@
 
 import time
 from datetime import timedelta
+from random import random
 from typing import List
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pynvml
 import torch
@@ -56,6 +57,8 @@ class DeepNormalizeTrainer(Trainer):
         self._slicer = ImageSlicer()
         self._seg_slicer = SegmentationSlicer()
         self._reconstruction_datasets = reconstruction_datasets
+        self._number_of_datasets = len(
+            self._reconstruction_datasets)  # since there is one reconstruction dataset per domain.
         self._normalized_reconstructors = [ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
                                                               [self._model_trainers[GENERATOR]], normalize=True),
                                            ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
@@ -150,7 +153,7 @@ class DeepNormalizeTrainer(Trainer):
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
-            self._segmenter.update_train_loss("MSELoss", seg_loss.mean())
+            self._segmenter.update_train_loss("DiceLoss", seg_loss.mean())
 
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
@@ -161,7 +164,7 @@ class DeepNormalizeTrainer(Trainer):
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
                                                                    size=(inputs.size(0),),
-                                                                   fill_value=3,
+                                                                   fill_value=self._number_of_datasets,
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
@@ -188,13 +191,13 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.step()
 
         if disc_pred is not None:
-            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), 3)
+            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), len(self._reconstruction_datasets) + 1)
             real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
                 size=(inputs.size(0) // 2,),
-                fill_value=2,
+                fill_value=len(self._reconstruction_datasets),
                 dtype=torch.long,
                 device="cpu",
-                requires_grad=False)), dim=0), 3)
+                requires_grad=False)), dim=0), len(self._reconstruction_datasets) + 1)
             self.custom_variables["Pie Plot"] = count
             self.custom_variables["Pie Plot True"] = real_count
 
@@ -204,6 +207,92 @@ class DeepNormalizeTrainer(Trainer):
                                    target[IMAGE_TARGET].cpu().detach())
                 self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
                 self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
+
+                iseg_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ISEG_ID)]
+                iseg_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)]
+                mrbrains_gen_pred = gen_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+                target_mrbrains = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+                iseg_inputs = inputs[torch.where(target[DATASET_ID] == ISEG_ID)]
+                mrbrains_inputs = inputs[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+
+                fig1, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(nrows=4, ncols=2, figsize=(15, 15))
+
+                _, bins, _ = ax1.hist(iseg_gen_pred[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax1.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 0)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax1.set_xlabel("Intensity")
+                ax1.set_ylabel("Frequency")
+                ax1.set_title("Generated Background Histogram")
+                ax1.legend()
+
+                _, bins, _ = ax2.hist(iseg_gen_pred[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax2.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 1)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax2.set_xlabel("Intensity")
+                ax2.set_ylabel("Frequency")
+                ax2.set_title("Generated CSF Histogram")
+                ax2.legend()
+
+                _, bins, _ = ax3.hist(iseg_gen_pred[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax3.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 2)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax3.set_xlabel("Intensity")
+                ax3.set_ylabel("Frequency")
+                ax3.set_title("Generated Gray Matter Histogram")
+                ax3.legend()
+
+                _, bins, _ = ax4.hist(iseg_gen_pred[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax4.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 3)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax4.set_xlabel("Intensity")
+                ax4.set_ylabel("Frequency")
+                ax4.set_title("Generated White Matter Histogram")
+                ax4.legend()
+
+
+                _, bins, _ = ax5.hist(iseg_inputs[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax5.hist(mrbrains_inputs[torch.where(target_mrbrains == 0)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax5.set_xlabel("Intensity")
+                ax5.set_ylabel("Frequency")
+                ax5.set_title("Input Background Histogram")
+                ax5.legend()
+
+                _, bins, _ = ax6.hist(iseg_inputs[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax6.hist(mrbrains_inputs[torch.where(target_mrbrains == 1)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax6.set_xlabel("Intensity")
+                ax6.set_ylabel("Frequency")
+                ax6.set_title("Input CSF Histogram")
+                ax6.legend()
+
+                _, bins, _ = ax7.hist(iseg_inputs[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax7.hist(mrbrains_inputs[torch.where(target_mrbrains == 2)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax7.set_xlabel("Intensity")
+                ax7.set_ylabel("Frequency")
+                ax7.set_title("Input Gray Matter Histogram")
+                ax7.legend()
+
+                _, bins, _ = ax8.hist(iseg_inputs[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
+                                      density=False, label="iSEG")
+                _ = ax8.hist(mrbrains_inputs[torch.where(target_mrbrains == 3)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="MRBrainS")
+                ax8.set_xlabel("Intensity")
+                ax8.set_ylabel("Frequency")
+                ax8.set_title("Input White Matter Histogram")
+                ax8.legend()
+                fig1.tight_layout()
+
+                self.custom_variables["Per-Dataset Histograms"] = fig1
+
                 self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
                     torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
                 self.custom_variables["CSF Generated Intensity Histogram"] = gen_pred[
@@ -300,7 +389,7 @@ class DeepNormalizeTrainer(Trainer):
             metric["Dice"] = metric["Dice"].mean()
             self._segmenter.update_test_metrics(metric)
 
-            self._class_dice_gauge.update(np.array(metric.numpy()))
+            self._class_dice_gauge.update(np.array(metric))
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
                 self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
@@ -445,10 +534,11 @@ class DeepNormalizeTrainer(Trainer):
     def on_training_end(self):
         self._stop_time = time.time()
 
+    def on_batch_end(self):
+        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
+            np.array(gpu_mem_get(self._run_config.local_rank))]
+
     def on_train_epoch_end(self):
-        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = \
-            [np.array(gpu_mem_get(self._run_config.local_rank))]
-            
         if self._run_config.local_rank == 0:
             if self._should_activate_autoencoder():
                 self.custom_variables["D(G(X)) | X"] = [np.array([0])]
@@ -472,9 +562,16 @@ class DeepNormalizeTrainer(Trainer):
 
             all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
                                    self._reconstruction_datasets))
+
+            ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
+                                            self._reconstruction_datasets))
+
             img_input = list(
                 map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                     self._input_reconstructors))
+            img_gt = list(
+                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
+                    ground_truth_patches, self._input_reconstructors))
             img_norm = list(
                 map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                     self._normalized_reconstructors))
@@ -490,6 +587,8 @@ class DeepNormalizeTrainer(Trainer):
                                                                                                       0))
             self.custom_variables["Reconstructed Segmented iSEG Image"] = self._seg_slicer.get_colored_slice(
                 SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[0], 0), 0)).squeeze(0)
+            self.custom_variables["Reconstructed Ground Truth iSEG Image"] = self._seg_slicer.get_colored_slice(
+                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[0], 0), 0)).squeeze(0)
             self.custom_variables["Reconstructed Input iSEG Image"] = self._slicer.get_slice(SliceType.AXIAL,
                                                                                              np.expand_dims(
                                                                                                  np.expand_dims(
@@ -504,6 +603,8 @@ class DeepNormalizeTrainer(Trainer):
                                                                                                               0), 0))
             self.custom_variables["Reconstructed Segmented MRBrainS Image"] = self._seg_slicer.get_colored_slice(
                 SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[1], 0), 0)).squeeze(0)
+            self.custom_variables["Reconstructed Ground Truth MRBrainS Image"] = self._seg_slicer.get_colored_slice(
+                SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[1], 0), 0)).squeeze(0)
             self.custom_variables["Reconstructed Input MRBrainS Image"] = self._slicer.get_slice(SliceType.AXIAL,
                                                                                                  np.expand_dims(
                                                                                                      np.expand_dims(
@@ -548,7 +649,7 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
                                                                            ["JS Divergence"],
                                                                            [0.0, 0.0])
-                self.custom_variables["Jensen-Shannon Divergence"] = [np.zeros((2,))]
+                self.custom_variables["Jensen-Shannon Divergence"] = [np.zeros((1,))]
                 self.custom_variables["Mean Hausdorff Distance"] = [np.zeros((1,))]
 
             if self._should_activate_segmentation():
@@ -570,7 +671,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                            [self._js_div_inputs_gauge.compute().numpy(),
                                                                             self._js_div_gen_gauge.compute().numpy()])
                 self.custom_variables["Jensen-Shannon Divergence"] = np.array(
-                    [self._js_div_inputs_gauge.compute().numpy(), self._js_div_gen_gauge.compute().numpy()])
+                    [self._js_div_gen_gauge.compute().numpy()])
 
                 self.custom_variables["Mean Hausdorff Distance"] = np.array(
                     [self._class_hausdorff_distance_gauge.compute().mean()])
@@ -614,12 +715,12 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
+        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
         pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
-                                        device=target.device, requires_grad=False)
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._number_of_datasets,
+                                        dtype=torch.long, device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
@@ -647,13 +748,13 @@ class DeepNormalizeTrainer(Trainer):
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
-        # Choose randomly 6 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=True)
+        # Choose randomly 8 predictions (to balance with real domains).
+        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
         pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=2, dtype=torch.long,
-                                        device=target.device, requires_grad=False)
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._number_of_datasets,
+                                        dtype=torch.long, device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),

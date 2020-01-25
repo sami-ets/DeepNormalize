@@ -146,7 +146,7 @@ class ToCSVABIDEipeline(object):
 
             center_class.append(int(center_coordinate.class_id))
 
-        file_names = np.array(file_names)
+        file_names = np.array(source_paths)
         labels_file_names = np.array(target_paths)
         center_classes = np.array(center_class)
 

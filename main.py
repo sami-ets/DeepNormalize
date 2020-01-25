@@ -40,6 +40,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
 
+from deepNormalize.events.handlers.handlers import PlotCustomBarBlot
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
@@ -56,7 +57,6 @@ if __name__ == '__main__':
     torch.set_num_threads(multiprocessing.cpu_count())
     torch.set_num_interop_threads(multiprocessing.cpu_count())
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
-
     # Create configurations.
     run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank, amp_opt_level=args.amp_opt_level)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
@@ -77,8 +77,11 @@ if __name__ == '__main__':
     ABIDE_train = None
     ABIDE_CSV = None
 
-    augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
-                                                  AddBiasField(exec_probability=0.3)]))
+    if training_config.data_augmentation:
+        augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
+                                                      AddBiasField(exec_probability=0.3)]))
+    else:
+        augmentation_strategy = None
 
     if dataset_configs.get("iSEG", None) is not None:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
@@ -86,7 +89,7 @@ if __name__ == '__main__':
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
             test_size=dataset_configs["iSEG"].validation_split,
-            max_subjects=1,
+            max_subjects=dataset_configs["iSEG"].max_subjects,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
@@ -99,7 +102,7 @@ if __name__ == '__main__':
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
             test_size=dataset_configs["MRBrainS"].validation_split,
-            max_subjects=1,
+            max_subjects=dataset_configs["MRBrainS"].max_subjects,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
@@ -151,8 +154,10 @@ if __name__ == '__main__':
                                                                training_config.batch_size,
                                                                sampler=sampler,
                                                                shuffle=False if sampler is not None else True,
-                                                               num_workers=2,
-                                                               collate_fn=sample_collate, pin_memory=True),
+                                                               num_workers=args.num_workers,
+                                                               collate_fn=sample_collate,
+                                                               drop_last=True,
+                                                               pin_memory=True),
                            [train_dataset, valid_dataset, test_dataset],
                            [train_sampler, valid_sampler, test_sampler]))
 
@@ -229,6 +234,11 @@ if __name__ == '__main__':
                                                  "title": "Reconstructed Segmented iSEG Image"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input MRBrainS Image"}},
@@ -244,46 +254,63 @@ if __name__ == '__main__':
                                                  "title": "Reconstructed Segmented MRBrainS Image"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.MATPLOTLIB_PLOT,
+                                params={}, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "Background Generated Intensity Histogram",
+                                params={"opts": {"title": "GM Generated Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "CSF Generated Intensity Histogram",
+                                params={"opts": {"title": "GM Generated Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "GM Generated Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "WM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "WM Generated Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={
                                     "opts": {"title": "Inputs Intensity Histogram",
-                                             "numbins": 128}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                             "store_history": True,
+                                             "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Background Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Background Input Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "CSF Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "CSF Input Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "GM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "GM Input Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "WM Input Intensity Histogram",
+                                                 "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Classification hit per classes",
@@ -314,11 +341,6 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Mean Hausdorff Distance",
                                                                      "legend": ["Test"]}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
-                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
-                                                 "legend": ["Total", "Free", "Used"]}},
-                                every=1), Event.ON_TRAIN_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Metric Table"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
@@ -358,13 +380,13 @@ if __name__ == '__main__':
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                        reconstruction_datasets, run_config) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
-                                params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
-                                                 "legend": ["Total", "Free", "Used"]}},
-                                every=1), Event.ON_TRAIN_EPOCH_END) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(
 # Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
 #            mode=MonitorMode.MIN), Event.ON_EPOCH_END)
+# .with_event_handler(
+#             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
+#                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
+#                                                  "legend": ["Total", "Free", "Used"]}},
+#                                 every=50), Event.ON_BATCH_END)

@@ -18,7 +18,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.00001
+        lr: 0.000005
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -33,10 +33,10 @@ models:
     metrics:
       Accuracy:
         type: "Accuracy"
-    gradients:
-      clipping_strategy: "value"
-      params:
-        clip_value: 25.0
+#    gradients:
+#      clipping_strategy: "value"
+#      params:
+#        clip_value: 25.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
@@ -99,7 +99,7 @@ models:
       params:
         lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.01
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -119,11 +119,12 @@ dataset:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     validation_split: 0.2
+    max_subjects: !!null
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     validation_split: 0.2
-
+    max_subjects: !!null
 #  ABIDE:
 #    path: "/home/pierre-luc-delisle/ABIDE/5.1"
 #    modalities: "T1"
@@ -133,8 +134,9 @@ dataset:
 
 training:
   batch_size: 16
-  nb_epochs: 50
-  patience_segmentation: 1
+  nb_epochs: 70
+  patience_segmentation: 10
+  data_augmentation: False
   variables:
     disc_ratio: 1.0
     seg_ratio: 1.0
