@@ -377,7 +377,7 @@ class DeepNormalizeTrainer(Trainer):
             gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
             self._generator.update_test_loss("MSELoss", gen_loss)
 
-            disc_loss, disc_pred = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
+            disc_loss, disc_pred, disc_target = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
@@ -468,7 +468,7 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator_confusion_matrix_gauge.update((
                 to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1), num_classes=3),
-                torch.squeeze(target[DATASET_ID].long(), dim=1)))
+                disc_target))
 
             inputs_reshaped = inputs.reshape(inputs.shape[0],
                                              inputs.shape[1] * inputs.shape[2] * inputs.shape[3] * inputs.shape[4])
@@ -774,7 +774,7 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.update_valid_loss("NLLLoss", disc_loss)
             self._discriminator.update_valid_metrics(metric)
 
-        return disc_loss, pred
+        return disc_loss, pred, target
 
     def compute_mean_hausdorff_distance(self, seg_pred, target):
         distances = np.zeros((4,))
