@@ -139,12 +139,13 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
-        reconstruction_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(reconstruction_source_paths)),
-                                                                target_paths=np.array(natural_sort(reconstruction_target_paths)),
-                                                                modalities=modality,
-                                                                dataset_id=dataset_id,
-                                                                transforms=[ToNumpyArray(), ToNDTensor()],
-                                                                augmentation_strategy=None)
+        reconstruction_dataset = iSEGSegmentationFactory.create(
+            source_paths=np.array(natural_sort(reconstruction_source_paths)),
+            target_paths=np.array(natural_sort(reconstruction_target_paths)),
+            modalities=modality,
+            dataset_id=dataset_id,
+            transforms=[ToNumpyArray(), ToNDTensor()],
+            augmentation_strategy=None)
 
         return train_dataset, test_dataset, reconstruction_dataset, csv
 
@@ -745,6 +746,8 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
         target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+
         if max_subjects is not None:
             choices = np.random.choice(len(source_paths), (50,), replace=False)
             source_paths = source_paths[choices]
@@ -752,7 +755,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         train_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
-                                                                          np.asarray(csv["center_class"])))
+                                                                          np.asarray(filtered_csv["center_class"])))
 
         train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[train_ids],
                                                        target_paths=np.array(natural_sort(target_paths))[train_ids],
@@ -801,11 +804,13 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
         target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
 
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+
         train_valid_ids, test_ids = next(
-            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, csv["center_class"]))
+            StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, filtered_csv["center_class"]))
         train_ids, valid_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths[train_valid_ids],
-                                                                          np.asarray(csv["center_class"])[
+                                                                          np.asarray(filtered_csv["center_class"])[
                                                                               train_valid_ids]))
 
         train_dataset = iSEGSegmentationFactory.create(
