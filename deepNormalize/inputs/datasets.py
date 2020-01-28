@@ -107,10 +107,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
-
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[
+            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), str(choices + 1)))]
 
         source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
         target_paths = np.array(sorted(list(filtered_csv["labels"])))
@@ -165,10 +164,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
-
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[
+            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), str(choices + 1)))]
 
         source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
         target_paths = np.array(sorted(list(filtered_csv["labels"])))
@@ -236,10 +234,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
-
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[
+            filtered_csv[str(modalities[0])].str.match(
+                "{}/{}/{}".format(source_dir, str(modalities[0]), str(choices + 1)))]
 
         source_paths = np.stack([sorted(list(filtered_csv[str(modality)])) for modality in modalities], axis=1)
         target_paths = np.array(sorted(list(filtered_csv["labels"])))
@@ -256,23 +254,23 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
                                                                           np.asarray(filtered_csv["center_class"])))
 
-        train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[train_ids],
-                                                       target_paths=np.array(natural_sort(target_paths))[train_ids],
+        train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[train_ids],
+                                                       target_paths=np.array(target_paths)[train_ids],
                                                        modalities=modalities,
                                                        dataset_id=dataset_id,
                                                        transforms=[ToNumpyArray(), ToNDTensor()],
                                                        augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
+        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[test_ids],
+                                                      target_paths=np.array(target_paths)[test_ids],
                                                       modalities=modalities,
                                                       dataset_id=dataset_id,
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
-            target_paths=np.array(natural_sort(reconstruction_target_paths)),
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
@@ -296,10 +294,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
-
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[
+            filtered_csv[str(modalities[0])].str.match(
+                "{}/{}/{}".format(source_dir, str(modalities[0]), str(choices + 1)))]
 
         source_paths = np.stack([sorted(list(filtered_csv[str(modality)])) for modality in modalities], axis=1)
         target_paths = np.array(sorted(list(filtered_csv["labels"])))
@@ -321,31 +319,31 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                                               train_valid_ids]))
 
         train_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(source_paths))[train_valid_ids][train_ids],
-            target_paths=np.array(natural_sort(target_paths))[train_valid_ids][train_ids],
+            source_paths=np.array(source_paths)[train_valid_ids][train_ids],
+            target_paths=np.array(target_paths)[train_valid_ids][train_ids],
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
         valid_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(source_paths))[train_valid_ids][valid_ids],
-            target_paths=np.array(natural_sort(target_paths))[train_valid_ids][valid_ids],
+            source_paths=np.array(source_paths)[train_valid_ids][valid_ids],
+            target_paths=np.array(target_paths)[train_valid_ids][valid_ids],
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
+        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[test_ids],
+                                                      target_paths=np.array(target_paths)[test_ids],
                                                       modalities=modalities,
                                                       dataset_id=dataset_id,
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
-            target_paths=np.array(natural_sort(reconstruction_target_paths)),
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
@@ -422,10 +420,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
+        source_dirs = np.array(sorted(all_dirs))[choices]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, source_dirs))]
 
         source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
         target_paths = np.array(sorted(list(filtered_csv["LabelsForTesting"])))
@@ -479,10 +477,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
+        source_dirs = np.array(sorted(all_dirs))[choices]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, source_dirs))]
 
         source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
         target_paths = np.array(sorted(list(filtered_csv["LabelsForTesting"])))
@@ -549,10 +547,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
+        source_dirs = np.array(sorted(all_dirs))[choices]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, source_dirs))]
 
         source_paths = np.stack([sorted(list(filtered_csv[str(modality)])) for modality in modalities], axis=1)
         target_paths = np.array(sorted(list(filtered_csv["LabelsForTesting"])))
@@ -569,23 +567,23 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
                                                                           np.asarray(filtered_csv["center_class"])))
 
-        train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[train_ids],
-                                                       target_paths=np.array(natural_sort(target_paths))[train_ids],
+        train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[train_ids],
+                                                       target_paths=np.array(target_paths)[train_ids],
                                                        modalities=modalities,
                                                        dataset_id=dataset_id,
                                                        transforms=[ToNumpyArray(), ToNDTensor()],
                                                        augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
+        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[test_ids],
+                                                      target_paths=np.array(target_paths)[test_ids],
                                                       modalities=modalities,
                                                       dataset_id=dataset_id,
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
-            target_paths=np.array(natural_sort(reconstruction_target_paths)),
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
@@ -608,10 +606,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs) - 1, replace=False)
         reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(all_dirs) + 1), choices), replace=False)
 
-        source_dirs = sorted(np.array(all_dirs)[choices])
+        source_dirs = np.array(sorted(all_dirs))[choices]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
-        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.contains("|".join(source_dirs))]
+        filtered_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, source_dirs))]
 
         source_paths = np.stack([sorted(list(filtered_csv[str(modality)])) for modality in modalities], axis=1)
         target_paths = np.array(sorted(list(filtered_csv["LabelsForTesting"])))
@@ -633,31 +631,31 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                                               train_valid_ids]))
 
         train_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(source_paths))[train_valid_ids][train_ids],
-            target_paths=np.array(natural_sort(target_paths))[train_valid_ids][train_ids],
+            source_paths=np.array(source_paths)[train_valid_ids][train_ids],
+            target_paths=np.array(target_paths)[train_valid_ids][train_ids],
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
         valid_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(source_paths))[train_valid_ids][valid_ids],
-            target_paths=np.array(natural_sort(target_paths))[train_valid_ids][valid_ids],
+            source_paths=np.array(source_paths)[train_valid_ids][valid_ids],
+            target_paths=np.array(target_paths)[train_valid_ids][valid_ids],
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
+        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(source_paths)[test_ids],
+                                                      target_paths=np.array(target_paths)[test_ids],
                                                       modalities=modalities,
                                                       dataset_id=dataset_id,
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
-            target_paths=np.array(natural_sort(reconstruction_target_paths)),
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],

@@ -203,7 +203,7 @@ class ABIDESSegmentationFactoryTest(unittest.TestCase):
 
     def test_should_create_single_modality_train_valid_test_datasets(self):
         train_dataset, valid_dataset, test_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, self.DATA_PATH, Modality.T1, 0, 0.2)
+            self.DATA_PATH, Modality.T1, 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
         assert_that(valid_dataset, instance_of(Dataset))
@@ -211,7 +211,7 @@ class ABIDESSegmentationFactoryTest(unittest.TestCase):
 
     def test_should_produce_a_single_modality_input_with_one_channel(self):
         train_dataset, valid_dataset, test_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, self.DATA_PATH, Modality.T1, 0, 0.2)
+            self.DATA_PATH, Modality.T1, 0, 0.2)
 
         sample = train_dataset[0]
 
