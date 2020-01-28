@@ -120,12 +120,12 @@ dataset:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     validation_split: 0.2
-    max_subjects: !!null
+    max_subjects: 1
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     validation_split: 0.2
-    max_subjects: !!null
+    max_subjects: 1
 #  ABIDE:
 #    path: "/home/pierre-luc-delisle/ABIDE/5.1"
 #    modalities: "T1"

@@ -39,6 +39,7 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
+from deepNormalize.events.handlers.handlers import PlotGPUMemory, PlotCustomLinePlotWithLegend
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
@@ -343,29 +344,28 @@ if __name__ == '__main__':
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": ["iSEG",
-                                                                                "MRBrainS",
-                                                                                # "ABIDE",
-                                                                                "Fake Class"]}},
+                                                                     "legend": list(map(lambda key: key,
+                                                                                        dataset_configs.keys())) + [
+                                                                                   "Fake Class"]}},
                                                     every=25), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": ["iSEG",
-                                                                                "MRBrainS",
-                                                                                # "ABIDE",
-                                                                                "Fake Class"]}},
+                                                                     "legend": list(map(lambda key: key,
+                                                                                        dataset_configs.keys())) + [
+                                                                                   "Fake Class"]}},
                                                     every=25), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "D(G(X)) | X", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Loss D(G(X)) | X",
+            .with_event_handler(PlotCustomLinePlotWithLegend(visdom_logger, "D(G(X)) | X",
+                                                             params={"title": "Loss D(G(X)) | X",
+                                                                     "xlabel": "Epoch",
+                                                                     "ylabel": "Combined Loss",
                                                                      "legend": ["Training",
                                                                                 "Validation",
-                                                                                "Test"]}},
-                                                    every=1), Event.ON_EPOCH_END) \
+                                                                                "Test"]},
+                                                             every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Jensen-Shannon Divergence", PlotType.LINE_PLOT,
-                                params={"opts": {"title": "Jensen-Shannon Divergence",
-                                                 "legend": ["Inputs", "Normalized"]}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+            PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence",
+                                         params={"legend": ["Inputs", "Normalized"]},
+                                         every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance",
                                                                      "legend": ["Test"]}},
@@ -420,8 +420,6 @@ if __name__ == '__main__':
 # .with_event_handler(
 # Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
 #            mode=MonitorMode.MIN), Event.ON_EPOCH_END)
-# .with_event_handler(
-#             PlotCustomVariables(visdom_logger, "GPU {} Memory".format(run_config.local_rank), PlotType.LINE_PLOT,
-#                                 params={"opts": {"title": "GPU {} Memory Usage".format(run_config.local_rank),
-#                                                  "legend": ["Total", "Free", "Used"]}},
-#                                 every=50), Event.ON_BATCH_END)
+# .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
+#                                   {"local_rank": run_config.local_rank}, every=50),
+#                     Event.ON_BATCH_END) \
