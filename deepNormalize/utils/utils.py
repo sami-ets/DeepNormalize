@@ -70,10 +70,12 @@ def to_html(classe_names, metric_names, metric_values):
 
 
 def to_html_per_dataset(classe_names, metric_names, metric_values, datasets):
-    arr_tuple_1 = tuple(([metric_values[0][i] for i in range(len(metric_values))]))
+    arr_tuple_1 = tuple(([metric_values[0][i] for i in range(len(metric_values)-1)]))
     interleaved = np.vstack(arr_tuple_1).reshape((-1,), order='F')
-    arr_tuple_2 = tuple(([metric_values[1][i] for i in range(len(metric_values))]))
+    arr_tuple_2 = tuple(([metric_values[1][i] for i in range(len(metric_values)-1)]))
     interleaved_2 = np.vstack(arr_tuple_2).reshape((-1,), order='F')
+    arr_tuple_3 = tuple(([metric_values[2][i] for i in range(len(metric_values)-1)]))
+    interleaved_3 = np.vstack(arr_tuple_3).reshape((-1,), order='F')
 
     class_row = "".join(["<th colspan='{}'> {} </th>".format(str(len(metric_names)),
                                                              str(class_name)) for class_name in classe_names])
@@ -82,6 +84,7 @@ def to_html_per_dataset(classe_names, metric_names, metric_values, datasets):
 
     metric_values_row = "".join(["<td> {} </td>".format(str(metric_value)) for metric_value in interleaved])
     metric_values_row_2 = "".join(["<td> {} </td>".format(str(metric_value)) for metric_value in interleaved_2])
+    metric_values_row_3 = "".join(["<td> {} </td>".format(str(metric_value)) for metric_value in interleaved_3])
 
     header = "<!DOCTYPE html> \
              <html> \
@@ -112,6 +115,7 @@ def to_html_per_dataset(classe_names, metric_names, metric_values, datasets):
            "<tr>" + "<th> </th>" + metric_row + "</tr>" + \
            "<tr>" + "<td> {} </td>".format(datasets[0]) + metric_values_row + "</tr>" + \
            "<tr>" + "<td> {} </td>".format(datasets[1]) + metric_values_row_2 + "</tr>" + \
+           "<tr>" + "<td> {} </td>".format(datasets[2]) + metric_values_row_3 + "</tr>" + \
            "</table></body></html>"
 
     return html

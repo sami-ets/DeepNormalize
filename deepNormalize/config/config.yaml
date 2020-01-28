@@ -33,10 +33,10 @@ models:
     metrics:
       Accuracy:
         type: "Accuracy"
-#    gradients:
-#      clipping_strategy: "value"
-#      params:
-#        clip_value: 25.0
+    gradients:
+      clipping_strategy: "value"
+      params:
+        clip_value: 40.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
@@ -134,9 +134,9 @@ dataset:
 #    validation_split: 0.2
 
 training:
-  batch_size: 8
+  batch_size: 16
   nb_epochs: 70
-  patience_segmentation: 0
+  patience_segmentation: 1
   data_augmentation: False
   variables:
     disc_ratio: 1.0
@@ -147,7 +147,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_test_kerosene_v0.2_2"
+  env: "deepNormalize_test_kerosene_v0.2_3"
 
 logger:
   path: "/tmp/ml/tests"

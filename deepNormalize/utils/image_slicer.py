@@ -23,7 +23,31 @@ from samitorch.inputs.transformers import ToNumpyArray
 from torchvision.transforms import Compose
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import EPSILON
+from deepNormalize.utils.constants import EPSILON, ISEG_ID, MRBRAINS_ID, ABIDE_ID
+
+
+class LabelMapper(object):
+    DEFAULT_COLOR_MAP = plt.get_cmap('jet')
+
+    def __init__(self, colormap=None):
+        self._colormap = colormap if colormap is not None else self.DEFAULT_COLOR_MAP
+
+    @staticmethod
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
+
+    def get_label_map(self, dataset_ids: torch.Tensor):
+        label_map = np.zeros((dataset_ids.size(0), 160, 160))
+
+        label_map[torch.where(dataset_ids == ISEG_ID)] = ISEG_ID + 1
+        label_map[torch.where(dataset_ids == MRBRAINS_ID)] = MRBRAINS_ID + 1
+        label_map[torch.where(dataset_ids == ABIDE_ID)] = ABIDE_ID + 1
+
+        label_map = self._normalize(label_map)
+
+        colored_label_map = self._colormap(label_map)
+
+        return np.transpose(np.uint8(colored_label_map[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
 
 
 class SegmentationSlicer(object):

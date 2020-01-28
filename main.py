@@ -23,8 +23,6 @@ import torch
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
 from kerosene.configs.parsers import YamlConfigurationParser
-from kerosene.events import MonitorMode
-from kerosene.events.handlers.checkpoints import Checkpoint
 from kerosene.events.handlers.console import PrintTrainingStatus, PrintMonitors
 from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVariables, PlotAvgGradientPerLayer
 from kerosene.loggers.visdom import PlotType, PlotFrequency
@@ -40,13 +38,13 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
 
-from deepNormalize.events.handlers.handlers import PlotCustomBarBlot
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.constants import *
+from deepNormalize.utils.image_slicer import ImageReconstructor
 
 cudnn.benchmark = True
 cudnn.enabled = True
@@ -57,6 +55,7 @@ if __name__ == '__main__':
     torch.set_num_threads(multiprocessing.cpu_count())
     torch.set_num_interop_threads(multiprocessing.cpu_count())
     args = ArgsParserFactory.create_parser(ArgsParserType.MODEL_TRAINING).parse_args()
+
     # Create configurations.
     run_config = RunConfiguration(use_amp=args.use_amp, local_rank=args.local_rank, amp_opt_level=args.amp_opt_level)
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
@@ -70,6 +69,10 @@ if __name__ == '__main__':
     valid_datasets = list()
     test_datasets = list()
     reconstruction_datasets = list()
+    normalized_reconstructors = list()
+    segmentation_reconstructors = list()
+    input_reconstructors = list()
+
     iSEG_train = None
     iSEG_CSV = None
     MRBrainS_train = None
@@ -83,6 +86,12 @@ if __name__ == '__main__':
     else:
         augmentation_strategy = None
 
+    # Initialize the model trainers
+    model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
+                                                criterion_factory=CustomCriterionFactory(run_config))
+    model_trainers = model_trainer_factory.create(model_trainer_configs)
+
+    # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
@@ -95,6 +104,12 @@ if __name__ == '__main__':
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
+        normalized_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
+                                                            [model_trainers[GENERATOR]], normalize=True))
+        segmentation_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
+                                                              [model_trainers[GENERATOR],
+                                                               model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
@@ -108,6 +123,12 @@ if __name__ == '__main__':
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
+        normalized_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
+                                                            [model_trainers[GENERATOR]], normalize=True))
+        segmentation_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
+                                                              [model_trainers[GENERATOR],
+                                                               model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("ABIDE", None) is not None:
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
@@ -122,6 +143,12 @@ if __name__ == '__main__':
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
+        normalized_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8],
+                                                            [model_trainers[GENERATOR]], normalize=True))
+        segmentation_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8],
+                                                              [model_trainers[GENERATOR],
+                                                               model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8]))
 
     # Concat datasets.
     if len(dataset_configs) > 1:
@@ -132,11 +159,6 @@ if __name__ == '__main__':
         train_dataset = train_datasets[0]
         valid_dataset = valid_datasets[0]
         test_dataset = test_datasets[0]
-
-    # Initialize the model trainers
-    model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
-                                                criterion_factory=CustomCriterionFactory(run_config))
-    model_trainers = model_trainer_factory.create(model_trainer_configs)
 
     # Create samplers
     if on_multiple_gpus(run_config.devices):
@@ -192,7 +214,8 @@ if __name__ == '__main__':
          ["Discriminator", "Generator", "Segmenter"]]
 
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       reconstruction_datasets, run_config) \
+                                       reconstruction_datasets, normalized_reconstructors, input_reconstructors,
+                                       segmentation_reconstructors, run_config, dataset_configs) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
@@ -217,6 +240,12 @@ if __name__ == '__main__':
                                 params={"nrow": 4,
                                         "opts": {"store_history": False,
                                                  "title": "Ground Truth Patches"}}, every=100),
+            Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Label Map Batch", PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Label Map Patches"}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -365,6 +394,11 @@ if __name__ == '__main__':
                                                                      "rownames": ["Background", "CSF", "GM", "WM"],
                                                                      "title": "MRBrainS Confusion Matrix"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "ABIDE Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "ABIDE Confusion Matrix"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
                                 params={"opts": {"columnnames": ["iSEG", "MRBrainS", "Generated"],
@@ -379,7 +413,8 @@ if __name__ == '__main__':
 
     else:
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       reconstruction_datasets, run_config) \
+                                       reconstruction_datasets, normalized_reconstructors, input_reconstructors,
+                                       segmentation_reconstructors, run_config, dataset_configs) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(
