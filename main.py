@@ -39,7 +39,7 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
-from deepNormalize.events.handlers.handlers import PlotGPUMemory, PlotCustomLinePlotWithLegend
+from deepNormalize.events.handlers.handlers import PlotGPUMemory, PlotCustomLinePlotWithLegend, PlotCustomLoss
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
@@ -204,10 +204,10 @@ if __name__ == '__main__':
                                          'center_class').count()[
                                                     "LabelsForTraining"] if MRBrainS_CSV is not None else 0),
                                      np.asarray(ABIDE_CSV.groupby(
-                                         'center_class').count()["labels"] if ABIDE_CSV is not None else [0, 0, 0, 0])],
+                                         'center_class').count()["labels"] if ABIDE_CSV is not None else [0, 0, 0])],
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={
                 "opts": {"title": "Center Voxel Class Count", "stacked": True,
-                         "legend": ["Background", "CSF", "GM", "WM"]}}))
+                         "legend": ["CSF", "GM", "WM"]}}))
 
         save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
         [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
@@ -248,46 +248,6 @@ if __name__ == '__main__':
                                         "opts": {"store_history": False,
                                                  "title": "Label Map Patches"}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
@@ -342,6 +302,46 @@ if __name__ == '__main__':
                                 params={"opts": {"title": "WM Input Intensity Histogram",
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth iSEG Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                     params={"opts": {"title": "Classification hit per classes",
                                                                      "legend": list(map(lambda key: key,
@@ -354,18 +354,6 @@ if __name__ == '__main__':
                                                                                         dataset_configs.keys())) + [
                                                                                    "Fake Class"]}},
                                                     every=25), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomLinePlotWithLegend(visdom_logger, "D(G(X)) | X",
-                                                             params={"title": "Loss D(G(X)) | X",
-                                                                     "xlabel": "Epoch",
-                                                                     "ylabel": "Combined Loss",
-                                                                     "legend": ["Training",
-                                                                                "Validation",
-                                                                                "Test"]},
-                                                             every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence",
-                                         params={"legend": ["Inputs", "Normalized"]},
-                                         every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                     params={"opts": {"title": "Mean Hausdorff Distance",
                                                                      "legend": ["Test"]}},
@@ -408,6 +396,13 @@ if __name__ == '__main__':
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence", every=1,
+                                         params={"title": "Jensen-Shannon Divergence on test data per Epoch",
+                                                 "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
+                                              {"local_rank": run_config.local_rank}, every=50), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
@@ -415,11 +410,11 @@ if __name__ == '__main__':
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                        reconstruction_datasets, normalized_reconstructors, input_reconstructors,
                                        segmentation_reconstructors, run_config, dataset_configs) \
+            .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
+                                              {"local_rank": run_config.local_rank}, every=50), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(
 # Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
 #            mode=MonitorMode.MIN), Event.ON_EPOCH_END)
-# .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
-#                                   {"local_rank": run_config.local_rank}, every=50),
-#                     Event.ON_BATCH_END) \
+#

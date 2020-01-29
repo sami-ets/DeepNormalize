@@ -146,7 +146,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -216,7 +216,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
@@ -276,7 +276,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality],
@@ -349,7 +349,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
 
 class MRBrainSSegmentationFactory(AbstractDatasetFactory):
@@ -460,7 +460,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int,
@@ -530,7 +530,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality],
@@ -589,7 +589,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality],
@@ -661,7 +661,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
 
 class ABIDESegmentationFactory(AbstractDatasetFactory):
@@ -769,7 +769,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
-        return train_dataset, test_dataset, csv
+        return train_dataset, test_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality,
@@ -834,4 +834,4 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                                       transforms=[ToNumpyArray(), ToNDTensor()],
                                                       augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, csv
+        return train_dataset, valid_dataset, test_dataset, filtered_csv

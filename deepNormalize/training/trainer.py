@@ -501,8 +501,8 @@ class DeepNormalizeTrainer(Trainer):
                 gen_pred_[image] = torch.nn.functional.softmax(torch.histc(gen_pred_reshaped[image].float(), bins=256),
                                                                dim=0)
 
-            self._js_div_inputs_gauge.update(js_div(inputs_))
-            self._js_div_gen_gauge.update(js_div(gen_pred_))
+            self._js_div_inputs_gauge.update(js_div(inputs_).item())
+            self._js_div_gen_gauge.update(js_div(gen_pred_).item())
 
     def _update_plots(self, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
@@ -550,12 +550,42 @@ class DeepNormalizeTrainer(Trainer):
     def on_training_begin(self):
         self._start_time = time.time()
 
+    def on_epoch_begin(self):
+        self._D_G_X_as_X_training_gauge.reset()
+        self._D_G_X_as_X_validation_gauge.reset()
+        self._D_G_X_as_X_test_gauge.reset()
+        self._class_hausdorff_distance_gauge.reset()
+        self._mean_hausdorff_distance_gauge.reset()
+        self._per_dataset_hausdorff_distance_gauge.reset()
+        self._iSEG_dice_gauge.reset()
+        self._MRBrainS_dice_gauge.reset()
+        self._ABIDE_dice_gauge.reset()
+        self._iSEG_hausdorff_gauge.reset()
+        self._MRBrainS_hausdorff_gauge.reset()
+        self._ABIDE_hausdorff_gauge.reset()
+        self._class_dice_gauge.reset()
+        self._js_div_inputs_gauge.reset()
+        self._js_div_gen_gauge.reset()
+        self._general_confusion_matrix_gauge.reset()
+        self._iSEG_confusion_matrix_gauge.reset()
+        self._MRBrainS_confusion_matrix_gauge.reset()
+        self._ABIDE_confusion_matrix_gauge.reset()
+        self._discriminator_confusion_matrix_gauge.reset()
+
     def on_training_end(self):
         self._stop_time = time.time()
 
-    # def on_batch_end(self):
-    #   self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
-    #     np.array(gpu_mem_get(self._run_config.local_rank))]
+    def on_train_batch_end(self):
+        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
+            np.array(gpu_mem_get(self._run_config.local_rank))]
+
+    def on_train_epoch_end(self):
+        if self._run_config.local_rank == 0:
+            self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_training_gauge.compute()]
+
+    def on_valid_epoch_end(self):
+        if self._run_config.local_rank == 0:
+            self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_validation_gauge.compute()]
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
@@ -582,27 +612,23 @@ class DeepNormalizeTrainer(Trainer):
 
             for i, dataset in enumerate(self._dataset_configs.keys()):
                 self.custom_variables[
-                    "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL,
-                    np.expand_dims(
-                        np.expand_dims(
-                            img_norm[
-                                i],
-                            0),
-                        0))
+                    "Reconstructed Normalized {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[i], 0), 0)), zoom=(1, 1, 3, 3),
+                    mode="reflect")
                 self.custom_variables[
-                    "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0)
+                    "Reconstructed Segmented {} Image".format(dataset)] = ndimage.zoom(
+                    self._seg_slicer.get_colored_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0),
+                    zoom=(1, 3, 3), mode="reflect")
                 self.custom_variables[
-                    "Reconstructed Ground Truth {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0)
+                    "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
+                    self._seg_slicer.get_colored_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0), zoom=(1, 3, 3),
+                    mode="reflect")
                 self.custom_variables[
-                    "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL,
-                    np.expand_dims(
-                        np.expand_dims(
-                            img_input[i], 0),
-                        0))
+                    "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
+                    mode="reflect")
 
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(
@@ -651,13 +677,13 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
                                                                            ["JS Divergence"],
                                                                            [0.0, 0.0])
-                self.custom_variables["Jensen-Shannon Divergence"] = [np.zeros((2,))]
-                self.custom_variables["Mean Hausdorff Distance"] = [np.zeros((1,))]
-                self.custom_variables["D(G(X)) | X"] = [np.array([0, 0, 0])]
+                self.custom_variables["Jensen-Shannon Divergence"] = [self._js_div_inputs_gauge.compute(),
+                                                                      self._js_div_gen_gauge.compute()]
+                self.custom_variables["Mean Hausdorff Distance"] = [
+                    self._class_hausdorff_distance_gauge.compute()]
+                self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
 
             if self._should_activate_segmentation():
-                self.custom_variables["D(G(X)) | X"] = [np.array([self._D_G_X_as_X_test_gauge.compute()])]
-
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
                                                                 ["DSC", "HD"],
                                                                 [
@@ -683,35 +709,14 @@ class DeepNormalizeTrainer(Trainer):
                     ["iSEG", "MRBrainS", "ABIDE"])
                 self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
                                                                            ["JS Divergence"],
-                                                                           [
-                                                                               self._js_div_inputs_gauge.compute().numpy() if self._js_div_inputs_gauge.has_been_updated() else
-                                                                               [0.0],
-                                                                               self._js_div_gen_gauge.compute().numpy() if self._js_div_gen_gauge.has_been_updated() else
-                                                                               [0.0]])
-                self.custom_variables["Jensen-Shannon Divergence"] = [
-                    self._js_div_inputs_gauge.compute().numpy() if self._js_div_inputs_gauge.has_been_updated() else np.array(
-                        [0.0]),
-                    self._js_div_gen_gauge.compute().numpy() if self._js_div_gen_gauge.has_been_updated() else np.array(
-                        [0.0])]
+                                                                           [self._js_div_inputs_gauge.compute(),
+                                                                            self._js_div_gen_gauge.compute()])
+                self.custom_variables["Jensen-Shannon Divergence"] = [self._js_div_inputs_gauge.compute(),
+                                                                      self._js_div_gen_gauge.compute()]
 
                 self.custom_variables["Mean Hausdorff Distance"] = [
-                    self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else
-                    np.array([0.0])]
-                self.custom_variables["D(G(X)) | X"] = [np.array(
-                    [self._D_G_X_as_X_training_gauge.compute(), self._D_G_X_as_X_validation_gauge.compute(),
-                     self._D_G_X_as_X_test_gauge.compute()])]
-
-        self._D_G_X_as_X_training_gauge.reset()
-        self._D_G_X_as_X_validation_gauge.reset()
-        self._D_G_X_as_X_test_gauge.reset()
-        self._MRBrainS_confusion_matrix_gauge.reset()
-        self._iSEG_confusion_matrix_gauge.reset()
-        self._general_confusion_matrix_gauge.reset()
-        self._discriminator_confusion_matrix_gauge.reset()
-        self._class_hausdorff_distance_gauge.reset()
-        self._class_dice_gauge.reset()
-        self._js_div_inputs_gauge.reset()
-        self._js_div_gen_gauge.reset()
+                    self._class_hausdorff_distance_gauge.compute().mean()]
+                self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
 
     @staticmethod
     def count(tensor, n_classes):
