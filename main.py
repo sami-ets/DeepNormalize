@@ -338,7 +338,27 @@ if __name__ == '__main__':
                                                  "title": "Reconstructed Segmented MRBrainS Image"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth ABIDE Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input ABIDE Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized ABIDE Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented ABIDE Image"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth MRBrainS Image"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \

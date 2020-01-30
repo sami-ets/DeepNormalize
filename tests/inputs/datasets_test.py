@@ -201,8 +201,27 @@ class ABIDESSegmentationFactoryTest(unittest.TestCase):
     def setUp(self) -> None:
         pass
 
+    def test_should_create_single_modality_train_test_datasets(self):
+        train_dataset, test_dataset, reconstruction_dataset, csv = ABIDESegmentationFactory.create_train_test(
+            self.DATA_PATH, Modality.T1, 0, 0.2, max_num_patches=20000)
+
+        assert_that(train_dataset, instance_of(Dataset))
+        assert_that(test_dataset, instance_of(Dataset))
+
+    def test_should_produce_a_single_modality_input_with_one_channel_train_test(self):
+        train_dataset, test_dataset, reconstruction_dataset, csv = ABIDESegmentationFactory.create_train_test(
+            self.DATA_PATH, Modality.T1, 0, 0.2)
+
+        sample = train_dataset[0]
+
+        assert_that(sample.x.size(), is_(torch.Size([1, 32, 32, 32])))
+        plt.imshow(sample.x[0, 16, :, :], cmap="gray")
+        plt.show()
+        plt.imshow(sample.y[0, 16, :, :], cmap="gray")
+        plt.show()
+
     def test_should_create_single_modality_train_valid_test_datasets(self):
-        train_dataset, valid_dataset, test_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
             self.DATA_PATH, Modality.T1, 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
@@ -210,7 +229,7 @@ class ABIDESSegmentationFactoryTest(unittest.TestCase):
         assert_that(test_dataset, instance_of(Dataset))
 
     def test_should_produce_a_single_modality_input_with_one_channel(self):
-        train_dataset, valid_dataset, test_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = ABIDESegmentationFactory.create_train_valid_test(
             self.DATA_PATH, Modality.T1, 0, 0.2)
 
         sample = train_dataset[0]

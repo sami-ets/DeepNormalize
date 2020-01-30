@@ -136,7 +136,7 @@ class ToCSVABIDEipeline(object):
         source_paths = sorted([item for sublist in source_paths for item in sublist])
         target_paths = sorted([item for sublist in target_paths for item in sublist])
 
-        with open(os.path.join(self._output_dir, 'output.csv'), mode='a+') as output_file:
+        with open(os.path.join(self._output_dir, 'output_2.csv'), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(["T1", "labels", "center_class"])
 
@@ -152,7 +152,8 @@ class ToCSVABIDEipeline(object):
 
                 csv_data = np.vstack((source_path, target_path, center_class))
 
-                writer.writerow([csv_data[0], csv_data[1], csv_data[2]])
+                for item in range(csv_data.shape[1]):
+                    writer.writerow([csv_data[0][item], csv_data[1][item], csv_data[2][item]])
             output_file.close()
 
 

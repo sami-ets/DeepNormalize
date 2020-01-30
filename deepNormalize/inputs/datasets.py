@@ -12,6 +12,7 @@ from samitorch.utils.files import extract_file_paths
 from sklearn.model_selection import StratifiedShuffleSplit
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms import Compose
+
 from deepNormalize.utils.utils import natural_sort
 
 
@@ -691,118 +692,130 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                          augmentation_strategy: DataAugmentationStrategy = None):
+                          max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
         else:
             return ABIDESegmentationFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                dataset_id, test_size, sites,
-                                                                               max_subjects,
+                                                                               max_subjects, max_num_patches,
                                                                                augmentation_strategy)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                                augmentation_strategy: DataAugmentationStrategy = None):
+                                max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
         else:
             return ABIDESegmentationFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                      dataset_id, test_size, sites,
-                                                                                     max_subjects,
+                                                                                     max_subjects, max_num_patches,
                                                                                      augmentation_strategy)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            sites: List[str] = None, max_subjects: int = None,
-                                           augmentation_strategy=None):
+                                           max_num_patches: int = None, augmentation_strategy=None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-
-        source_paths = list()
-        target_paths = list()
+        subject_dirs = [dir for dir in sorted(os.listdir(source_dir))]
 
         if sites is not None:
-            dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
-            csv = csv[csv["filename"].str.contains("|".join(sites))]
+            subject_dirs = ABIDESegmentationFactory.filter_subjects_by_sites(source_dir, sites)
+
+        if max_subjects is not None:
+            choices = np.random.choice(len(subject_dirs), max_subjects, replace=False)
         else:
-            dirs = [dir for dir in sorted(os.listdir(source_dir))]
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs) - 1, replace=False)
+        reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(subject_dirs)), choices),
+                                                 replace=False)
 
-        if max_subjects is not None:
-            choices = np.random.choice(len(dirs), max_subjects, replace=False)
-            dirs = np.array(dirs)[choices]
-            csv = csv[csv["filename"].str.contains("|".join(dirs))]
+        selected_dirs = np.array(subject_dirs)[choices]
+        reconstruction_dir = subject_dirs[reconstruction_choice]
 
-        for dir in sorted(dirs):
-            source_paths.append(
-                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image")))
-            target_paths.append(
-                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels")))
+        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(selected_dirs))]
 
-        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
-        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
+        if max_num_patches is not None:
+            filtered_csv = filtered_csv.sample(max_num_patches)
 
-        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+        source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
+        target_paths = np.array(sorted(list(filtered_csv["labels"])))
 
-        if max_subjects is not None:
-            choices = np.random.choice(len(source_paths), (50,), replace=False)
-            source_paths = source_paths[choices]
-            target_paths = target_paths[choices]
+        reconstruction_source_paths = np.array(extract_file_paths(
+            os.path.join(source_dir, str(reconstruction_dir), "mri", "patches", "image")))
+
+        reconstruction_target_paths = np.array(extract_file_paths(
+            os.path.join(source_dir, str(reconstruction_dir), "mri", "patches", "labels")))
 
         train_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths,
                                                                           np.asarray(filtered_csv["center_class"])))
 
-        train_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[train_ids],
-                                                       target_paths=np.array(natural_sort(target_paths))[train_ids],
+        train_dataset = ABIDESegmentationFactory.create(
+            source_paths=np.array(natural_sort(source_paths))[train_ids],
+            target_paths=np.array(natural_sort(target_paths))[train_ids],
+            modalities=modality,
+            dataset_id=dataset_id,
+            transforms=[ToNumpyArray(), ToNDTensor()],
+            augmentation_strategy=augmentation_strategy)
+
+        test_dataset = ABIDESegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
+                                                       target_paths=np.array(natural_sort(target_paths))[test_ids],
                                                        modalities=modality,
                                                        dataset_id=dataset_id,
                                                        transforms=[ToNumpyArray(), ToNDTensor()],
-                                                       augmentation_strategy=augmentation_strategy)
+                                                       augmentation_strategy=None)
+        reconstruction_dataset = ABIDESegmentationFactory.create(
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
-                                                      modalities=modality,
-                                                      dataset_id=dataset_id,
-                                                      transforms=[ToNumpyArray(), ToNDTensor()],
-                                                      augmentation_strategy=None)
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
+            modalities=modality,
+            dataset_id=dataset_id,
+            transforms=[ToNumpyArray(), ToNDTensor()],
+            augmentation_strategy=None)
 
-        return train_dataset, test_dataset, filtered_csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality,
                                                  dataset_id: int, test_size: float, sites: List[str] = None,
-                                                 max_subjects: int = None,
+                                                 max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-
-        source_paths = list()
-        target_paths = list()
+        subject_dirs = [dir for dir in sorted(os.listdir(source_dir))]
 
         if sites is not None:
-            dirs = [dir for dir in sorted(os.listdir(source_dir)) if any(substring in dir for substring in sites)]
-            csv = csv[csv["filename"].str.contains("|".join(sites))]
-        else:
-            dirs = [dir for dir in sorted(os.listdir(source_dir))]
+            subject_dirs = ABIDESegmentationFactory.filter_subjects_by_sites(source_dir, sites)
 
         if max_subjects is not None:
-            choices = np.random.choice(len(dirs), max_subjects, replace=False)
-            dirs = np.array(dirs)[choices]
-            csv = csv[csv["filename"].str.contains("|".join(dirs))]
+            choices = np.random.choice(len(subject_dirs), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs) - 1, replace=False)
+        reconstruction_choice = np.random.choice(np.setdiff1d(np.arange(1, len(subject_dirs)), choices),
+                                                 replace=False)
 
-        for dir in sorted(dirs):
-            source_paths.append(
-                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/image")))
-            target_paths.append(
-                extract_file_paths(os.path.join(source_dir, dir, "mri/patches/labels")))
+        selected_dirs = np.array(subject_dirs)[choices]
+        reconstruction_dir = subject_dirs[reconstruction_choice]
 
-        source_paths = np.array(sorted([item for sublist in source_paths for item in sublist]))
-        target_paths = np.array(sorted([item for sublist in target_paths for item in sublist]))
+        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(selected_dirs))]
 
-        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+        if max_num_patches is not None:
+            filtered_csv = filtered_csv.sample(max_num_patches)
+
+        source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
+        target_paths = np.array(sorted(list(filtered_csv["labels"])))
+
+        reconstruction_source_paths = np.array(extract_file_paths(
+            os.path.join(source_dir, str(reconstruction_dir), "mri", "patches", "image")))
+
+        reconstruction_target_paths = np.array(extract_file_paths(
+            os.path.join(source_dir, str(reconstruction_dir), "mri", "patches", "labels")))
 
         train_valid_ids, test_ids = next(
             StratifiedShuffleSplit(n_splits=1, test_size=test_size).split(source_paths, filtered_csv["center_class"]))
@@ -811,7 +824,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                                                           np.asarray(filtered_csv["center_class"])[
                                                                               train_valid_ids]))
 
-        train_dataset = iSEGSegmentationFactory.create(
+        train_dataset = ABIDESegmentationFactory.create(
             source_paths=np.array(natural_sort(source_paths))[train_valid_ids][train_ids],
             target_paths=np.array(natural_sort(target_paths))[train_valid_ids][train_ids],
             modalities=modality,
@@ -819,7 +832,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = iSEGSegmentationFactory.create(
+        valid_dataset = ABIDESegmentationFactory.create(
             source_paths=np.array(natural_sort(source_paths))[train_valid_ids][valid_ids],
             target_paths=np.array(natural_sort(target_paths))[train_valid_ids][valid_ids],
             modalities=modality,
@@ -827,11 +840,24 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        test_dataset = iSEGSegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
-                                                      target_paths=np.array(natural_sort(target_paths))[test_ids],
-                                                      modalities=modality,
-                                                      dataset_id=dataset_id,
-                                                      transforms=[ToNumpyArray(), ToNDTensor()],
-                                                      augmentation_strategy=None)
+        test_dataset = ABIDESegmentationFactory.create(source_paths=np.array(natural_sort(source_paths))[test_ids],
+                                                       target_paths=np.array(natural_sort(target_paths))[test_ids],
+                                                       modalities=modality,
+                                                       dataset_id=dataset_id,
+                                                       transforms=[ToNumpyArray(), ToNDTensor()],
+                                                       augmentation_strategy=None)
 
-        return train_dataset, valid_dataset, test_dataset, filtered_csv
+        reconstruction_dataset = ABIDESegmentationFactory.create(
+            source_paths=np.array(reconstruction_source_paths),
+            target_paths=np.array(reconstruction_target_paths),
+            modalities=modality,
+            dataset_id=dataset_id,
+            transforms=[ToNumpyArray(), ToNDTensor()],
+            augmentation_strategy=None)
+
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
+
+    @staticmethod
+    def filter_subjects_by_sites(source_dir: str, sites: List[str]):
+        return [dir for dir in sorted(os.listdir(source_dir)) if
+                any(substring in dir for substring in sites)]

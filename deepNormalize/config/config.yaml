@@ -126,12 +126,12 @@ dataset:
     modalities: "T1_1mm"
     validation_split: 0.2
     max_subjects: 1
-#  ABIDE:
-#    path: "/home/pierre-luc-delisle/ABIDE/5.1"
-#    modalities: "T1"
-#    sites: ["Stanford"]
-#    max_subjects: 10
-#    validation_split: 0.2
+  ABIDE:
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    modalities: "T1"
+    sites: ["Stanford"]
+    max_subjects: 2
+    validation_split: 0.2
 
 training:
   batch_size: 16
