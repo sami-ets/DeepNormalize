@@ -130,7 +130,7 @@ dataset:
     path: "/home/pierre-luc-delisle/ABIDE/5.1"
     modalities: "T1"
     sites: ["Stanford"]
-    max_subjects: 2
+    max_subjects: 1
     validation_split: 0.2
 
 training:
