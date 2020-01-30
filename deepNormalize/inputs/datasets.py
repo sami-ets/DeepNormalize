@@ -806,7 +806,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         filtered_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(selected_dirs))]
 
         if max_num_patches is not None:
-            filtered_csv = filtered_csv.sample(max_num_patches)
+            filtered_csv = filtered_csv.sample(n=max_num_patches)
 
         source_paths = np.array(sorted(list(filtered_csv[str(modality)])))
         target_paths = np.array(sorted(list(filtered_csv["labels"])))

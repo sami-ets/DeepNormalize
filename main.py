@@ -139,6 +139,7 @@ if __name__ == '__main__':
             sites=dataset_configs["ABIDE"].sites,
             max_subjects=dataset_configs["ABIDE"].max_subjects,
             test_size=dataset_configs["ABIDE"].validation_split,
+            max_num_patches=dataset_configs["ABIDE"].max_num_patches,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
@@ -302,6 +303,51 @@ if __name__ == '__main__':
                                 params={"opts": {"title": "WM Input Intensity Histogram",
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
+                                                    params={"opts": {"title": "Classification hit per classes",
+                                                                     "legend": list(map(lambda key: key,
+                                                                                        dataset_configs.keys())) + [
+                                                                                   "Fake Class"]}},
+                                                    every=25), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
+                                                    params={"opts": {"title": "Batch data distribution",
+                                                                     "legend": list(map(lambda key: key,
+                                                                                        dataset_configs.keys())) + [
+                                                                                   "Fake Class"]}},
+                                                    every=25), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
+                                                    params={"opts": {"title": "Mean Hausdorff Distance",
+                                                                     "legend": ["Test"]}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Metric Table"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Per-Dataset Metric Table", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Per-Dataset Metric Table"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Jensen-Shannon Table", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Jensen-Shannon Divergence"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "Confusion Matrix"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "iSEG Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "iSEG Confusion Matrix"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "MRBrainS Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "MRBrainS Confusion Matrix"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "ABIDE Confusion Matrix", PlotType.HEATMAP_PLOT,
+                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
+                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
+                                                                     "title": "ABIDE Confusion Matrix"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
@@ -362,56 +408,13 @@ if __name__ == '__main__':
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth MRBrainS Image"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Classification hit per classes",
-                                                                     "legend": list(map(lambda key: key,
-                                                                                        dataset_configs.keys())) + [
-                                                                                   "Fake Class"]}},
-                                                    every=25), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot True", PlotType.PIE_PLOT,
-                                                    params={"opts": {"title": "Batch data distribution",
-                                                                     "legend": list(map(lambda key: key,
-                                                                                        dataset_configs.keys())) + [
-                                                                                   "Fake Class"]}},
-                                                    every=25), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
-                                                    params={"opts": {"title": "Mean Hausdorff Distance",
-                                                                     "legend": ["Test"]}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Metric Table", PlotType.TEXT_PLOT,
-                                                    params={"opts": {"title": "Metric Table"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Per-Dataset Metric Table", PlotType.TEXT_PLOT,
-                                                    params={"opts": {"title": "Per-Dataset Metric Table"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Jensen-Shannon Table", PlotType.TEXT_PLOT,
-                                                    params={"opts": {"title": "Jensen-Shannon Divergence"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Confusion Matrix", PlotType.HEATMAP_PLOT,
-                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
-                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
-                                                                     "title": "Confusion Matrix"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "iSEG Confusion Matrix", PlotType.HEATMAP_PLOT,
-                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
-                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
-                                                                     "title": "iSEG Confusion Matrix"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "MRBrainS Confusion Matrix", PlotType.HEATMAP_PLOT,
-                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
-                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
-                                                                     "title": "MRBrainS Confusion Matrix"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "ABIDE Confusion Matrix", PlotType.HEATMAP_PLOT,
-                                                    params={"opts": {"columnnames": ["VM", "GM", "CSF", "Background"],
-                                                                     "rownames": ["Background", "CSF", "GM", "WM"],
-                                                                     "title": "ABIDE Confusion Matrix"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
-                                params={"opts": {"columnnames": ["iSEG", "MRBrainS", "Generated"],
-                                                 "rownames": ["Generated", "MRBrainS", "iSEG"],
-                                                 "title": "Discriminator Confusion Matrix"}},
+                                params={"opts": {
+                                    "columnnames": list(map(lambda key: key, dataset_configs.keys())) + ["Generated"],
+                                    "rownames": ["Generated"] + list(map(lambda key: key, dataset_configs.keys()))[
+                                                                ::-1],
+                                    "title": "Discriminator Confusion Matrix"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
@@ -422,7 +425,8 @@ if __name__ == '__main__':
                                          params={"title": "Jensen-Shannon Divergence on test data per Epoch",
                                                  "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
-                                              {"local_rank": run_config.local_rank}, every=50), Event.ON_TRAIN_BATCH_END) \
+                                              {"local_rank": run_config.local_rank}, every=50),
+                                Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
@@ -431,7 +435,8 @@ if __name__ == '__main__':
                                        reconstruction_datasets, normalized_reconstructors, input_reconstructors,
                                        segmentation_reconstructors, run_config, dataset_configs) \
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
-                                              {"local_rank": run_config.local_rank}, every=50), Event.ON_TRAIN_BATCH_END) \
+                                              {"local_rank": run_config.local_rank}, every=50),
+                                Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(

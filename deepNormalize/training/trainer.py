@@ -63,7 +63,7 @@ class DeepNormalizeTrainer(Trainer):
         self._normalize_reconstructors = normalize_reconstructors
         self._input_reconstructors = input_reconstructors
         self._segmentation_reconstructors = segmentation_reconstructors
-        self._number_of_datasets = len(input_reconstructors)
+        self._num_datasets = len(input_reconstructors)
         self._generator = self._model_trainers[GENERATOR]
         self._discriminator = self._model_trainers[DISCRIMINATOR]
         self._segmenter = self._model_trainers[SEGMENTER]
@@ -86,7 +86,7 @@ class DeepNormalizeTrainer(Trainer):
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
-        self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=3)
+        self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets + 1)
         self._start_time = 0
         self._stop_time = 0
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
@@ -154,7 +154,7 @@ class DeepNormalizeTrainer(Trainer):
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                                torch.Tensor().new_full(
                                                                    size=(inputs.size(0),),
-                                                                   fill_value=self._number_of_datasets,
+                                                                   fill_value=self._num_datasets,
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
@@ -181,13 +181,13 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.step()
 
         if disc_pred is not None:
-            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._number_of_datasets + 1)
+            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._num_datasets + 1)
             real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
                 size=(inputs.size(0) // 2,),
-                fill_value=self._number_of_datasets,
+                fill_value=self._num_datasets,
                 dtype=torch.long,
                 device="cpu",
-                requires_grad=False)), dim=0), self._number_of_datasets + 1)
+                requires_grad=False)), dim=0), self._num_datasets + 1)
             self.custom_variables["Pie Plot"] = count
             self.custom_variables["Pie Plot True"] = real_count
 
@@ -200,18 +200,23 @@ class DeepNormalizeTrainer(Trainer):
 
                 iseg_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ISEG_ID)]
                 iseg_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)]
-                mrbrains_gen_pred = gen_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
-                target_mrbrains = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
                 iseg_inputs = inputs[torch.where(target[DATASET_ID] == ISEG_ID)]
+                mrbrains_gen_pred = gen_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+                mrbrains_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
                 mrbrains_inputs = inputs[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+                abide_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ABIDE_ID)]
+                abide_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)]
+                abide_inputs = inputs[torch.where(target[DATASET_ID] == ABIDE_ID)]
 
                 fig1, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(nrows=4, ncols=2,
                                                                                       figsize=(15, 15))
 
                 _, bins, _ = ax1.hist(iseg_gen_pred[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax1.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 0)].cpu().detach().numpy(), bins=bins,
+                _ = ax1.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax1.hist(abide_gen_pred[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax1.set_xlabel("Intensity")
                 ax1.set_ylabel("Frequency")
                 ax1.set_title("Generated Background Histogram")
@@ -219,8 +224,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax2.hist(iseg_gen_pred[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax2.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 1)].cpu().detach().numpy(), bins=bins,
+                _ = ax2.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax2.hist(abide_gen_pred[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax2.set_xlabel("Intensity")
                 ax2.set_ylabel("Frequency")
                 ax2.set_title("Generated CSF Histogram")
@@ -228,8 +235,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax3.hist(iseg_gen_pred[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax3.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 2)].cpu().detach().numpy(), bins=bins,
+                _ = ax3.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax3.hist(abide_gen_pred[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax3.set_xlabel("Intensity")
                 ax3.set_ylabel("Frequency")
                 ax3.set_title("Generated Gray Matter Histogram")
@@ -237,8 +246,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax4.hist(iseg_gen_pred[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax4.hist(mrbrains_gen_pred[torch.where(target_mrbrains == 3)].cpu().detach().numpy(), bins=bins,
+                _ = ax4.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax4.hist(abide_gen_pred[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax4.set_xlabel("Intensity")
                 ax4.set_ylabel("Frequency")
                 ax4.set_title("Generated White Matter Histogram")
@@ -246,8 +257,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax5.hist(iseg_inputs[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax5.hist(mrbrains_inputs[torch.where(target_mrbrains == 0)].cpu().detach().numpy(), bins=bins,
+                _ = ax5.hist(mrbrains_inputs[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax5.hist(abide_inputs[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax5.set_xlabel("Intensity")
                 ax5.set_ylabel("Frequency")
                 ax5.set_title("Input Background Histogram")
@@ -255,8 +268,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax6.hist(iseg_inputs[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax6.hist(mrbrains_inputs[torch.where(target_mrbrains == 1)].cpu().detach().numpy(), bins=bins,
+                _ = ax6.hist(mrbrains_inputs[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax6.hist(abide_inputs[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax6.set_xlabel("Intensity")
                 ax6.set_ylabel("Frequency")
                 ax6.set_title("Input CSF Histogram")
@@ -264,8 +279,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax7.hist(iseg_inputs[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax7.hist(mrbrains_inputs[torch.where(target_mrbrains == 2)].cpu().detach().numpy(), bins=bins,
+                _ = ax7.hist(mrbrains_inputs[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax7.hist(abide_inputs[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax7.set_xlabel("Intensity")
                 ax7.set_ylabel("Frequency")
                 ax7.set_title("Input Gray Matter Histogram")
@@ -273,8 +290,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 _, bins, _ = ax8.hist(iseg_inputs[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
-                _ = ax8.hist(mrbrains_inputs[torch.where(target_mrbrains == 3)].cpu().detach().numpy(), bins=bins,
+                _ = ax8.hist(mrbrains_inputs[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
                              alpha=0.75, density=False, label="MRBrainS")
+                _ = ax8.hist(abide_inputs[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
+                             alpha=0.75, density=False, label="ABIDE")
                 ax8.set_xlabel("Intensity")
                 ax8.set_ylabel("Frequency")
                 ax8.set_title("Input White Matter Histogram")
@@ -338,7 +357,7 @@ class DeepNormalizeTrainer(Trainer):
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                            torch.Tensor().new_full(
                                                                size=(inputs.size(0),),
-                                                               fill_value=2,
+                                                               fill_value=self._num_datasets,
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
@@ -468,7 +487,7 @@ class DeepNormalizeTrainer(Trainer):
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
                                                            torch.Tensor().new_full(
                                                                size=(inputs.size(0),),
-                                                               fill_value=2,
+                                                               fill_value=self._num_datasets,
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
@@ -485,7 +504,8 @@ class DeepNormalizeTrainer(Trainer):
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
             self._discriminator_confusion_matrix_gauge.update((
-                to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1), num_classes=3),
+                to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
+                          num_classes=self._num_datasets + 1),
                 disc_target))
 
             inputs_reshaped = inputs.reshape(inputs.shape[0],
@@ -571,6 +591,9 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge.reset()
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
+
+        if self.epoch == self._training_config.patience_segmentation:
+            self.model_trainers[GENERATOR].optimizer_lr = 0.00001
 
     def on_training_end(self):
         self._stop_time = time.time()
@@ -751,7 +774,7 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._number_of_datasets,
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
@@ -785,7 +808,7 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._number_of_datasets,
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
         # Compute loss on fake predictions with bad class tensor.
