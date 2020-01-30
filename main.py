@@ -412,8 +412,7 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
                                 params={"opts": {
                                     "columnnames": list(map(lambda key: key, dataset_configs.keys())) + ["Generated"],
-                                    "rownames": ["Generated"] + list(map(lambda key: key, dataset_configs.keys()))[
-                                                                ::-1],
+                                    "rownames": reversed(list(map(lambda key: key, dataset_configs.keys())) + ["Generated"]),
                                     "title": "Discriminator Confusion Matrix"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
