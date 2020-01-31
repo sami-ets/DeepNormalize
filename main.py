@@ -349,73 +349,72 @@ if __name__ == '__main__':
                                                                      "title": "ABIDE Confusion Matrix"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth ABIDE Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Input ABIDE Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Normalized ABIDE Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Segmented ABIDE Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
                                 params={"opts": {
-                                    "columnnames": list(map(lambda key: key, dataset_configs.keys())) + ["Generated"],
-                                    "rownames": ["Generated"] + list(map(lambda key: key, dataset_configs.keys()))[
-                                                                ::-1],
+                                    "columnnames": list(dataset_configs.keys()) + ["Generated"],
+                                    "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
                                     "title": "Discriminator Confusion Matrix"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
+                  .with_event_handler(
+                  PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Input iSEG Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Normalized iSEG Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Segmented iSEG Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Ground Truth iSEG Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Input MRBrainS Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Normalized MRBrainS Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Segmented MRBrainS Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Ground Truth ABIDE Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                  .with_event_handler(
+                  PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Input ABIDE Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Normalized ABIDE Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                  .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Segmented ABIDE Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
+                   .with_event_handler(
+                   PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
+                                       params={"opts": {"store_history": True,
+                                                        "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                       every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \

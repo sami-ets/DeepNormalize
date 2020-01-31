@@ -681,7 +681,7 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Discriminator Confusion Matrix"] = np.array(
                     np.rot90(self._discriminator_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
-                self.custom_variables["Discriminator Confusion Matrix"] = np.zeros((3, 3))
+                self.custom_variables["Discriminator Confusion Matrix"] = np.zeros((4, 4))
 
             if self._should_activate_autoencoder():
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
