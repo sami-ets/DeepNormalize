@@ -36,7 +36,7 @@ models:
     gradients:
       clipping_strategy: "value"
       params:
-        clip_value: 40.0
+        clip_value: 25.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
@@ -82,6 +82,15 @@ models:
           ignore_index: 0
           average: !!null
           weight: !!null
+      IoU:
+        type: "IoU"
+        params:
+          num_classes: 4
+          reduction: !!null
+          ignore_index: 0
+          average: !!null
+          weight: !!null
+
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
@@ -119,25 +128,25 @@ dataset:
   iSEG:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
-    max_subjects: !!null
+    max_subjects: 1
     validation_split: 0.2
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
-    max_subjects: !!null
+    max_subjects: 1
     validation_split: 0.2
-  ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
-    modalities: "T1"
-    max_subjects: !!null
-    sites: !!null
-    max_num_patches: 10000
-    validation_split: 0.2
+#  ABIDE:
+#    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+#    modalities: "T1"
+#    max_subjects: 1
+#    sites: !!null
+#    max_num_patches: !!null
+#    validation_split: 0.2
 
 training:
   batch_size: 16
   nb_epochs: 70
-  patience_segmentation: 10
+  patience_segmentation: 1
   data_augmentation: False
   variables:
     disc_ratio: 1.0
@@ -148,7 +157,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_test_kerosene_v0.2_3"
+  env: "deepNormalize_test_kerosene_v0.2_1"
 
 logger:
   path: "/tmp/ml/tests"

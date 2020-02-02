@@ -20,7 +20,6 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import ndimage
 import pynvml
 import torch
 from fastai.utils.mem import gpu_mem_get
@@ -30,7 +29,9 @@ from kerosene.metrics.gauges import AverageGauge
 from kerosene.nn.functional import js_div
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
+from kerosene.utils.devices import on_multiple_gpus
 from kerosene.utils.tensors import flatten, to_onehot
+from scipy import ndimage
 from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader, Dataset
 
@@ -74,8 +75,11 @@ class DeepNormalizeTrainer(Trainer):
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._per_dataset_hausdorff_distance_gauge = AverageGauge()
         self._iSEG_dice_gauge = AverageGauge()
+        self._iSEG_iou_gauge = AverageGauge()
         self._MRBrainS_dice_gauge = AverageGauge()
+        self._MRBrainS_iou_gauge = AverageGauge()
         self._ABIDE_dice_gauge = AverageGauge()
+        self._ABIDE_iou_gauge = AverageGauge()
         self._iSEG_hausdorff_gauge = AverageGauge()
         self._MRBrainS_hausdorff_gauge = AverageGauge()
         self._ABIDE_hausdorff_gauge = AverageGauge()
@@ -126,6 +130,11 @@ class DeepNormalizeTrainer(Trainer):
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_train_metrics(metric)
 
             seg_loss.mean().backward()
@@ -147,7 +156,13 @@ class DeepNormalizeTrainer(Trainer):
 
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_train_metrics(metric)
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps_seg"] == 0:
@@ -180,21 +195,24 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator.step()
 
-        if disc_pred is not None:
-            count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._num_datasets + 1)
-            real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
-                size=(inputs.size(0) // 2,),
-                fill_value=self._num_datasets,
-                dtype=torch.long,
-                device="cpu",
-                requires_grad=False)), dim=0), self._num_datasets + 1)
-            self.custom_variables["Pie Plot"] = count
-            self.custom_variables["Pie Plot True"] = real_count
+        if self.current_train_step % 100 == 0:
+            if self._run_config.local_rank == 0:
+                if disc_pred is not None:
+                    count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._num_datasets + 1)
+                    real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
+                        size=(inputs.size(0) // 2,),
+                        fill_value=self._num_datasets,
+                        dtype=torch.long,
+                        device="cpu",
+                        requires_grad=False)), dim=0), self._num_datasets + 1)
+                    self.custom_variables["Pie Plot"] = count
+                    self.custom_variables["Pie Plot True"] = real_count
 
-        if self._run_config.local_rank == 0:
-            if self.current_train_step % 100 == 0:
-                self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
-                                   target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
+        if self.current_train_step % 100 == 0:
+            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
+                               target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
+
+            if self._run_config.local_rank == 0:
                 self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
                 self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
 
@@ -335,7 +353,13 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_valid_loss("DiceLoss", seg_loss.mean())
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_valid_metrics(metric)
 
         if self._should_activate_segmentation():
@@ -351,7 +375,13 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_valid_loss("DiceLoss", seg_loss.mean())
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_valid_metrics(metric)
 
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
@@ -379,7 +409,13 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_test_loss("DiceLoss", seg_loss.mean())
             metric = self._segmenter.compute_metrics(torch.nn.functional.softmax(seg_pred, dim=1),
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
+
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_test_metrics(metric)
 
         if self._should_activate_segmentation():
@@ -398,16 +434,28 @@ class DeepNormalizeTrainer(Trainer):
                                                      torch.squeeze(target[IMAGE_TARGET], dim=1).long())
 
             self._class_dice_gauge.update(np.array(metric["Dice"]))
+
             metric["Dice"] = metric["Dice"].mean()
+            metric["IoU"] = metric["IoU"].mean()
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_metric(metric)
+
             self._segmenter.update_test_metrics(metric)
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
-                self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
+                metric = self._segmenter.compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)], dim=1),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)],
-                                  dim=1).long())["Dice"].numpy()))
+                                  dim=1).long())
 
-                self._iSEG_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_metric(metric)
+
+                self._iSEG_dice_gauge.update(metric["Dice"].numpy())
+                self._iSEG_iou_gauge.update(metric["IoU"].numpy())
+
+                hausdorff = torch.tensor(self.compute_mean_hausdorff_distance(
                     to_onehot(
                         torch.argmax(
                             torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)], dim=1),
@@ -415,6 +463,11 @@ class DeepNormalizeTrainer(Trainer):
                     to_onehot(
                         torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)], dim=1).long(),
                         num_classes=4))[-3:])
+
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_tensor(hausdorff)
+
+                self._iSEG_hausdorff_gauge.update(hausdorff)
 
                 self._iSEG_confusion_matrix_gauge.update((
                     to_onehot(
@@ -429,12 +482,18 @@ class DeepNormalizeTrainer(Trainer):
                 self._iSEG_hausdorff_gauge.update(np.zeros((3,)))
 
             if seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)].shape[0] != 0:
-                self._MRBrainS_dice_gauge.update(np.array(self._segmenter.compute_metrics(
+                metric = self._segmenter.compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)], dim=1),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)],
-                                  dim=1).long())["Dice"].numpy()))
+                                  dim=1).long())
 
-                self._MRBrainS_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_metric(metric)
+
+                self._MRBrainS_dice_gauge.update(metric["Dice"].numpy())
+                self._MRBrainS_iou_gauge.update(metric["IoU"].numpy())
+
+                hausdorff = torch.tensor(self.compute_mean_hausdorff_distance(
                     to_onehot(
                         torch.argmax(
                             torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)],
@@ -444,6 +503,11 @@ class DeepNormalizeTrainer(Trainer):
                         torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)],
                                       dim=1).long(),
                         num_classes=4))[-3:])
+
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_tensor(hausdorff)
+
+                self._MRBrainS_hausdorff_gauge.update(hausdorff)
 
                 self._MRBrainS_confusion_matrix_gauge.update((
                     to_onehot(
@@ -458,19 +522,32 @@ class DeepNormalizeTrainer(Trainer):
                 self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
 
             if seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)].shape[0] != 0:
-                self._ABIDE_dice_gauge.update(np.array(self._segmenter.compute_metrics(
+                metric = self._segmenter.compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)], dim=1),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)],
-                                  dim=1).long())["Dice"].numpy()))
+                                  dim=1).long())
 
-                self._ABIDE_hausdorff_gauge.update(self.compute_mean_hausdorff_distance(
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_metric(metric)
+
+                self._ABIDE_dice_gauge.update(metric["Dice"].numpy())
+                self._ABIDE_iou_gauge.update(metric["IoU"].numpy())
+
+                hausdorff = torch.tensor(self.compute_mean_hausdorff_distance(
                     to_onehot(
                         torch.argmax(
-                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)], dim=1),
+                            torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)],
+                                                        dim=1),
                             dim=1), num_classes=4),
                     to_onehot(
-                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)], dim=1).long(),
+                        torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)],
+                                      dim=1).long(),
                         num_classes=4))[-3:])
+
+                if on_multiple_gpus(self._run_config.devices):
+                    self.average_tensor(hausdorff)
+
+                self._ABIDE_hausdorff_gauge.update(hausdorff)
 
                 self._ABIDE_confusion_matrix_gauge.update((
                     to_onehot(
@@ -493,10 +570,14 @@ class DeepNormalizeTrainer(Trainer):
                                                                requires_grad=False))
             self._D_G_X_as_X_test_gauge.update(disc_loss_as_X.item())
 
-            self._class_hausdorff_distance_gauge.update(
-                self.compute_mean_hausdorff_distance(
-                    to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1), num_classes=4),
-                    to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(), num_classes=4))[-3:])
+            hausdorff = torch.tensor(self.compute_mean_hausdorff_distance(
+                to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1), num_classes=4),
+                to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(), num_classes=4))[-3:])
+
+            if on_multiple_gpus(self._run_config.devices):
+                self.average_tensor(hausdorff)
+
+            self._class_hausdorff_distance_gauge.update(hausdorff)
 
             self._general_confusion_matrix_gauge.update((
                 to_onehot(torch.argmax(torch.nn.functional.softmax(seg_pred, dim=1), dim=1, keepdim=False),
@@ -535,13 +616,21 @@ class DeepNormalizeTrainer(Trainer):
 
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
-        self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
-        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
-        self.custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                      segmenter_predictions)
-        self.custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                                      target)
-        self.custom_variables["Label Map Batch"] = self._label_mapper.get_label_map(dataset_ids)
+        self.custom_variables["Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            SliceType.AXIAL, inputs)
+        self.custom_variables[
+            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                                       generator_predictions)
+        self.custom_variables[
+            "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            SliceType.AXIAL,
+            segmenter_predictions)
+        self.custom_variables["Segmentation Ground Truth Batch Process {}".format(
+            self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                                               target)
+        self.custom_variables[
+            "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
+            dataset_ids)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
@@ -549,13 +638,6 @@ class DeepNormalizeTrainer(Trainer):
         if self._should_activate_segmentation():
             self._discriminator.scheduler_step()
             self._segmenter.scheduler_step()
-
-    @staticmethod
-    def average_gradients(model):
-        size = int(torch.distributed.get_world_size())
-        for param in model.parameters():
-            torch.distributed.all_reduce(param.grad.data, op=torch.distributed.ReduceOp.SUM)
-            param.grad.data /= size
 
     @staticmethod
     def merge_tensors(tensor_0, tensor_1):
@@ -595,9 +677,6 @@ class DeepNormalizeTrainer(Trainer):
         if self.epoch == self._training_config.patience_segmentation:
             self.model_trainers[GENERATOR].optimizer_lr = 0.00001
 
-    def on_training_end(self):
-        self._stop_time = time.time()
-
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
             np.array(gpu_mem_get(self._run_config.local_rank))]
@@ -611,47 +690,51 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_validation_gauge.compute()]
 
     def on_test_epoch_end(self):
+        print("Rank {} entering on_test_epoch_end".format(self._run_config.local_rank))
         if self._run_config.local_rank == 0:
+            if self.epoch % 3 == 0:
+
+                all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
+                                       self._reconstruction_datasets))
+
+                ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
+                                                self._reconstruction_datasets))
+
+                img_input = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._input_reconstructors))
+                img_gt = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
+                        ground_truth_patches, self._input_reconstructors))
+                img_norm = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._normalize_reconstructors))
+                img_seg = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._segmentation_reconstructors))
+
+                for i, dataset in enumerate(self._dataset_configs.keys()):
+                    self.custom_variables[
+                        "Reconstructed Normalized {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[i], 0), 0)), zoom=(1, 1, 3, 3),
+                        mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Segmented {} Image".format(dataset)] = ndimage.zoom(
+                        self._seg_slicer.get_colored_slice(
+                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0),
+                        zoom=(1, 3, 3), mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
+                        self._seg_slicer.get_colored_slice(
+                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0),
+                        zoom=(1, 3, 3),
+                        mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
+                        mode="reflect")
+
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
-
-            all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                                   self._reconstruction_datasets))
-
-            ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
-                                            self._reconstruction_datasets))
-
-            img_input = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._input_reconstructors))
-            img_gt = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                    ground_truth_patches, self._input_reconstructors))
-            img_norm = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._normalize_reconstructors))
-            img_seg = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._segmentation_reconstructors))
-
-            for i, dataset in enumerate(self._dataset_configs.keys()):
-                self.custom_variables[
-                    "Reconstructed Normalized {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[i], 0), 0)), zoom=(1, 1, 3, 3),
-                    mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Segmented {} Image".format(dataset)] = ndimage.zoom(
-                    self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0),
-                    zoom=(1, 3, 3), mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
-                    self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0), zoom=(1, 3, 3),
-                    mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
-                    mode="reflect")
 
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(
@@ -748,6 +831,26 @@ class DeepNormalizeTrainer(Trainer):
             count[i] = torch.sum(tensor == i).int()
         return count
 
+    @staticmethod
+    def average_tensor(tensor):
+        size = float(torch.distributed.get_world_size())
+        torch.distributed.all_reduce(tensor)
+        tensor /= size
+
+    def average_metric(self, metric):
+        size = float(torch.distributed.get_world_size())
+
+        if not isinstance(metric, torch.Tensor):
+            for metric_name, metric_value in metric.items():
+                metric[metric_name] = torch.tensor(np.array(metric_value))
+
+        for metric_name, metric_value in metric.items():
+            metric[metric_name] = metric_value.mean().to("cuda:{}".format(self._run_config.local_rank))
+
+        for metric_name, metric_value in metric.items():
+            torch.distributed.all_reduce(metric_value)
+            metric_value /= size
+
     def evaluate_loss_D_G_X_as_X(self, inputs, target):
         pred_D_G_X = self._discriminator.forward(inputs)
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
@@ -789,6 +892,10 @@ class DeepNormalizeTrainer(Trainer):
         target = self.merge_tensors(target, y_bad)
 
         metric = self._discriminator.compute_metrics(pred, target)
+
+        if on_multiple_gpus(self._run_config.devices):
+            self.average_metric(metric)
+
         self._discriminator.update_train_metrics(metric)
 
         return disc_loss, pred
@@ -822,6 +929,10 @@ class DeepNormalizeTrainer(Trainer):
         target = self.merge_tensors(target, y_bad)
 
         metric = self._discriminator.compute_metrics(pred, target)
+
+        if on_multiple_gpus(self._run_config.devices):
+            self.average_metric(metric)
+
         if test:
             self._discriminator.update_test_loss("NLLLoss", disc_loss)
             self._discriminator.update_test_metrics(metric)
