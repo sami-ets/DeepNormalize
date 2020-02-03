@@ -193,10 +193,12 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Pie Plot"] = count
             self.custom_variables["Pie Plot True"] = real_count
 
+        if self.current_train_step % 100 == 0:
+            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
+                               target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
+
         if self._run_config.local_rank == 0:
             if self.current_train_step % 100 == 0:
-                self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
-                                   target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
                 self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
                 self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
 
@@ -541,13 +543,21 @@ class DeepNormalizeTrainer(Trainer):
 
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
-        self.custom_variables["Input Batch"] = self._slicer.get_slice(SliceType.AXIAL, inputs)
-        self.custom_variables["Generated Batch"] = self._slicer.get_slice(SliceType.AXIAL, generator_predictions)
-        self.custom_variables["Segmented Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                      segmenter_predictions)
-        self.custom_variables["Segmentation Ground Truth Batch"] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                                                      target)
-        self.custom_variables["Label Map Batch"] = self._label_mapper.get_label_map(dataset_ids)
+        self.custom_variables["Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            SliceType.AXIAL, inputs)
+        self.custom_variables[
+            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(SliceType.AXIAL,
+                                                                                                       generator_predictions)
+        self.custom_variables[
+            "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            SliceType.AXIAL,
+            segmenter_predictions)
+        self.custom_variables["Segmentation Ground Truth Batch Process {}".format(
+            self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
+                                                                               target)
+        self.custom_variables[
+            "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
+            dataset_ids)
 
     def scheduler_step(self):
         self._generator.scheduler_step()
@@ -601,9 +611,6 @@ class DeepNormalizeTrainer(Trainer):
         if self.epoch == self._training_config.patience_segmentation:
             self.model_trainers[GENERATOR].optimizer_lr = 0.00001
 
-    def on_training_end(self):
-        self._stop_time = time.time()
-
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
             np.array(gpu_mem_get(self._run_config.local_rank))]
@@ -618,46 +625,47 @@ class DeepNormalizeTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
+            if self.epoch % 5 == 0:
+                all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
+                                       self._reconstruction_datasets))
+
+                ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
+                                                self._reconstruction_datasets))
+
+                img_input = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._input_reconstructors))
+                img_gt = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
+                        ground_truth_patches, self._input_reconstructors))
+                img_norm = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._normalize_reconstructors))
+                img_seg = list(
+                    map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+                        self._segmentation_reconstructors))
+
+                for i, dataset in enumerate(self._dataset_configs.keys()):
+                    self.custom_variables[
+                        "Reconstructed Normalized {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[i], 0), 0)), zoom=(1, 1, 3, 3),
+                        mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Segmented {} Image".format(dataset)] = ndimage.zoom(
+                        self._seg_slicer.get_colored_slice(
+                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0),
+                        zoom=(1, 3, 3), mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
+                        self._seg_slicer.get_colored_slice(
+                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0), zoom=(1, 3, 3),
+                        mode="reflect")
+                    self.custom_variables[
+                        "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
+                        mode="reflect")
+
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
-
-            all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                                   self._reconstruction_datasets))
-
-            ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
-                                            self._reconstruction_datasets))
-
-            img_input = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._input_reconstructors))
-            img_gt = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                    ground_truth_patches, self._input_reconstructors))
-            img_norm = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._normalize_reconstructors))
-            img_seg = list(
-                map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
-                    self._segmentation_reconstructors))
-
-            for i, dataset in enumerate(self._dataset_configs.keys()):
-                self.custom_variables[
-                    "Reconstructed Normalized {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[i], 0), 0)), zoom=(1, 1, 3, 3),
-                    mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Segmented {} Image".format(dataset)] = ndimage.zoom(
-                    self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0),
-                    zoom=(1, 3, 3), mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
-                    self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0), zoom=(1, 3, 3),
-                    mode="reflect")
-                self.custom_variables[
-                    "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
-                    mode="reflect")
 
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(

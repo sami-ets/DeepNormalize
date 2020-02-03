@@ -222,32 +222,45 @@ if __name__ == '__main__':
             .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
             .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Generated Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4,
-                                                            "opts": {"store_history": False,
-                                                                     "title": "Generated Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Input Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4,
-                                                            "opts": {"store_history": False,
-                                                                     "title": "Input Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Segmented Batch", PlotType.IMAGES_PLOT,
-                                                    params={"nrow": 4,
-                                                            "opts": {"store_history": False,
-                                                                     "title": "Segmented Patches"}},
-                                                    every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Segmentation Ground Truth Batch", PlotType.IMAGES_PLOT,
+            PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
                                         "opts": {"store_history": False,
-                                                 "title": "Ground Truth Patches"}}, every=100),
+                                                 "title": "Generated Patches Process {}".format(
+                                                     run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Input Patches Process {}".format(run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Segmented Patches Process {}".format(
+                                                     run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger,
+                                "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Ground Truth Patches Process {}".format(
+                                                     run_config.local_rank)}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Label Map Batch", PlotType.IMAGES_PLOT,
+            PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
                                         "opts": {"store_history": False,
-                                                 "title": "Label Map Patches"}}, every=100),
+                                                 "title": "Label Map Patches Process {}".format(
+                                                     run_config.local_rank)}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
@@ -359,37 +372,57 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Normalized iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth iSEG Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Normalized MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented MRBrainS Image"}},
-                                every=1), Event.ON_TEST_EPOCH_END) \
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Input ABIDE Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Normalized ABIDE Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Segmented ABIDE Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
@@ -411,29 +444,49 @@ if __name__ == '__main__':
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
                                               {"local_rank": run_config.local_rank}, every=50),
                                 Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Generated Patches Process {}".format(
+                                                     run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Input Patches Process {}".format(run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Segmented Patches Process {}".format(
+                                                     run_config.local_rank)}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger,
+                                "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Ground Truth Patches Process {}".format(
+                                                     run_config.local_rank)}}, every=100),
+            Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                                PlotType.IMAGES_PLOT,
+                                params={"nrow": 4,
+                                        "opts": {"store_history": False,
+                                                 "title": "Label Map Patches Process {}".format(
+                                                     run_config.local_rank)}}, every=100),
+            Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
 # .with_event_handler(
 # Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
 #            mode=MonitorMode.MIN), Event.ON_EPOCH_END)
 #
-#                   .with_event_handler(
-#                   PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
-#                                        params={"opts": {"store_history": True,
-#                                                         "title": "Reconstructed Input ABIDE Image"}},
-#                                        every=1), Event.ON_TEST_EPOCH_END) \
-#                    .with_event_handler(
-#                    PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
-#                                        params={"opts": {"store_history": True,
-#                                                         "title": "Reconstructed Normalized ABIDE Image"}},
-#                                        every=1), Event.ON_TEST_EPOCH_END)
-# .with_event_handler(
-#                    PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
-#                                        params={"opts": {"store_history": True,
-#                                                         "title": "Reconstructed Ground Truth MRBrainS Image"}},
-#                                        every=1), Event.ON_TEST_EPOCH_END)
-#  .with_event_handler(
-#             PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
-#                                 params={"opts": {"store_history": True,
-#                                                  "title": "Reconstructed Segmented ABIDE Image"}},
-#                                 every=1), Event.ON_TEST_EPOCH_END) \
