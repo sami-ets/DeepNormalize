@@ -23,6 +23,7 @@ import numpy as np
 from scipy import ndimage
 import pynvml
 import torch
+import cv2
 from fastai.utils.mem import gpu_mem_get
 from ignite.metrics.confusion_matrix import ConfusionMatrix
 from kerosene.configs.configs import RunConfiguration
@@ -87,8 +88,7 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets + 1)
-        self._start_time = 0
-        self._stop_time = 0
+        self._start_time = time.time()
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
                                                       sum(p.numel() for p in self._discriminator.parameters())))
@@ -213,7 +213,7 @@ class DeepNormalizeTrainer(Trainer):
                 abide_inputs = inputs[torch.where(target[DATASET_ID] == ABIDE_ID)]
 
                 fig1, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(nrows=4, ncols=2,
-                                                                                      figsize=(15, 15))
+                                                                                      figsize=(12, 10))
 
                 _, bins, _ = ax1.hist(iseg_gen_pred[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
                                       density=False, label="iSEG")
@@ -303,8 +303,11 @@ class DeepNormalizeTrainer(Trainer):
                 ax8.set_title("Input White Matter Histogram")
                 ax8.legend()
                 fig1.tight_layout()
+                fig1.savefig("/tmp/histograms.png")
 
-                self.custom_variables["Per-Dataset Histograms"] = fig1
+                fig1.clf()
+                plt.close(fig1)
+                self.custom_variables["Per-Dataset Histograms"] = cv2.imread("/tmp/histograms.png").transpose((2, 0 , 1))
 
                 self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
                     torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
@@ -583,9 +586,6 @@ class DeepNormalizeTrainer(Trainer):
     def _should_activate_segmentation(self):
         return self._current_epoch >= self._patience_segmentation
 
-    def on_training_begin(self):
-        self._start_time = time.time()
-
     def on_epoch_begin(self):
         self._D_G_X_as_X_training_gauge.reset()
         self._D_G_X_as_X_validation_gauge.reset()
@@ -608,8 +608,8 @@ class DeepNormalizeTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
 
-        if self.epoch == self._training_config.patience_segmentation:
-            self.model_trainers[GENERATOR].optimizer_lr = 0.00001
+        # if self.epoch == self._training_config.patience_segmentation:
+        #     self.model_trainers[GENERATOR].optimizer_lr = 0.0001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
@@ -658,12 +658,19 @@ class DeepNormalizeTrainer(Trainer):
                     self.custom_variables[
                         "Reconstructed Ground Truth {} Image".format(dataset)] = ndimage.zoom(
                         self._seg_slicer.get_colored_slice(
-                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0), zoom=(1, 3, 3),
+                            SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0),
+                        zoom=(1, 3, 3),
                         mode="reflect")
                     self.custom_variables[
                         "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
                         SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
                         mode="reflect")
+
+            if "ABIDE" not in self._dataset_configs.keys():
+                self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Segmented ABIDE Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Ground Truth ABIDE Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Input ABIDE Image"] = np.zeros((224, 192))
 
             self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 

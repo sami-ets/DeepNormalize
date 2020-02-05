@@ -268,16 +268,16 @@ if __name__ == '__main__':
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.MATPLOTLIB_PLOT,
-                                params={}, every=100), Event.ON_TRAIN_BATCH_END) \
+            PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "GM Generated Intensity Histogram",
+                                params={"opts": {"title": "Background Generated Intensity Histogram",
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                params={"opts": {"title": "GM Generated Intensity Histogram",
+                                params={"opts": {"title": "CSF Generated Intensity Histogram",
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
@@ -402,6 +402,11 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented MRBrainS Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
