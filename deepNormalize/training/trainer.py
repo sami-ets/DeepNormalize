@@ -606,8 +606,8 @@ class DeepNormalizeTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
 
-        if self.epoch == self._training_config.patience_segmentation:
-            self.model_trainers[GENERATOR].optimizer_lr = 0.0001
+        # if self.epoch == self._training_config.patience_segmentation:
+        #     self.model_trainers[GENERATOR].optimizer_lr = 0.0001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
@@ -790,8 +790,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        pred_D_G_X = pred_D_G_X[choices]
+        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
+        # pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
@@ -801,8 +801,8 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = ((2 / 3) * loss_D_X +
-                     ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
+
         self._discriminator.update_train_loss("NLLLoss", disc_loss)
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
@@ -824,8 +824,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
-        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        pred_D_G_X = pred_D_G_X[choices]
+        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
+        # pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
@@ -835,8 +835,7 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = ((2 / 3) * loss_D_X +
-                     ((1 / 3) * loss_D_G_X)) * 0.5  # 1/3 because fake images represents 1/3 of total count.
+        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)

@@ -22,10 +22,11 @@ models:
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
-      type: "MultiStepLR"
-      params:
-        milestones: [40, 50, 60]
-        gamma: 0.5
+       type: "ReduceLROnPlateau"
+       params:
+         mode: "min"
+         factor: 0.1
+         patience: 30
     criterion:
       MSELoss:
         type: "MSELoss"
@@ -55,14 +56,14 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.001
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.01
     scheduler:
       type: "ReduceLROnPlateau"
       params:
         mode: "min"
-        factor: 0.01
+        factor: 0.1
         patience: 3
     criterion:
       DiceLoss:
@@ -109,9 +110,11 @@ models:
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
-      type: "MultiStepLR"
-      params:
-        milestones: [40, 50, 60]
+       type: "ReduceLROnPlateau"
+       params:
+         mode: "min"
+         factor: 0.1
+         patience: 3
     criterion:
       NLLLoss:
         type: "NLLLoss"
