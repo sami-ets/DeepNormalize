@@ -307,7 +307,7 @@ class DeepNormalizeTrainer(Trainer):
 
                 fig1.clf()
                 plt.close(fig1)
-                self.custom_variables["Per-Dataset Histograms"] = cv2.imread("/tmp/histograms.png").transpose((2, 0 , 1))
+                self.custom_variables["Per-Dataset Histograms"] = cv2.imread("/tmp/histograms.png").transpose((2, 0, 1))
 
                 self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
                     torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
@@ -564,10 +564,8 @@ class DeepNormalizeTrainer(Trainer):
 
     def scheduler_step(self):
         self._generator.scheduler_step()
-
-        if self._should_activate_segmentation():
-            self._discriminator.scheduler_step()
-            self._segmenter.scheduler_step()
+        self._discriminator.scheduler_step()
+        self._segmenter.scheduler_step()
 
     @staticmethod
     def average_gradients(model):
@@ -608,8 +606,8 @@ class DeepNormalizeTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
 
-        # if self.epoch == self._training_config.patience_segmentation:
-        #     self.model_trainers[GENERATOR].optimizer_lr = 0.0001
+        if self.epoch == self._training_config.patience_segmentation:
+            self.model_trainers[GENERATOR].optimizer_lr = 0.0001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [

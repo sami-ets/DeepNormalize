@@ -18,9 +18,9 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.00001
+        lr: 0.000005
         momentum: 0.9
-        weight_decay: 0.001
+        weight_decay: 0.1
     scheduler:
       type: "MultiStepLR"
       params:
@@ -57,7 +57,7 @@ models:
       params:
         lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.001
+        weight_decay: 0.1
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -95,7 +95,7 @@ models:
     params:
       in_channels: 1
       out_channels: 4
-      num_groups: 8
+      num_groups: !!null
       conv_groups: 1
       width_per_group: 64
       padding: !!null
@@ -107,7 +107,7 @@ models:
       params:
         lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.01
+        weight_decay: 0.1
     scheduler:
       type: "MultiStepLR"
       params:
@@ -153,7 +153,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_triple_dataset"
+  env: "deepNormalize_home_triple_dataset_3"
 
 logger:
   path: "/tmp/ml/tests"
