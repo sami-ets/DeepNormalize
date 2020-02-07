@@ -17,7 +17,7 @@
 import time
 from datetime import timedelta
 from typing import List
-
+import uuid
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage
@@ -307,11 +307,14 @@ class DeepNormalizeTrainer(Trainer):
                 ax8.set_title("Input White Matter Histogram")
                 ax8.legend()
                 fig1.tight_layout()
-                fig1.savefig("/tmp/histograms.png")
+                id = str(uuid.uuid4())
+                fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
 
                 fig1.clf()
                 plt.close(fig1)
-                self.custom_variables["Per-Dataset Histograms"] = cv2.imread("/tmp/histograms.png").transpose((2, 0, 1))
+
+                self.custom_variables["Per-Dataset Histograms"] = cv2.imread(
+                    "/tmp/histograms-{}.png".format(str(id))).transpose((2, 0, 1))
 
                 self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
                     torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
