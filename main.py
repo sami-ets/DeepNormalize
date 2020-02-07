@@ -23,6 +23,8 @@ import torch
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
 from kerosene.configs.parsers import YamlConfigurationParser
+from kerosene.events import MonitorMode
+from kerosene.events.handlers.checkpoints import Checkpoint
 from kerosene.events.handlers.console import PrintTrainingStatus, PrintMonitors
 from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVariables, PlotAvgGradientPerLayer
 from kerosene.loggers.visdom import PlotType, PlotFrequency
@@ -439,6 +441,9 @@ if __name__ == '__main__':
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
                                               {"local_rank": run_config.local_rank}, every=50),
                                 Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
+                       mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
             .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
@@ -491,7 +496,4 @@ if __name__ == '__main__':
             Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
 
-# .with_event_handler(
-# Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
-#            mode=MonitorMode.MIN), Event.ON_EPOCH_END)
 #

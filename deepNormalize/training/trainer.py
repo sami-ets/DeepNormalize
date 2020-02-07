@@ -160,10 +160,14 @@ class DeepNormalizeTrainer(Trainer):
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
-                self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.item())
 
-                total_loss = self._training_config.variables["disc_ratio"] * disc_loss_as_X + \
-                             self._training_config.variables["seg_ratio"] * seg_loss.mean()
+                total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() - \
+                             self._training_config.variables["disc_ratio"] * (
+                                     disc_loss_as_X + self._discriminator.compute_loss("NLLLoss",
+                                                                                       self._discriminator.forward(
+                                                                                           inputs),
+                                                                                       target[DATASET_ID]))
+                self._D_G_X_as_X_training_gauge.update(total_loss.item())
                 total_loss.backward()
 
                 self._segmenter.step()
@@ -370,7 +374,14 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.item())
+
+            total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() - \
+                         self._training_config.variables["disc_ratio"] * (
+                                 disc_loss_as_X + self._discriminator.compute_loss("NLLLoss",
+                                                                                   self._discriminator.forward(
+                                                                                       inputs),
+                                                                                   target[DATASET_ID]))
+            self._D_G_X_as_X_training_gauge.update(total_loss.item())
 
     def test_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
@@ -502,7 +513,14 @@ class DeepNormalizeTrainer(Trainer):
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
-            self._D_G_X_as_X_test_gauge.update(disc_loss_as_X.item())
+
+            total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() - \
+                         self._training_config.variables["disc_ratio"] * (
+                                 disc_loss_as_X + self._discriminator.compute_loss("NLLLoss",
+                                                                                   self._discriminator.forward(
+                                                                                       inputs),
+                                                                                   target[DATASET_ID]))
+            self._D_G_X_as_X_training_gauge.update(total_loss.item())
 
             self._class_hausdorff_distance_gauge.update(
                 self.compute_mean_hausdorff_distance(
@@ -606,8 +624,8 @@ class DeepNormalizeTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
 
-        # if self.epoch == self._training_config.patience_segmentation:
-        #     self.model_trainers[GENERATOR].optimizer_lr = 0.0001
+        if self.epoch == self._training_config.patience_segmentation:
+            self.model_trainers[GENERATOR].optimizer_lr = 0.00001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
@@ -770,14 +788,12 @@ class DeepNormalizeTrainer(Trainer):
 
     def evaluate_loss_D_G_X_as_X(self, inputs, target):
         pred_D_G_X = self._discriminator.forward(inputs)
-        ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
-                                       requires_grad=False)
+        # ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
+        #                                requires_grad=False)
         loss_D_G_X_as_X = self._discriminator.compute_loss("NLLLoss",
-                                                           torch.nn.functional.log_softmax(
-                                                               ones - torch.nn.functional.softmax(pred_D_G_X, dim=1),
-                                                               dim=1),
-                                                           target)
-        return loss_D_G_X_as_X
+                                                           torch.nn.functional.log_softmax(pred_D_G_X, dim=1), target)
+
+        return -1.0 * loss_D_G_X_as_X
 
     def train_discriminator(self, inputs, gen_pred, target):
         # Forward on real data.
@@ -790,8 +806,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
-        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        # pred_D_G_X = pred_D_G_X[choices]
+        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
+        pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
@@ -801,7 +817,7 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
+        disc_loss = (loss_D_X + (loss_D_G_X / 2.0)) / 2.0
 
         self._discriminator.update_train_loss("NLLLoss", disc_loss)
 
@@ -824,8 +840,8 @@ class DeepNormalizeTrainer(Trainer):
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
-        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        # pred_D_G_X = pred_D_G_X[choices]
+        choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
+        pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
@@ -835,7 +851,7 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
+        disc_loss = (loss_D_X + (loss_D_G_X / 2.0)) / 2.0
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)

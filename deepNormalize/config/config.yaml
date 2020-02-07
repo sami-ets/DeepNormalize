@@ -153,7 +153,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_triple_dataset_3"
+  env: "deepNormalize_home_triple_dataset_4"
 
 logger:
   path: "/tmp/ml/tests"
