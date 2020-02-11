@@ -777,63 +777,63 @@ if __name__ == "__main__":
     parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
 
-    # iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
-    #                           output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Preprocessed").run()
-    # MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
-    #                               output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Resampled").run()
-    #
-    # AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Preprocessed",
-    #                                 output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/SizeNormalized").run()
-    # AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Resampled",
-    #                                 output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/SizeNormalized").run()
-    #
-    # AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              FlipLR()]),
-    #               output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Aligned"
-    #               ).run()
-    # AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              Transpose((0, 2, 3, 1))]),
-    #               output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Aligned"
-    #               ).run()
-    #
-    # MRBrainSPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Aligned",
-    #                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full",
-    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
-    # iSEGPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Aligned",
-    #                                output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full",
-    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
-    #
-    # # Test data
-    #
-    # MRBrainsTestPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
-    #                                   output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Resampled").run()
-    #
-    # AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
-    #                                 output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/SizeNormalized").run()
-    # AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Resampled",
-    #                                 output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
-    #
-    # AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              FlipLR()]),
-    #               output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Aligned"
-    #               ).run()
-    # AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/SizeNormalized",
-    #               transforms=transforms.Compose([ToNumpyArray(),
-    #                                              Transpose((0, 2, 3, 1))]),
-    #               output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Aligned"
-    #               ).run()
-    #
-    # MRBrainSPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Aligned",
-    #                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Patches/Full",
-    #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
-    #                                                                                       keep_labels=False)
-    # iSEGPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Aligned",
-    #                                output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Patches/Full",
-    #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
-    #                                                                                   keep_labels=False)
+    iSEGPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Training"),
+                              output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Preprocessed").run()
+    MRBrainsPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TrainingData"),
+                                  output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Resampled").run()
+
+    AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Preprocessed",
+                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Resampled",
+                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/SizeNormalized").run()
+
+    AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 FlipLR()]),
+                  output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Aligned"
+                  ).run()
+    AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 Transpose((0, 2, 3, 1))]),
+                  output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Aligned"
+                  ).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Aligned",
+                                       output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+    iSEGPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Aligned",
+                                   output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False)
+
+    # Test data
+
+    MRBrainsTestPreProcessingPipeline(root_dir=os.path.join(args.path_mrbrains, "TestData"),
+                                      output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Resampled").run()
+
+    AnatomicalPreProcessingPipeline(root_dir=os.path.join(args.path_iseg, "Testing"),
+                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/SizeNormalized").run()
+    AnatomicalPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Resampled",
+                                    output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/SizeNormalized").run()
+
+    AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 FlipLR()]),
+                  output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Aligned"
+                  ).run()
+    AlignPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/SizeNormalized",
+                  transforms=transforms.Compose([ToNumpyArray(),
+                                                 Transpose((0, 2, 3, 1))]),
+                  output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Aligned"
+                  ).run()
+
+    MRBrainSPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Aligned",
+                                       output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TestData/Patches/Full",
+                                       patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+                                                                                          keep_labels=False)
+    iSEGPatchPreProcessingPipeline(root_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Aligned",
+                                   output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Testing/Patches/Full",
+                                   patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
+                                                                                      keep_labels=False)
 
     ABIDEPreprocessingPipeline(root_dir=args.path_abide).run()
 

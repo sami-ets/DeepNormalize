@@ -2,7 +2,7 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: !!null
+    #     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -19,28 +19,29 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.000005
+        lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.001
     scheduler:
-      type: "MultiStepLR"
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [40, 50, 60]
-        gamma: 0.5
+        mode: "min"
+        factor: 0.1
+        patience: 25
     criterion:
       MSELoss:
         type: "MSELoss"
     metrics:
       Accuracy:
         type: "Accuracy"
-#    gradients:
-#      clipping_strategy: "value"
-#      params:
-#        clip_value: 25.0
+  #    gradients:
+  #      clipping_strategy: "value"
+  #      params:
+  #        clip_value: 25.0
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: !!null
+    #     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -59,7 +60,7 @@ models:
       params:
         lr: 0.0001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -90,15 +91,25 @@ models:
           ignore_index: 0
           average: !!null
           weight: !!null
+      Accuracy:
+        type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
 
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
-    path: !!null
+    #     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Discriminator/Discriminator.tar"
     params:
       in_channels: 1
-      out_channels: 4
-      num_groups: !!null
+      out_channels: 3
+      num_groups: 8
       conv_groups: 1
       width_per_group: 64
       padding: !!null
@@ -112,9 +123,11 @@ models:
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
-      type: "MultiStepLR"
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [40, 50, 60]
+        mode: "min"
+        factor: 0.1
+        patience: 25
     criterion:
       NLLLoss:
         type: "NLLLoss"
@@ -122,25 +135,26 @@ models:
     metrics:
       Accuracy:
         type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
 
 dataset:
   iSEG:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
-    max_subjects: !!null
+    max_subjects: 1
     validation_split: 0.2
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
-    max_subjects: !!null
+    max_subjects: 1
     validation_split: 0.2
-#  ABIDE:
-#    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
-#    modalities: "T1"
-#    max_subjects: !!null
-#    sites: !!null
-#    max_num_patches: 15000
-#    validation_split: 0.2
 
 training:
   batch_size: 16
@@ -150,15 +164,14 @@ training:
   variables:
     disc_ratio: 1.0
     seg_ratio: 1.0
-    train_generator_every_n_steps: 5
+    train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "pldelisle.no-ip.info"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_triple_dataset"
+  env: "deepNormalize_home_new_disc_3"
 
 logger:
   path: "/tmp/ml/tests"
   log_after_iterations: 50
-

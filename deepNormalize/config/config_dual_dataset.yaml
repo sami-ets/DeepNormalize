@@ -2,7 +2,7 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -41,7 +41,7 @@ models:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -95,7 +95,7 @@ models:
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Discriminator/Discriminator.tar"
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Discriminator/Discriminator.tar"
     params:
       in_channels: 1
       out_channels: 3
@@ -141,7 +141,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 70
-  patience_segmentation: 0
+  patience_segmentation: 3
   data_augmentation: False
   variables:
     disc_ratio: 1.0
@@ -152,7 +152,7 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_new_disc_2"
+  env: "deepNormalize_home_new_disc_3"
 
 logger:
   path: "/tmp/ml/tests"

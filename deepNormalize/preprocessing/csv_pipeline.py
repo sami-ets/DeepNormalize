@@ -167,4 +167,4 @@ if __name__ == "__main__":
                     target_dir=os.path.join(args.path_iseg, "label")).run()
     ToCSVMRBrainSPipeline(args.path_mrbrains, output_dir=args.path_mrbrains,
                          target_dir=args.path_mrbrains).run()
-    ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()
+    # ToCSVABIDEipeline(args.path_abide, output_dir=args.path_abide).run()
