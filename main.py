@@ -202,10 +202,12 @@ if __name__ == '__main__':
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
                                  x=[np.asarray(
-                                     iSEG_CSV.groupby('center_class').count()["labels"] if iSEG_CSV is not None else 0),
+                                     iSEG_CSV.groupby('center_class').count()["labels"] if iSEG_CSV is not None else [0,
+                                                                                                                      0,
+                                                                                                                      0]),
                                      np.asarray(MRBrainS_CSV.groupby(
                                          'center_class').count()[
-                                                    "LabelsForTraining"] if MRBrainS_CSV is not None else 0),
+                                                    "LabelsForTraining"] if MRBrainS_CSV is not None else [0, 0, 0]),
                                      np.asarray(ABIDE_CSV.groupby(
                                          'center_class').count()["labels"] if ABIDE_CSV is not None else [0, 0, 0])],
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={

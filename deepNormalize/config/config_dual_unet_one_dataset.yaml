@@ -2,7 +2,7 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
+#    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -19,9 +19,9 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.00001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.0001
     scheduler:
        type: "ReduceLROnPlateau"
        params:
@@ -41,7 +41,7 @@ models:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
+#    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -60,7 +60,7 @@ models:
       params:
         lr: 0.001
         momentum: 0.9
-        weight_decay: 0.01
+        weight_decay: 0.0001
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -132,19 +132,14 @@ dataset:
     modalities: "T1"
     max_subjects: !!null
     validation_split: 0.2
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
-    modalities: "T1_1mm"
-    max_subjects: !!null
-    validation_split: 0.2
 
 training:
   batch_size: 16
   nb_epochs: 70
-  patience_segmentation: 0
+  patience_segmentation: 3
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -152,8 +147,9 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_new_disc_2"
+  env: "deepNormalize_home_dual_unet_iseg"
 
 logger:
   path: "/tmp/ml/tests"
   log_after_iterations: 50
+

@@ -145,7 +145,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 10
-  patience_segmentation: 10
+  patience_segmentation: 0
   data_augmentation: False
   variables:
     disc_ratio: 1.0
@@ -156,7 +156,7 @@ training:
 visdom:
   server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_pretraining"
+  env: "deepNormalize_test_config"
 
 logger:
   path: "/tmp/ml/tests"
