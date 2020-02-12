@@ -19,7 +19,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.000001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
@@ -52,7 +52,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
+      activation: "Leaky_ReLU"
       interpolation: True
       scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -60,13 +60,13 @@ models:
       params:
         lr: 0.001
         momentum: 0.9
-        weight_decay: 0.01
+        weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
       params:
         mode: "min"
         factor: 0.1
-        patience: 3
+        patience: 7
     criterion:
       DiceLoss:
         type: "DiceLoss"
@@ -91,6 +91,14 @@ models:
           ignore_index: 0
           average: !!null
           weight: !!null
+      Precision:
+        type: "Precision"
+        params:
+            average: True
+      Recall:
+        type: "Recall"
+        params:
+            average: True
 
   Discriminator:
     name: "ResNet3D"
@@ -99,7 +107,7 @@ models:
     params:
       in_channels: 1
       out_channels: 3
-      num_groups: 8
+      num_groups: !!null
       conv_groups: 1
       width_per_group: 64
       padding: !!null
@@ -117,7 +125,7 @@ models:
        params:
          mode: "min"
          factor: 0.1
-         patience: 3
+         patience: 30
     criterion:
       NLLLoss:
         type: "NLLLoss"
@@ -125,6 +133,14 @@ models:
     metrics:
       Accuracy:
         type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
 
 dataset:
   iSEG:
@@ -152,7 +168,7 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_new_disc_4"
+  env: "deepNormalize_home_new_disc_5"
 
 logger:
   path: "/tmp/ml/tests"
