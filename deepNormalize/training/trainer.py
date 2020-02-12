@@ -155,9 +155,9 @@ class DeepNormalizeTrainer(Trainer):
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps_seg"] == 0:
                 disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                               torch.Tensor().new_tensor(
-                                                                   data=np.random.randint(0, self._num_datasets,
-                                                                                          gen_pred.size(0)),
+                                                               torch.Tensor().new_full(
+                                                                   fill_value=self._num_datasets,
+                                                                   size=(gen_pred.size(0),),
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
@@ -372,9 +372,9 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_valid_metrics(metric)
 
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                           torch.Tensor().new_tensor(
-                                                               data=np.random.randint(0, self._num_datasets,
-                                                                                      gen_pred.size(0)),
+                                                           torch.Tensor().new_full(
+                                                               fill_value=self._num_datasets,
+                                                               size=(gen_pred.size(0),),
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
@@ -424,9 +424,9 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_test_metrics(metric)
 
             disc_loss_as_X = self.evaluate_loss_D_G_X_as_X(gen_pred,
-                                                           torch.Tensor().new_tensor(
-                                                               data=np.random.randint(0, self._num_datasets,
-                                                                                      gen_pred.size(0)),
+                                                           torch.Tensor().new_full(
+                                                               fill_value=self._num_datasets,
+                                                               size=(gen_pred.size(0),),
                                                                dtype=torch.long,
                                                                device=inputs.device,
                                                                requires_grad=False))
@@ -799,7 +799,8 @@ class DeepNormalizeTrainer(Trainer):
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
                                        requires_grad=False)
         loss_D_G_X_as_X = self._discriminator.compute_loss("NLLLoss",
-                                                           torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
+                                                           torch.log(
+                                                               ones - torch.nn.functional.softmax(pred_D_G_X, dim=1)),
                                                            target)
 
         return loss_D_G_X_as_X
