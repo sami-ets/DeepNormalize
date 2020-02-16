@@ -230,7 +230,7 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": False,
+                                        "opts": {"store_history": True,
                                                  "title": "Generated Patches Process {}".format(
                                                      run_config.local_rank)}},
                                 every=100), Event.ON_TRAIN_BATCH_END) \
@@ -238,14 +238,14 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": False,
+                                        "opts": {"store_history": True,
                                                  "title": "Input Patches Process {}".format(run_config.local_rank)}},
                                 every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": False,
+                                        "opts": {"store_history": True,
                                                  "title": "Segmented Patches Process {}".format(
                                                      run_config.local_rank)}},
                                 every=100), Event.ON_TRAIN_BATCH_END) \
@@ -254,7 +254,7 @@ if __name__ == '__main__':
                                 "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": False,
+                                        "opts": {"store_history": True,
                                                  "title": "Ground Truth Patches Process {}".format(
                                                      run_config.local_rank)}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
@@ -262,7 +262,7 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
-                                        "opts": {"store_history": False,
+                                        "opts": {"store_history": True,
                                                  "title": "Label Map Patches Process {}".format(
                                                      run_config.local_rank)}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
@@ -436,6 +436,7 @@ if __name__ == '__main__':
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
             PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence", every=1,
                                          params={"title": "Jensen-Shannon Divergence on test data per Epoch",

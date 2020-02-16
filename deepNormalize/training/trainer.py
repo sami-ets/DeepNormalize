@@ -72,6 +72,9 @@ class DeepNormalizeTrainer(Trainer):
         self._D_G_X_as_X_training_gauge = AverageGauge()
         self._D_G_X_as_X_validation_gauge = AverageGauge()
         self._D_G_X_as_X_test_gauge = AverageGauge()
+        self._total_loss_training_gauge = AverageGauge()
+        self._total_loss_validation_gauge = AverageGauge()
+        self._total_loss_test_gauge = AverageGauge()
         self._class_hausdorff_distance_gauge = AverageGauge()
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._per_dataset_hausdorff_distance_gauge = AverageGauge()
@@ -161,13 +164,11 @@ class DeepNormalizeTrainer(Trainer):
                                                                    dtype=torch.long,
                                                                    device=inputs.device,
                                                                    requires_grad=False))
-                disc_pred = self._discriminator.forward(inputs)
-                disc_loss = self._discriminator.compute_loss("NLLLoss",
-                                                             torch.nn.functional.log_softmax(disc_pred, dim=1),
-                                                             target[DATASET_ID])
+
                 total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
                              self._training_config.variables["disc_ratio"] * (disc_loss_as_X)
-                self._D_G_X_as_X_training_gauge.update(total_loss.item())
+                self._D_G_X_as_X_training_gauge.update(disc_loss_as_X.item())
+                self._total_loss_training_gauge.update(total_loss.item())
 
                 total_loss.backward()
 
@@ -381,7 +382,8 @@ class DeepNormalizeTrainer(Trainer):
 
             total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
                          self._training_config.variables["disc_ratio"] * (disc_loss_as_X)
-            self._D_G_X_as_X_validation_gauge.update(total_loss.item())
+            self._D_G_X_as_X_validation_gauge.update(disc_loss_as_X.item())
+            self._total_loss_validation_gauge.update(total_loss.item())
 
     def test_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs)
@@ -434,7 +436,8 @@ class DeepNormalizeTrainer(Trainer):
             total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
                          self._training_config.variables["disc_ratio"] * (disc_loss_as_X)
 
-            self._D_G_X_as_X_test_gauge.update(total_loss.item())
+            self._D_G_X_as_X_test_gauge.update(disc_loss_as_X.item())
+            self._total_loss_test_gauge.update(total_loss.item())
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
                 self._iSEG_dice_gauge.update(np.array(self._segmenter.compute_metrics(
@@ -604,6 +607,9 @@ class DeepNormalizeTrainer(Trainer):
         self._D_G_X_as_X_training_gauge.reset()
         self._D_G_X_as_X_validation_gauge.reset()
         self._D_G_X_as_X_test_gauge.reset()
+        self._total_loss_training_gauge.reset()
+        self._total_loss_validation_gauge.reset()
+        self._total_loss_test_gauge.reset()
         self._class_hausdorff_distance_gauge.reset()
         self._mean_hausdorff_distance_gauge.reset()
         self._per_dataset_hausdorff_distance_gauge.reset()
@@ -632,10 +638,12 @@ class DeepNormalizeTrainer(Trainer):
     def on_train_epoch_end(self):
         if self._run_config.local_rank == 0:
             self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_training_gauge.compute()]
+            self.custom_variables["Total Loss"] = [self._total_loss_training_gauge.compute()]
 
     def on_valid_epoch_end(self):
         if self._run_config.local_rank == 0:
             self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_validation_gauge.compute()]
+            self.custom_variables["Total Loss"] = [self._total_loss_validation_gauge.compute()]
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
@@ -751,6 +759,7 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Mean Hausdorff Distance"] = [
                     self._class_hausdorff_distance_gauge.compute()]
                 self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
+                self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
 
             if self._should_activate_segmentation():
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
@@ -786,6 +795,7 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Mean Hausdorff Distance"] = [
                     self._class_hausdorff_distance_gauge.compute().mean()]
                 self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
+                self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
 
     @staticmethod
     def count(tensor, n_classes):

@@ -2,7 +2,7 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: !!null
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Generator/Generator.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -19,14 +19,15 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0000005
+        lr: 0.000001
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
-      type: "MultiStepLR"
-      params:
-        milestones: [40, 50, 60]
-        gamma: 0.5
+       type: "ReduceLROnPlateau"
+       params:
+         mode: "min"
+         factor: 0.1
+         patience: 50
     criterion:
       MSELoss:
         type: "MSELoss"
@@ -40,7 +41,7 @@ models:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: !!null
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Segmenter/Segmenter.tar"
     params:
       feature_maps: 64
       in_channels: 1
@@ -51,7 +52,7 @@ models:
       pooling_type: "MaxPool3d"
       num_groups: !!null
       padding: !python/tuple [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
+      activation: "Leaky_ReLU"
       interpolation: True
       scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
@@ -59,20 +60,20 @@ models:
       params:
         lr: 0.001
         momentum: 0.9
-        weight_decay: 0.1
+        weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
       params:
         mode: "min"
         factor: 0.1
-        patience: 3
+        patience: 7
     criterion:
       DiceLoss:
         type: "DiceLoss"
         params:
           reduction: !!null
           ignore_index: -100
-          weight: !torch/tensor [0.22141935, 0.28180645, 0.23845161, 0.25832258]
+          weight: !torch/tensor [0.22, 0.28, 0.235, 0.265]
     metrics:
       Dice:
         type: "Dice"
@@ -90,11 +91,19 @@ models:
           ignore_index: 0
           average: !!null
           weight: !!null
+      Precision:
+        type: "Precision"
+        params:
+            average: True
+      Recall:
+        type: "Recall"
+        params:
+            average: True
 
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
-    path: !!null
+#     path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_pretraining_dual_dataset/Discriminator/Discriminator.tar"
     params:
       in_channels: 1
       out_channels: 4
@@ -112,9 +121,11 @@ models:
         momentum: 0.9
         weight_decay: 0.1
     scheduler:
-      type: "MultiStepLR"
-      params:
-        milestones: [40, 50, 60]
+       type: "ReduceLROnPlateau"
+       params:
+         mode: "min"
+         factor: 0.1
+         patience: 50
     criterion:
       NLLLoss:
         type: "NLLLoss"
@@ -122,6 +133,14 @@ models:
     metrics:
       Accuracy:
         type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
 
 dataset:
   iSEG:
@@ -138,27 +157,26 @@ dataset:
     path: "/home/pierre-luc-delisle/ABIDE/5.1"
     modalities: "T1"
     max_subjects: !!null
-    sites: !!null
     max_num_patches: 15000
     validation_split: 0.2
+    sites: !!null
 
 training:
   batch_size: 16
-  nb_epochs: 10
-  patience_segmentation: 0
+  nb_epochs: 80
+  patience_segmentation: 3
   data_augmentation: False
   variables:
     disc_ratio: 1.0
     seg_ratio: 1.0
-    train_generator_every_n_steps: 5
+    train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.3.9"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_test_config"
+  env: "deepNormalize_home_triple_dataset"
 
 logger:
   path: "/tmp/ml/tests"
   log_after_iterations: 50
-

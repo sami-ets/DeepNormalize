@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-from typing import Iterable
 
 from kerosene.models.models import ModelFactory
-from samitorch.models.resnet3d import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
 from samitorch.models.unet3d import UNet3D
 
 from deepNormalize.config.types import ModelType
+from deepNormalize.models.resnet3d import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
 
 
 class CustomModelFactory(ModelFactory):
