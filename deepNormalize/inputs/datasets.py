@@ -49,7 +49,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
                                source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
@@ -59,7 +59,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         else:
             samples = list(
-                map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
+                map(lambda source: Sample(x=source, y=None, is_labeled=False, dataset_id=dataset_id), source_paths))
 
             return SegmentationDataset(list(source_paths), None, samples, modalities, dataset_id, Compose(
                 [transform for transform in transforms]) if transforms is not None else None,
@@ -364,7 +364,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
                                source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
@@ -374,7 +374,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         else:
             samples = list(
-                map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
+                map(lambda source: Sample(x=source, y=None, is_labeled=False, dataset_id=dataset_id), source_paths))
 
             return SegmentationDataset(list(source_paths), None, samples, modalities, dataset_id, Compose(
                 [transform for transform in transforms]) if transforms is not None else None,
@@ -678,7 +678,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(source, target, is_labeled=True, dataset_id=dataset_id),
+            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
                                source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
@@ -688,7 +688,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         else:
             samples = list(
-                map(lambda source: Sample(source, None, is_labeled=False, dataset_id=dataset_id), source_paths))
+                map(lambda source: Sample(x=source, y=None, is_labeled=False, dataset_id=dataset_id), source_paths))
 
             return SegmentationDataset(list(source_paths), None, samples, modalities, dataset_id, Compose(
                 [transform for transform in transforms]) if transforms is not None else None,

@@ -35,7 +35,7 @@ from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
 from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField
-from samitorch.inputs.utils import sample_collate
+from samitorch.inputs.utils import sample_collate, augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
@@ -84,8 +84,8 @@ if __name__ == '__main__':
     ABIDE_CSV = None
 
     if training_config.data_augmentation:
-        augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=0.3, noise_type="rician"),
-                                                      AddBiasField(exec_probability=0.3)]))
+        augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                      AddBiasField(exec_probability=1.0)]))
     else:
         augmentation_strategy = None
 
@@ -181,7 +181,7 @@ if __name__ == '__main__':
                                                                sampler=sampler,
                                                                shuffle=False if sampler is not None else True,
                                                                num_workers=args.num_workers,
-                                                               collate_fn=sample_collate,
+                                                               collate_fn=augmented_sample_collate,
                                                                drop_last=True,
                                                                pin_memory=True),
                            [train_dataset, valid_dataset, test_dataset],

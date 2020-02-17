@@ -37,7 +37,8 @@ from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader, Dataset
 
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID
+from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
+    NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, natural_sort
@@ -103,7 +104,7 @@ class DeepNormalizeTrainer(Trainer):
         seg_pred = torch.Tensor().new_zeros(
             size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
-        gen_pred = torch.nn.functional.relu(self._generator.forward(inputs))
+        gen_pred = torch.nn.functional.relu(self._generator.forward(inputs[AUGMENTED_INPUTS]))
 
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
@@ -111,13 +112,14 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
                 self._generator.update_train_loss("MSELoss", gen_loss)
                 gen_loss.backward()
 
                 self._generator.step()
 
-            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
+                                                            target[DATASET_ID])
             disc_loss.backward()
             self._discriminator.step()
 
@@ -141,7 +143,7 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
 
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_train_loss("MSELoss", gen_loss)
 
             seg_pred = self._segmenter.forward(gen_pred)
@@ -162,7 +164,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                    fill_value=self._num_datasets,
                                                                    size=(gen_pred.size(0),),
                                                                    dtype=torch.long,
-                                                                   device=inputs.device,
+                                                                   device=inputs[NON_AUGMENTED_INPUTS].device,
                                                                    requires_grad=False))
 
                 total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
@@ -183,7 +185,8 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator.zero_grad()
 
-            disc_loss, disc_pred = self.train_discriminator(inputs, gen_pred.detach(), target[DATASET_ID])
+            disc_loss, disc_pred = self.train_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
+                                                            target[DATASET_ID])
             disc_loss.backward()
 
             self._discriminator.step()
@@ -191,7 +194,7 @@ class DeepNormalizeTrainer(Trainer):
         if disc_pred is not None:
             count = self.count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._num_datasets + 1)
             real_count = self.count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
-                size=(inputs.size(0) // 2,),
+                size=(inputs[NON_AUGMENTED_INPUTS].size(0) // 2,),
                 fill_value=self._num_datasets,
                 dtype=torch.long,
                 device="cpu",
@@ -200,23 +203,25 @@ class DeepNormalizeTrainer(Trainer):
             self.custom_variables["Pie Plot True"] = real_count
 
         if self.current_train_step % 100 == 0:
-            self._update_plots(inputs.cpu().detach(), gen_pred.cpu().detach(), seg_pred.cpu().detach(),
+            self._update_plots(inputs[AUGMENTED_INPUTS].cpu().detach(), gen_pred.cpu().detach(),
+                               seg_pred.cpu().detach(),
                                target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
 
         if self._run_config.local_rank == 0:
             if self.current_train_step % 100 == 0:
                 self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
-                self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
+                self.custom_variables["Input Intensity Histogram"] = flatten(
+                    inputs[NON_AUGMENTED_INPUTS].cpu().detach())
 
                 iseg_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ISEG_ID)]
                 iseg_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)]
-                iseg_inputs = inputs[torch.where(target[DATASET_ID] == ISEG_ID)]
+                iseg_inputs = inputs[NON_AUGMENTED_INPUTS][torch.where(target[DATASET_ID] == ISEG_ID)]
                 mrbrains_gen_pred = gen_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
                 mrbrains_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
-                mrbrains_inputs = inputs[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+                mrbrains_inputs = inputs[NON_AUGMENTED_INPUTS][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
                 abide_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ABIDE_ID)]
                 abide_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)]
-                abide_inputs = inputs[torch.where(target[DATASET_ID] == ABIDE_ID)]
+                abide_inputs = inputs[NON_AUGMENTED_INPUTS][torch.where(target[DATASET_ID] == ABIDE_ID)]
 
                 fig1, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(nrows=4, ncols=2,
                                                                                       figsize=(12, 10))
@@ -326,23 +331,24 @@ class DeepNormalizeTrainer(Trainer):
                     torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
                 self.custom_variables["WM Generated Intensity Histogram"] = gen_pred[
                     torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
-                self.custom_variables["Background Input Intensity Histogram"] = inputs[
+                self.custom_variables["Background Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
-                self.custom_variables["CSF Input Intensity Histogram"] = inputs[
+                self.custom_variables["CSF Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
-                self.custom_variables["GM Input Intensity Histogram"] = inputs[
+                self.custom_variables["GM Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
-                self.custom_variables["WM Input Intensity Histogram"] = inputs[
+                self.custom_variables["WM Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
 
     def validate_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs)
+        gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_valid_loss("MSELoss", gen_loss)
 
-            disc_loss, disc_pred, _ = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+            disc_loss, disc_pred, _ = self.validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
+                                                                  target[DATASET_ID])
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
@@ -356,10 +362,11 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_valid_metrics(metric)
 
         if self._should_activate_segmentation():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_valid_loss("MSELoss", gen_loss)
 
-            disc_loss, disc_pred, _ = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID])
+            disc_loss, disc_pred, _ = self.validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
+                                                                  target[DATASET_ID])
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
@@ -377,7 +384,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                fill_value=self._num_datasets,
                                                                size=(gen_pred.size(0),),
                                                                dtype=torch.long,
-                                                               device=inputs.device,
+                                                               device=inputs[NON_AUGMENTED_INPUTS].device,
                                                                requires_grad=False))
 
             total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
@@ -386,13 +393,14 @@ class DeepNormalizeTrainer(Trainer):
             self._total_loss_validation_gauge.update(total_loss.item())
 
     def test_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs)
+        gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_test_loss("MSELoss", gen_loss)
 
-            disc_loss, disc_pred, _ = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID], test=True)
+            disc_loss, disc_pred, _ = self.validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
+                                                                  target[DATASET_ID], test=True)
 
             seg_pred = self._segmenter.forward(gen_pred)
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
@@ -406,10 +414,11 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_test_metrics(metric)
 
         if self._should_activate_segmentation():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs)
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_test_loss("MSELoss", gen_loss)
 
-            disc_loss, disc_pred, disc_target = self.validate_discriminator(inputs, gen_pred, target[DATASET_ID],
+            disc_loss, disc_pred, disc_target = self.validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
+                                                                            target[DATASET_ID],
                                                                             test=True)
 
             seg_pred = self._segmenter.forward(gen_pred)
@@ -430,7 +439,7 @@ class DeepNormalizeTrainer(Trainer):
                                                                fill_value=self._num_datasets,
                                                                size=(gen_pred.size(0),),
                                                                dtype=torch.long,
-                                                               device=inputs.device,
+                                                               device=inputs[NON_AUGMENTED_INPUTS].device,
                                                                requires_grad=False))
 
             total_loss = self._training_config.variables["seg_ratio"] * seg_loss.mean() + \
@@ -538,8 +547,11 @@ class DeepNormalizeTrainer(Trainer):
                           num_classes=self._num_datasets + 1),
                 disc_target))
 
-            inputs_reshaped = inputs.reshape(inputs.shape[0],
-                                             inputs.shape[1] * inputs.shape[2] * inputs.shape[3] * inputs.shape[4])
+            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[AUGMENTED_INPUTS].shape[0],
+                                                               inputs[AUGMENTED_INPUTS].shape[1] *
+                                                               inputs[AUGMENTED_INPUTS].shape[2] *
+                                                               inputs[AUGMENTED_INPUTS].shape[3] *
+                                                               inputs[AUGMENTED_INPUTS].shape[4])
 
             gen_pred_reshaped = gen_pred.reshape(gen_pred.shape[0],
                                                  gen_pred.shape[1] * gen_pred.shape[2] * gen_pred.shape[3] *
@@ -684,9 +696,12 @@ class DeepNormalizeTrainer(Trainer):
                         zoom=(1, 3, 3),
                         mode="reflect")
                     self.custom_variables[
-                        "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
-                        mode="reflect")
+                        "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0))
+                    # self.custom_variables[
+                    #     "Reconstructed Input {} Image".format(dataset)] = ndimage.zoom(self._slicer.get_slice(
+                    #     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
+                    #     mode="reflect")
 
             if "ABIDE" not in self._dataset_configs.keys():
                 self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
