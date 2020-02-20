@@ -235,45 +235,6 @@ class FlipLR(object):
         return np.fliplr(input)
 
 
-# class ToNifti1Image(object):
-#     """
-#     Creates a Nifti1Image from a given Numpy ndarray.
-#
-#     The Numpy arrays are transposed to respect the standard Nifti dimensions (WxHxDxC)
-#     """
-#
-#     def __init__(self,
-#                  header: Union[nib.Nifti1Header, List[Union[nib.Nifti1Header, nib.Nifti2Header, None]]] = None,
-#                  affine: Union[List[np.ndarray], np.ndarray, None] = None) -> None:
-#         """
-#         Transformer initializer.
-#
-#         Args:
-#             header (:obj:`nibabel.Nifti1Header`): The Nifti image header.
-#         """
-#         self._header = header
-#         self._affine = affine
-#
-#     def __call__(self, input: np.ndarray) -> nib.Nifti1Image:
-#         """
-#         Convert 3D or 4D Numpy arrays to Nifti1Image.
-#
-#         Args:
-#             input: (:obj:`Numpy.ndarray`_or_:obj:`samitorch.inputs.sample.Sample`): The input image or sample to convert
-#             to a Nifti1Image.
-#
-#         Returns:
-#             :obj:`nibabel.Nifti1Image`_or_:obj:`samitorch.inputs.sample.Sample`: The transformed image or Sample.
-#         """
-#         if isinstance(input, np.ndarray):
-#             if not isinstance(input, np.ndarray) or (input.ndim not in [3, 4]):
-#                 raise TypeError("Only 3D (DxHxW) or 4D (CxDxHxW) ndarrays are supported")
-#
-#             return nib.Nifti1Image(input.transpose(3, 2, 1, 0), self._affine, self._header)
-#         else:
-#             raise NotImplementedError()
-
-
 class AlignPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
