@@ -641,7 +641,7 @@ class DeepNormalizeTrainer(Trainer):
         self._discriminator_confusion_matrix_gauge.reset()
 
         if self.epoch == self._training_config.patience_segmentation:
-            self.model_trainers[GENERATOR].optimizer_lr = 0.00001
+            self.model_trainers[GENERATOR].optimizer_lr = 0.0001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
