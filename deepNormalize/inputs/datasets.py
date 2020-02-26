@@ -49,8 +49,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
-                               source_paths, target_paths))
+            samples = list(
+                map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
+                    source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
                                        Compose(
@@ -272,7 +273,8 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
+            source_paths=np.stack((np.array(natural_sort(reconstruction_source_paths[:, 0])),
+                                   np.array(natural_sort(reconstruction_source_paths[:, 1]))), axis=1),
             target_paths=np.array(natural_sort(reconstruction_target_paths)),
             modalities=modalities,
             dataset_id=dataset_id,
@@ -346,7 +348,8 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                                       augmentation_strategy=None)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
+            source_paths=np.stack((np.array(natural_sort(reconstruction_source_paths[:, 0])),
+                                   np.array(natural_sort(reconstruction_source_paths[:, 1]))), axis=1),
             target_paths=np.array(natural_sort(reconstruction_target_paths)),
             modalities=modalities,
             dataset_id=dataset_id,
@@ -364,8 +367,9 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
-                               source_paths, target_paths))
+            samples = list(
+                map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
+                    source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
                                        Compose(
@@ -561,7 +565,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.array(sorted(list(filtered_csv["LabelsForTesting"]))))
 
         reconstruction_source_paths = np.array(list(map(lambda modality: extract_file_paths(
-            os.path.join(source_dir, str(modality), str(reconstruction_choice))), modalities)))
+            os.path.join(source_dir, str(reconstruction_choice), str(modality))), modalities)))
         reconstruction_source_paths = np.stack(reconstruction_source_paths, axis=1)
 
         reconstruction_target_paths = np.array(extract_file_paths(
@@ -587,7 +591,8 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                           augmentation_strategy=None)
 
         reconstruction_dataset = MRBrainSSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
+            source_paths=np.stack((np.array(natural_sort(reconstruction_source_paths[:, 0])),
+                                   np.array(natural_sort(reconstruction_source_paths[:, 1]))), axis=1),
             target_paths=np.array(natural_sort(reconstruction_target_paths)),
             modalities=modalities,
             dataset_id=dataset_id,
@@ -621,7 +626,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.array(sorted(list(filtered_csv["LabelsForTesting"]))))
 
         reconstruction_source_paths = np.array(list(map(lambda modality: extract_file_paths(
-            os.path.join(source_dir, str(modality), str(reconstruction_choice))), modalities)))
+            os.path.join(source_dir, str(reconstruction_choice), str(modality))), modalities)))
         reconstruction_source_paths = np.stack(reconstruction_source_paths, axis=1)
 
         reconstruction_target_paths = np.array(extract_file_paths(
@@ -660,7 +665,8 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
                                                           augmentation_strategy=None)
 
         reconstruction_dataset = MRBrainSSegmentationFactory.create(
-            source_paths=np.array(natural_sort(reconstruction_source_paths)),
+            source_paths=np.stack((np.array(natural_sort(reconstruction_source_paths[:, 0])),
+                                   np.array(natural_sort(reconstruction_source_paths[:, 1]))), axis=1),
             target_paths=np.array(natural_sort(reconstruction_target_paths)),
             modalities=modalities,
             dataset_id=dataset_id,
@@ -678,8 +684,9 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                augmentation_strategy: DataAugmentationStrategy = None):
 
         if target_paths is not None:
-            samples = list(map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
-                               source_paths, target_paths))
+            samples = list(
+                map(lambda source, target: Sample(x=source, y=target, is_labeled=True, dataset_id=dataset_id),
+                    source_paths, target_paths))
 
             return SegmentationDataset(list(source_paths), list(target_paths), samples, modalities, dataset_id,
                                        Compose(

@@ -100,7 +100,7 @@ models:
     type: "ResNet18"
     params:
       in_channels: 1
-      out_channels: 4
+      out_channels: 3
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
@@ -137,30 +137,23 @@ models:
 
 dataset:
   iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     max_subjects: !!null
     validation_split: 0.2
   MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
     validation_split: 0.2
-  ABIDE:
-    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
-    modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: 15000
-    validation_split: 0.2
-    sites: !!null
 
 training:
-  batch_size: 24
+  batch_size: 16
   nb_epochs: 125
   patience_segmentation: 3
-  data_augmentation: False
+  data_augmentation: True
   variables:
-    disc_ratio: 0.50
+    disc_ratio: 1.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -168,7 +161,7 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_phoebe_disc_ratio_0_50"
+  env: "deepNormalize_data_augmentation"
 
 logger:
   path: "/tmp/ml/tests"

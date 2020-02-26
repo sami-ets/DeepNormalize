@@ -26,7 +26,7 @@ class ArgsParserFactory(object):
     @staticmethod
     def create_parser(parser_type):
         parser = ArgumentParser(description='DeepNormalize Training')
-        parser.add_argument("--use-amp", dest="use_amp", action="store_true", default=True)
+        parser.add_argument("--use-amp", dest="use_amp", action="store_true", default=False)
         parser.add_argument("--amp-opt-level", dest="amp_opt_level", type=str, default="O1",
                             help="O0 - FP32 training, O1 - Mixed Precision (recommended), O2 - Almost FP16 Mixed Precision, O3 - FP16 Training.")
         parser.add_argument("--num-workers", dest="num_workers", default=4, type=int,

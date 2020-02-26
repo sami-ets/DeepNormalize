@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     if training_config.data_augmentation:
         augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                      AddBiasField(exec_probability=1.0)]))
+                                                      AddBiasField(exec_probability=1.0, alpha=0.001)]))
     else:
         augmentation_strategy = None
 
