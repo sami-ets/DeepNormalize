@@ -738,31 +738,31 @@ class DeepNormalizeTrainer(Trainer):
 
             if self._general_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Confusion Matrix"] = np.array(
-                    np.rot90(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                    np.fliplr(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
                 self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
 
             if self._iSEG_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["iSEG Confusion Matrix"] = np.array(
-                    np.rot90(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                    np.fliplr(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
                 self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
 
             if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
-                    np.rot90(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                    np.fliplr(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
                 self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
 
             if self._ABIDE_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["ABIDE Confusion Matrix"] = np.array(
-                    np.rot90(self._ABIDE_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                    np.fliplr(self._ABIDE_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
                 self.custom_variables["ABIDE Confusion Matrix"] = np.zeros((4, 4))
 
             if self._discriminator_confusion_matrix_gauge._num_examples != 0:
                 self.custom_variables["Discriminator Confusion Matrix"] = np.array(
-                    np.rot90(self._discriminator_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+                    np.fliplr(self._discriminator_confusion_matrix_gauge.compute().cpu().detach().numpy()))
             else:
                 self.custom_variables["Discriminator Confusion Matrix"] = np.zeros(
                     (self._num_datasets + 1, self._num_datasets + 1))
