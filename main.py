@@ -275,6 +275,9 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Background Generated Intensity Histogram",
                                                  "store_history": True,

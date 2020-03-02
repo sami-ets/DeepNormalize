@@ -703,6 +703,21 @@ class DeepNormalizeTrainer(Trainer):
                     #     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0)), zoom=(1, 1, 3, 3),
                     #     mode="reflect")
 
+                if len(img_input) == 3:
+                    self.custom_variables["Reconstructed Images Histograms"] = cv2.imread(
+                        self.construct_histrogram(img_norm[0],
+                                                  img_input[0],
+                                                  img_norm[1],
+                                                  img_input[1],
+                                                  img_norm[2],
+                                                  img_input[2])).transpose((2, 0, 1))
+                else:
+                    self.custom_variables["Reconstructed Images Histograms"] = cv2.imread(
+                        self.construct_double_histrogram(img_norm[0],
+                                                         img_input[0],
+                                                         img_norm[1],
+                                                         img_input[1])).transpose((2, 0, 1))
+
             if "ABIDE" not in self._dataset_configs.keys():
                 self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
                 self.custom_variables["Reconstructed Segmented ABIDE Image"] = np.zeros((224, 192))
@@ -813,6 +828,103 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
 
     @staticmethod
+    def construct_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, input_mrbrains, gen_pred_abide, input_abide):
+        fig1, ((ax1, ax4), (ax2, ax5), (ax3, ax6)) = plt.subplots(nrows=3, ncols=2,
+                                                                  figsize=(12, 10))
+
+        _, bins, _ = ax1.hist(gen_pred_iseg.flatten(), bins=128,
+                              density=False, label="iSEG")
+        ax1.set_xlabel("Intensity")
+        ax1.set_ylabel("Frequency")
+        ax1.set_title("Generated iSEG Histogram")
+        ax1.legend()
+
+        _ = ax2.hist(gen_pred_mrbrains.flatten(), bins=bins,
+                     density=False, label="MRBrainS")
+        ax2.set_xlabel("Intensity")
+        ax2.set_ylabel("Frequency")
+        ax2.set_title("Generated MRBrainS Histogram")
+        ax2.legend()
+
+        _ = ax3.hist(gen_pred_abide.flatten(), bins=bins,
+                     density=False, label="ABIDE")
+        ax3.set_xlabel("Intensity")
+        ax3.set_ylabel("Frequency")
+        ax3.set_title("Generated ABIDE Histogram")
+        ax3.legend()
+
+        _, bins, _ = ax4.hist(input_iseg.flatten(), bins=128,
+                              density=False, label="iSEG")
+        ax4.set_xlabel("Intensity")
+        ax4.set_ylabel("Frequency")
+        ax4.set_title("Input iSEG Histogram")
+        ax4.legend()
+        _ = ax5.hist(input_mrbrains.flatten(), bins=bins,
+                     density=False, label="MRBrainS")
+        ax5.set_xlabel("Intensity")
+        ax5.set_ylabel("Frequency")
+        ax5.set_title("Input MRBrainS Histogram")
+        ax5.legend()
+
+        _ = ax6.hist(input_abide.flatten(), bins=bins,
+                     density=False, label="ABIDE")
+        ax6.set_xlabel("Intensity")
+        ax6.set_ylabel("Frequency")
+        ax6.set_title("Input ABIDE Histogram")
+        ax6.legend()
+
+        fig1.tight_layout()
+        id = str(uuid.uuid4())
+        fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+        fig1.clf()
+        plt.close(fig1)
+
+        return "/tmp/histograms-{}.png".format(str(id))
+
+    @staticmethod
+    def construct_double_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, input_mrbrains):
+        fig1, ((ax1, ax3), (ax2, ax4)) = plt.subplots(nrows=2, ncols=2,
+                                                      figsize=(12, 10))
+
+        _, bins, _ = ax1.hist(gen_pred_iseg.flatten(), bins=128,
+                              density=False, label="iSEG")
+        ax1.set_xlabel("Intensity")
+        ax1.set_ylabel("Frequency")
+        ax1.set_title("Generated iSEG Histogram")
+        ax1.legend()
+
+        _ = ax2.hist(input_iseg.flatten(), bins=bins,
+                     density=False, label="MRBrainS")
+        ax2.set_xlabel("Intensity")
+        ax2.set_ylabel("Frequency")
+        ax2.set_title("Generated MRBrainS Histogram")
+        ax2.legend()
+
+        _, bins, _ = ax3.hist(gen_pred_mrbrains.flatten(), bins=128,
+                              density=False, label="ABIDE")
+        ax3.set_xlabel("Intensity")
+        ax3.set_ylabel("Frequency")
+        ax3.set_title("Generated ABIDE Histogram")
+        ax3.legend()
+
+        _ = ax4.hist(input_mrbrains.flatten(), bins=bins,
+                     density=False, label="iSEG")
+        ax4.set_xlabel("Intensity")
+        ax4.set_ylabel("Frequency")
+        ax4.set_title("Input iSEG Histogram")
+        ax4.legend()
+
+        fig1.tight_layout()
+        id = str(uuid.uuid4())
+        fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+        fig1.clf()
+        plt.close(fig1)
+
+        return "/tmp/histograms-{}.png".format(str(id))
+
+    @staticmethod
     def count(tensor, n_classes):
         count = torch.Tensor().new_zeros(size=(n_classes,), device="cpu")
         for i in range(n_classes):
@@ -824,8 +936,9 @@ class DeepNormalizeTrainer(Trainer):
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
                                        requires_grad=False)
         loss_D_G_X_as_X = self._discriminator.compute_loss("NLLLoss",
-                                                           torch.log(
-                                                               ones - torch.nn.functional.softmax(pred_D_G_X, dim=1)),
+                                                           torch.nn.functional.log_softmax(
+                                                               ones - torch.nn.functional.softmax(pred_D_G_X, dim=1),
+                                                               dim=1),
                                                            target)
 
         return loss_D_G_X_as_X
@@ -853,7 +966,7 @@ class DeepNormalizeTrainer(Trainer):
                                                       y_bad)
 
         disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-                    1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+                1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
 
         self._discriminator.update_train_loss("NLLLoss", disc_loss)
 
@@ -888,7 +1001,7 @@ class DeepNormalizeTrainer(Trainer):
                                                       y_bad)
 
         disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-                    1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+                1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
 
         pred = self.merge_tensors(pred_D_X, pred_D_G_X)
         target = self.merge_tensors(target, y_bad)

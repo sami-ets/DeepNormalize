@@ -539,7 +539,8 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                 root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
                 if not os.path.exists(
                         os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number))):
-                    os.makedirs(os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number)))
+                    os.makedirs(
+                        os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number)))
                 transforms_ = transforms.Compose([
                     ToNifti1Image(),
                     NiftiToDisk(
@@ -568,8 +569,9 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                 root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
                 transforms_ = transforms.Compose([
                     ToNifti1Image(),
-                    NiftiToDisk(os.path.join("/data/users/pldelisle/datasets/ABIDE/freesurfer/{}/mri".format(root_dir_number),
-                                             prefix + file_names[i]))])
+                    NiftiToDisk(
+                        os.path.join("/data/users/pldelisle/datasets/ABIDE/freesurfer/{}/mri".format(root_dir_number),
+                                     prefix + file_names[i]))])
 
                 transforms_(transformed_images[i])
 
@@ -672,34 +674,34 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--path-iseg', type=str, help='Path to the iSEG preprocessed directory.', required=True)
     parser.add_argument('--path-mrbrains', type=str, help='Path to the preprocessed directory.', required=True)
-
+    parser.add_argument('--path-abide', type=str, help='Path to the preprocessed directory.', required=True)
     args = parser.parse_args()
 
-    iSEGScalerPipeline(root_dir=args.path_iseg,
-                       output_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
-                       scaler=MinMaxScalerTransformer()).run()
-    MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
-                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
-                           scaler=MinMaxScalerTransformer()).run()
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled",
-                                       patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Scaled",
-                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-
-    iSEGScalerPipeline(root_dir=args.path_iseg,
-                       output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
-                       scaler=StandardScalerTransformer()).run()
-    MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
-                           output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
-                           scaler=StandardScalerTransformer()).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized",
-                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized",
-                                       patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGScalerPipeline(root_dir=args.path_iseg,
+    #                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
+    #                    scaler=MinMaxScalerTransformer()).run()
+    # MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
+    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
+    #                        scaler=MinMaxScalerTransformer()).run()
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Scaled",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Scaled",
+    #                                    patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Scaled",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Scaled",
+    #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    #
+    # iSEGScalerPipeline(root_dir=args.path_iseg,
+    #                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
+    #                    scaler=StandardScalerTransformer()).run()
+    # MRBrainSScalerPipeline(root_dir=args.path_mrbrains,
+    #                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+    #                        scaler=StandardScalerTransformer()).run()
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Standardized",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Standardized",
+    #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Standardized",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Standardized",
+    #                                    patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
 
     # iSEGScalerPipeline(root_dir=args.path_iseg,
     #                    output_dir="/mnt/md0/Data/Preprocessed/iSEG/Quantile",
@@ -715,9 +717,10 @@ if __name__ == "__main__":
     #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Quantile",
     #                                    patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
 
-    DualStandardScaler(root_dir_iseg="/mnt/md0/Data/Preprocessed/iSEG/Aligned",
-                       root_dir_mrbrains="/mnt/md0/Data/Preprocessed/MRBrainS/Aligned",
-                       output_dir="/mnt/md0/Data/Preprocessed/").run()
+    TripleStandardScaler(root_dir_iseg=args.path_iseg,
+                         root_dir_mrbrains=args.path_mrbrains,
+                         root_dir_abide=args.path_abide,
+                         output_dir="/data/users/pldelisle/datasets/Preprocessed/").run()
     MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Dual_Standardized",
                                        output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized",
                                        patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
