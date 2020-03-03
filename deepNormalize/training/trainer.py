@@ -124,7 +124,7 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.step()
 
             # Pretrain segmenter.
-            seg_pred = self._segmenter.forward(gen_pred.detach())
+            seg_pred = self._segmenter.forward(inputs[AUGMENTED_INPUTS])
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
@@ -832,41 +832,41 @@ class DeepNormalizeTrainer(Trainer):
         fig1, ((ax1, ax4), (ax2, ax5), (ax3, ax6)) = plt.subplots(nrows=3, ncols=2,
                                                                   figsize=(12, 10))
 
-        _, bins, _ = ax1.hist(gen_pred_iseg.flatten(), bins=128,
+        _, bins, _ = ax1.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=128,
                               density=False, label="iSEG")
         ax1.set_xlabel("Intensity")
         ax1.set_ylabel("Frequency")
         ax1.set_title("Generated iSEG Histogram")
         ax1.legend()
 
-        _ = ax2.hist(gen_pred_mrbrains.flatten(), bins=bins,
+        _ = ax2.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=bins,
                      density=False, label="MRBrainS")
         ax2.set_xlabel("Intensity")
         ax2.set_ylabel("Frequency")
         ax2.set_title("Generated MRBrainS Histogram")
         ax2.legend()
 
-        _ = ax3.hist(gen_pred_abide.flatten(), bins=bins,
+        _ = ax3.hist(gen_pred_abide[gen_pred_abide > 0].flatten(), bins=bins,
                      density=False, label="ABIDE")
         ax3.set_xlabel("Intensity")
         ax3.set_ylabel("Frequency")
         ax3.set_title("Generated ABIDE Histogram")
         ax3.legend()
 
-        _, bins, _ = ax4.hist(input_iseg.flatten(), bins=128,
+        _, bins, _ = ax4.hist(input_iseg[input_iseg > 0].flatten(), bins=128,
                               density=False, label="iSEG")
         ax4.set_xlabel("Intensity")
         ax4.set_ylabel("Frequency")
         ax4.set_title("Input iSEG Histogram")
         ax4.legend()
-        _ = ax5.hist(input_mrbrains.flatten(), bins=bins,
+        _ = ax5.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=bins,
                      density=False, label="MRBrainS")
         ax5.set_xlabel("Intensity")
         ax5.set_ylabel("Frequency")
         ax5.set_title("Input MRBrainS Histogram")
         ax5.legend()
 
-        _ = ax6.hist(input_abide.flatten(), bins=bins,
+        _ = ax6.hist(input_abide[input_abide > 0].flatten(), bins=bins,
                      density=False, label="ABIDE")
         ax6.set_xlabel("Intensity")
         ax6.set_ylabel("Frequency")
@@ -887,28 +887,28 @@ class DeepNormalizeTrainer(Trainer):
         fig1, ((ax1, ax3), (ax2, ax4)) = plt.subplots(nrows=2, ncols=2,
                                                       figsize=(12, 10))
 
-        _, bins, _ = ax1.hist(gen_pred_iseg.flatten(), bins=128,
+        _, bins, _ = ax1.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=128,
                               density=False, label="iSEG")
         ax1.set_xlabel("Intensity")
         ax1.set_ylabel("Frequency")
         ax1.set_title("Generated iSEG Histogram")
         ax1.legend()
 
-        _ = ax2.hist(input_iseg.flatten(), bins=bins,
+        _ = ax2.hist(input_iseg[input_iseg > 0].flatten(), bins=bins,
                      density=False, label="MRBrainS")
         ax2.set_xlabel("Intensity")
         ax2.set_ylabel("Frequency")
         ax2.set_title("Generated MRBrainS Histogram")
         ax2.legend()
 
-        _, bins, _ = ax3.hist(gen_pred_mrbrains.flatten(), bins=128,
+        _, bins, _ = ax3.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=128,
                               density=False, label="ABIDE")
         ax3.set_xlabel("Intensity")
         ax3.set_ylabel("Frequency")
         ax3.set_title("Generated ABIDE Histogram")
         ax3.legend()
 
-        _ = ax4.hist(input_mrbrains.flatten(), bins=bins,
+        _ = ax4.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=bins,
                      density=False, label="iSEG")
         ax4.set_xlabel("Intensity")
         ax4.set_ylabel("Frequency")
