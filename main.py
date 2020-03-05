@@ -72,9 +72,11 @@ if __name__ == '__main__':
     valid_datasets = list()
     test_datasets = list()
     reconstruction_datasets = list()
+    augmented_reconstruction_datasets = list()
     normalized_reconstructors = list()
     segmentation_reconstructors = list()
     input_reconstructors = list()
+    augmented_input_reconstructors = list()
 
     iSEG_train = None
     iSEG_CSV = None
@@ -96,7 +98,7 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_augmented_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
@@ -107,15 +109,17 @@ if __name__ == '__main__':
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
+        augmented_reconstruction_datasets.append(iSEG_augmented_reconstruction)
         normalized_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
                                                             [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
                                                               [model_trainers[GENERATOR],
                                                                model_trainers[SEGMENTER]], segment=True))
         input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
+        augmented_input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_augmented_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
@@ -126,12 +130,14 @@ if __name__ == '__main__':
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
+        augmented_reconstruction_datasets.append(MRBrainS_augmented_reconstruction)
         normalized_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
                                                             [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
                                                               [model_trainers[GENERATOR],
                                                                model_trainers[SEGMENTER]], segment=True))
         input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
+        augmented_input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("ABIDE", None) is not None:
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
@@ -201,15 +207,12 @@ if __name__ == '__main__':
                                     len(ABIDE_train) if ABIDE_train is not None else 0],
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
         visdom_logger(VisdomData("Experiment", "Center Voxel Class Count", PlotType.BAR_PLOT, PlotFrequency.EVERY_EPOCH,
-                                 x=[np.asarray(
-                                     iSEG_CSV.groupby('center_class').count()["labels"] if iSEG_CSV is not None else [0,
-                                                                                                                      0,
-                                                                                                                      0]),
-                                     np.asarray(MRBrainS_CSV.groupby(
-                                         'center_class').count()[
-                                                    "LabelsForTraining"] if MRBrainS_CSV is not None else [0, 0, 0]),
-                                     np.asarray(ABIDE_CSV.groupby(
-                                         'center_class').count()["labels"] if ABIDE_CSV is not None else [0, 0, 0])],
+                                 x=[np.asarray(iSEG_CSV.groupby('center_class').count()[
+                                                   "labels"] if iSEG_CSV is not None else [0, 0, 0]),
+                                    np.asarray(MRBrainS_CSV.groupby('center_class').count()[
+                                                   "LabelsForTraining"] if MRBrainS_CSV is not None else [0, 0, 0]),
+                                    np.asarray(ABIDE_CSV.groupby('center_class').count()[
+                                                   "labels"] if ABIDE_CSV is not None else [0, 0, 0])],
                                  y=["iSEG", "MRBrainS", "ABIDE"], params={
                 "opts": {"title": "Center Voxel Class Count", "stacked": True,
                          "legend": ["CSF", "GM", "WM"]}}))
@@ -220,8 +223,10 @@ if __name__ == '__main__':
          ["Discriminator", "Generator", "Segmenter"]]
 
         trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                       reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                       segmentation_reconstructors, run_config, dataset_configs) \
+                                       reconstruction_datasets, augmented_reconstruction_datasets,
+                                       normalized_reconstructors, input_reconstructors,
+                                       segmentation_reconstructors, augmented_input_reconstructors, run_config,
+                                       dataset_configs) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
@@ -396,6 +401,16 @@ if __name__ == '__main__':
                                                  "title": "Reconstructed Ground Truth iSEG Image"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise iSEG Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Initial Noise iSEG Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Noise iSEG After Normalization"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input MRBrainS Image"}},
@@ -414,6 +429,16 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise MRBrainS Image", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Initial Noise MRBrainS Image"}},
+                                every=5), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True,
+                                                 "title": "Reconstructed Noise MRBrainS After Normalization"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
@@ -501,5 +526,3 @@ if __name__ == '__main__':
                                                      run_config.local_rank)}}, every=100),
             Event.ON_TRAIN_BATCH_END) \
             .train(training_config.nb_epochs)
-
-#

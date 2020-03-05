@@ -16,6 +16,7 @@
 
 import argparse
 import logging
+
 from typing import Callable
 
 import abc
@@ -29,7 +30,7 @@ from samitorch.inputs.transformers import ToNumpyArray, NiftiToDisk, CropToConte
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from torchvision.transforms import transforms
 
-from deepNormalize.preprocessing.pipelines import MRBrainSPatchPreProcessingPipeline, iSEGPatchPreProcessingPipeline
+logging.basicConfig(level=logging.INFO)
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -119,7 +120,7 @@ class iSEGScalerPipeline(AbstractPreProcessingPipeline):
 
                 try:
 
-                    self.LOGGER.info("Processing: {}".format(file))
+                    self.LOGGER.info("Processing: {}".format(os.path.join(root, file)))
                     file_names.append(file)
                     root_dirs.append(root_dir_number)
                     images_np.append(self._transforms(os.path.join(root, file)))
@@ -458,9 +459,10 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
         self._root_dir_mrbrains = root_dir_mrbrains
         self._root_dir_abide = root_dir_abide
         self._output_dir = output_dir
-        self._normalized_shape = self.compute_normalized_shape_from_images_in(self._root_dir_iseg,
-                                                                              self._root_dir_mrbrains,
-                                                                              self._root_dir_abide)
+        self._normalized_shape = (1, 224, 224, 192)
+        # self._normalized_shape = self.compute_normalized_shape_from_images_in(self._root_dir_iseg,
+        #                                                                       self._root_dir_mrbrains,
+        #                                                                       self._root_dir_abide)
         self._transforms = transforms.Compose([ToNumpyArray(),
                                                CropToContent(),
                                                PadToShape(self._normalized_shape)])
@@ -478,15 +480,14 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
 
         for root, dirs, files in os.walk(os.path.join(self._root_dir_mrbrains)):
             root_dir_number = os.path.basename(os.path.normpath(root))
-            images = list(filter(re.compile(r"^T.*\.nii").search, files))
-            for file in images:
+            images_ = list(filter(re.compile(r"^T1_1mm.*\.nii").search, files))
+            for file in images_:
                 try:
-                    self.LOGGER.info("Processing: {}".format(file))
+                    self.LOGGER.info("Processing: {}".format(os.path.join(root, file)))
                     file_names.append(file)
                     root_dirs.append(root)
                     root_dirs_number.append(root_dir_number)
                     image = self._transforms(os.path.join(root, file))
-                    images.append(image)
                     images_means.append(np.mean(image))
                     images_stds.append(np.std(image))
                     headers.append(self._get_image_header(os.path.join(root, file)))
@@ -499,16 +500,15 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                 continue
 
             root_dir_number = os.path.basename(os.path.normpath(root))
-            images = list(filter(re.compile(r".*T.*\.nii").search, files))
+            images_ = list(filter(re.compile(r".*T1.*\.nii").search, files))
 
-            for file in images:
+            for file in images_:
                 try:
-                    self.LOGGER.info("Processing: {}".format(file))
+                    self.LOGGER.info("Processing: {}".format(os.path.join(root, file)))
                     file_names.append(file)
                     root_dirs.append(root)
                     root_dirs_number.append(root_dir_number)
                     image = self._transforms(os.path.join(root, file))
-                    images.append(image)
                     images_means.append(np.mean(image))
                     images_stds.append(np.std(image))
                     headers.append(self._get_image_header(os.path.join(root, file)))
@@ -519,11 +519,10 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
         for root, dirs, files in os.walk(self._root_dir_abide):
             for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
                 try:
-                    self.LOGGER.info("Processing: {}".format(file))
+                    self.LOGGER.info("Processing: {}".format(os.path.join(root, file)))
                     file_names.append(file)
                     root_dirs.append(root)
                     image = self._transforms(os.path.join(root, file))
-                    images.append(image)
                     images_means.append(np.mean(image))
                     images_stds.append(np.std(image))
                     headers.append(self._get_image_header(os.path.join(root, file)))
@@ -531,10 +530,18 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                 except Exception as e:
                     self.LOGGER.warning(e)
 
-        images_np = np.array(images).astype(np.float32)
-        transformed_images = np.subtract(images_np, np.mean(images_np)) / np.std(images_np)
+        images_mean = np.array(images_means).astype(np.float32).mean()
+        img_std = np.array(images_stds).astype(np.float32).mean()
+        transformed_images = list()
 
-        for i in range(transformed_images.shape[0]):
+        for root_dir, file_name in zip(root_dirs, file_names):
+            image = self._transforms(os.path.join(root_dir, file_name))
+            transformed_images.append(np.subtract(image, images_mean) / img_std)
+
+        # images_np = np.array(images).astype(np.float32)
+        # transformed_images = np.subtract(images_np, np.mean(images_np)) / np.std(images_np)
+
+        for i in range(len(transformed_images)):
             if "MRBrainS" in root_dirs[i]:
                 root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
                 if not os.path.exists(
@@ -614,7 +621,7 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                                                       NiftiToDisk(
                                                           os.path.join(
                                                               os.path.join(self._output_dir,
-                                                                           os.path.join("iSEG/Dual_Standardized",
+                                                                           os.path.join("iSEG/Triple_Standardized",
                                                                                         root_dir_end)),
                                                               file))])
 
@@ -721,11 +728,11 @@ if __name__ == "__main__":
                          root_dir_mrbrains=args.path_mrbrains,
                          root_dir_abide=args.path_abide,
                          output_dir="/data/users/pldelisle/datasets/Preprocessed/").run()
-    MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Dual_Standardized",
-                                       output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized",
-                                       patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
-    iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Dual_Standardized",
-                                   output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Dual_Standardized",
-                                   patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Dual_Standardized",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/Patches/Dual_Standardized",
+    #                                    patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
+    # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Dual_Standardized",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Patches/Dual_Standardized",
+    #                                patch_size=[1, 32, 32, 32], step=[1, 8, 8, 8]).run()
 
     print("Preprocessing pipeline completed successfully.")

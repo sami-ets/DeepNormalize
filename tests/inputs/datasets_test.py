@@ -16,7 +16,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         pass
 
     def test_should_create_single_modality_train_valid_test_datasets(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
             self.DATA_PATH + "/Full", Modality.T1, 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
@@ -25,7 +25,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_single_modality_input_with_one_channel(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
             self.DATA_PATH + "/Full", Modality.T1, 0, 0.2)
 
         sample = train_dataset[0]
@@ -37,7 +37,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_single_modality_train_test_datasets(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_test(
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_test(
             self.DATA_PATH + "/Full", Modality.T1, 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
@@ -45,7 +45,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_single_modality_input_with_one_channel_train_test(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_test(
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_test(
             self.DATA_PATH + "/Full", Modality.T1, 0, 0.2)
 
         sample = train_dataset[0]
@@ -57,7 +57,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_multi_modality_train_test_datasets(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_test(
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_test(
             self.DATA_PATH + "/Full", [Modality.T1, Modality.T2], 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
@@ -65,7 +65,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_multi_modality_input_with_one_channel_train_test(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_test(
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_test(
             self.DATA_PATH + "/Full", [Modality.T1, Modality.T2], 0, 0.2)
 
         sample = train_dataset[0]
@@ -79,7 +79,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_multimodal_train_valid_test_datasets(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
             self.DATA_PATH + "/Full", [Modality.T1, Modality.T2], 0, 0.2)
 
         assert_that(train_dataset, instance_of(Dataset))
@@ -88,7 +88,7 @@ class iSEGSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_multimodal_input_with_two_channels(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = iSEGSegmentationFactory.create_train_valid_test(
             self.DATA_PATH + "/Full", [Modality.T1, Modality.T2], 0, 0.2)
 
         sample = train_dataset[0]
@@ -109,8 +109,8 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         pass
 
     def test_should_create_single_modality_train_valid_test_datasets(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, Modality.T1, 0, 0.2)
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
+            self.DATA_PATH, Modality.T1, 0, 0.3)
 
         assert_that(train_dataset, instance_of(Dataset))
         assert_that(valid_dataset, instance_of(Dataset))
@@ -118,8 +118,8 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_single_modality_input_with_one_channel(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, Modality.T1, 0, 0.2)
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
+            self.DATA_PATH, Modality.T1, 0, 0.3)
 
         sample = train_dataset[0]
 
@@ -130,16 +130,16 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_single_modality_train_test_datasets(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
-            self.DATA_PATH, Modality.T1, 0, 0.2)
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
+            self.DATA_PATH, Modality.T1, 0, 0.3)
 
         assert_that(train_dataset, instance_of(Dataset))
         assert_that(test_dataset, instance_of(Dataset))
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_single_modality_input_with_one_channel_train_test(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
-            self.DATA_PATH, Modality.T1, 0, 0.2)
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
+            self.DATA_PATH, Modality.T1, 0, 0.3)
 
         sample = train_dataset[0]
 
@@ -150,16 +150,16 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_multi_modality_train_test_datasets(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
-            self.DATA_PATH, [Modality.T1, Modality.T2], 0, 0.2)
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
+            self.DATA_PATH, [Modality.T1, Modality.T2_FLAIR], 0, 0.3)
 
         assert_that(train_dataset, instance_of(Dataset))
         assert_that(test_dataset, instance_of(Dataset))
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_multi_modality_input_with_one_channel_train_test(self):
-        train_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
-            self.DATA_PATH, [Modality.T1, Modality.T2], 0, 0.2)
+        train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_test(
+            self.DATA_PATH, [Modality.T1, Modality.T2_FLAIR], 0, 0.3)
 
         sample = train_dataset[0]
 
@@ -172,8 +172,8 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         plt.show()
 
     def test_should_create_multimodal_train_valid_test_datasets(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, [Modality.T1, Modality.T2], 0, 0.2)
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
+            self.DATA_PATH, [Modality.T1, Modality.T2_FLAIR], 0, 0.3)
 
         assert_that(train_dataset, instance_of(Dataset))
         assert_that(valid_dataset, instance_of(Dataset))
@@ -181,8 +181,8 @@ class MRBrainSSegmentationFactoryTest(unittest.TestCase):
         assert_that(reconstruction_dataset, instance_of(Dataset))
 
     def test_should_produce_a_multimodal_input_with_two_channels(self):
-        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
-            self.DATA_PATH, [Modality.T1, Modality.T2], 0, 0.2)
+        train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, csv = MRBrainSSegmentationFactory.create_train_valid_test(
+            self.DATA_PATH, [Modality.T1, Modality.T2_FLAIR], 0, 0.3)
 
         sample = train_dataset[0]
 
