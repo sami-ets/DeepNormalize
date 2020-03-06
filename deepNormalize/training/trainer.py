@@ -538,7 +538,7 @@ class DeepNormalizeTrainer(Trainer):
                         SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[i], 0), 0)).squeeze(0)
                     self.custom_variables[
                         "Reconstructed Ground Truth {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0),
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[i], 0), 0)).squeeze(0)
                     self.custom_variables[
                         "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
                         SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0))
