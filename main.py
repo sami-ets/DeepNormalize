@@ -469,6 +469,22 @@ if __name__ == '__main__':
             PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence", every=1,
                                          params={"title": "Jensen-Shannon Divergence on test data per Epoch",
                                                  "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
+                                         params={"title": "Dice score per class per epoch",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed iSEG image", every=1,
+                                         params={"title": "Dice score per class per epoch on reconstructed iSEG image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed MRBrainS image", every=1,
+                                         params={"title": "Dice score per class per epoch on reconstructed MRBrainS image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed ABIDE image", every=1,
+                                         params={"title": "Dice score per class per epoch on reconstructed ABIDE image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
                                               {"local_rank": run_config.local_rank}, every=50),
                                 Event.ON_TRAIN_BATCH_END) \

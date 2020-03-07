@@ -88,6 +88,10 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_hausdorff_gauge = AverageGauge()
         self._ABIDE_hausdorff_gauge = AverageGauge()
         self._class_dice_gauge = AverageGauge()
+        self._class_dice_gauge_on_reconstructed_images = AverageGauge()
+        self._class_dice_gauge_on_reconstructed_iseg_images = AverageGauge()
+        self._class_dice_gauge_on_reconstructed_mrbrains_images = AverageGauge()
+        self._class_dice_gauge_on_reconstructed_abide_images = AverageGauge()
         self._js_div_inputs_gauge = AverageGauge()
         self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
@@ -501,7 +505,6 @@ class DeepNormalizeTrainer(Trainer):
                 img_input = list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                         self._input_reconstructors))
-
                 img_gt = list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
                         ground_truth_patches, self._input_reconstructors))
@@ -546,6 +549,10 @@ class DeepNormalizeTrainer(Trainer):
                         "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
                         SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[i], 0), 0))
 
+                    metric = self._segmenter.compute_metrics(to_onehot(torch.tensor(img_seg[i]).unsqueeze(0).long(), num_classes=4),
+                                                             torch.tensor(img_gt[i]).unsqueeze(0).long())
+                    self._class_dice_gauge_on_reconstructed_images.update(metric["Dice"])
+
                     if self._training_config.data_augmentation:
                         self.custom_variables[
                             "Reconstructed Initial Noise {} Image".format(
@@ -562,6 +569,16 @@ class DeepNormalizeTrainer(Trainer):
                         self.custom_variables[
                             "Reconstructed Noise {} After Normalization".format(
                                 dataset)] = np.zeros((224, 192))
+
+                metric = self._segmenter.compute_metrics(to_onehot(torch.tensor(img_seg[ISEG_ID]).unsqueeze(0).long(), num_classes=4),
+                                                         torch.tensor(img_gt[ISEG_ID]).unsqueeze(0).long())
+                self._class_dice_gauge_on_reconstructed_iseg_images.update(metric["Dice"])
+                metric = self._segmenter.compute_metrics(to_onehot(torch.tensor(img_seg[MRBRAINS_ID]).unsqueeze(0).long(), num_classes=4),
+                                                         torch.tensor(img_gt[MRBRAINS_ID]).unsqueeze(0).long())
+                self._class_dice_gauge_on_reconstructed_mrbrains_images.update(metric["Dice"])
+                metric = self._segmenter.compute_metrics(to_onehot(torch.tensor(img_seg[ABIDE_ID]).unsqueeze(0).long(), num_classes=4),
+                                                         torch.tensor(img_gt[ABIDE_ID]).unsqueeze(0).long())
+                self._class_dice_gauge_on_reconstructed_abide_images.update(metric["Dice"])
 
                 if len(img_input) == 3:
                     self.custom_variables["Reconstructed Images Histograms"] = cv2.imread(
@@ -627,6 +644,30 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Discriminator Confusion Matrix"] = np.zeros(
                     (self._num_datasets + 1, self._num_datasets + 1))
 
+            self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
+                                                            ["DSC", "HD"],
+                                                            [
+                                                                self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+                                                                    [0.0, 0.0, 0.0]),
+                                                                self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
+                                                                    [0.0, 0.0, 0.0])])
+
+            self.custom_variables[
+                "Dice score per class per epoch"] = self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Dice score per class per epoch on reconstructed images"] = self._class_dice_gauge_on_reconstructed_images.compute() if self._class_dice_gauge_on_reconstructed_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Dice score per class per epoch on reconstructed iSEG images"] = self._class_dice_gauge_on_reconstructed_iseg_images.compute() if self._class_dice_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Dice score per class per epoch on reconstructed MRBrainS images"] = self._class_dice_gauge_on_reconstructed_mrbrains_images.compute() if self._class_dice_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Dice score per class per epoch on reconstructed ABIDE images"] = self._class_dice_gauge_on_reconstructed_abide_images.compute() if self._class_dice_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+
             if self._should_activate_autoencoder():
                 self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
                                                                 ["DSC", "HD"],
@@ -652,14 +693,6 @@ class DeepNormalizeTrainer(Trainer):
                 self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
 
             if self._should_activate_segmentation():
-                self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
-                                                                ["DSC", "HD"],
-                                                                [
-                                                                    self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
-                                                                        [0.0, 0.0, 0.0]),
-                                                                    self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
-                                                                        [0.0, 0.0, 0.0])])
-
                 if self._segmenter.valid_metrics["Dice"].mean() > self._previous_mean_dice:
                     self.custom_variables["Per-Dataset Metric Table"] = to_html_per_dataset(
                         ["CSF", "Grey Matter", "White Matter"],
@@ -686,7 +719,6 @@ class DeepNormalizeTrainer(Trainer):
                                                                             self._js_div_gen_gauge.compute()])
                 self.custom_variables["Jensen-Shannon Divergence"] = [self._js_div_inputs_gauge.compute(),
                                                                       self._js_div_gen_gauge.compute()]
-
                 self.custom_variables["Mean Hausdorff Distance"] = [
                     self._class_hausdorff_distance_gauge.compute().mean()]
                 self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
