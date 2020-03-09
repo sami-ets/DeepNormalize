@@ -530,151 +530,152 @@ class TripleStandardScaler(AbstractPreProcessingPipeline):
                 except Exception as e:
                     self.LOGGER.warning(e)
 
-        images_mean = np.array(images_means).astype(np.float32).mean()
-        img_std = np.array(images_stds).astype(np.float32).mean()
-        transformed_images = list()
-
-        for root_dir, file_name in zip(root_dirs, file_names):
-            image = self._transforms(os.path.join(root_dir, file_name))
-            transformed_images.append(np.subtract(image, images_mean) / img_std)
-
-        # images_np = np.array(images).astype(np.float32)
-        # transformed_images = np.subtract(images_np, np.mean(images_np)) / np.std(images_np)
-
-        for i in range(len(transformed_images)):
-            if "MRBrainS" in root_dirs[i]:
-                root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
-                if not os.path.exists(
-                        os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number))):
-                    os.makedirs(
-                        os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number)))
-                transforms_ = transforms.Compose([
-                    ToNifti1Image(),
-                    NiftiToDisk(
-                        os.path.join(
-                            os.path.join(self._output_dir,
-                                         os.path.join("MRBrainS/Triple_Standardized",
-                                                      root_dir_number)),
-                            prefix + file_names[i]))])
-                transforms_(transformed_images[i])
-            elif "iSEG" in root_dirs[i]:
-                root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
-                if not os.path.exists(
-                        os.path.join(self._output_dir, "iSEG/Triple_Standardized/{}".format(root_dir_number))):
-                    os.makedirs(os.path.join(self._output_dir, "iSEG/Triple_Standardized/{}".format(root_dir_number)))
-                transforms_ = transforms.Compose([
-                    ToNifti1Image(),
-                    NiftiToDisk(
-                        os.path.join(
-                            os.path.join(self._output_dir,
-                                         os.path.join("iSEG/Triple_Standardized",
-                                                      root_dir_number)),
-                            prefix + file_names[i]))])
-
-                transforms_(transformed_images[i])
-            elif "ABIDE" in root_dirs[i]:
-                root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
-                transforms_ = transforms.Compose([
-                    ToNifti1Image(),
-                    NiftiToDisk(
-                        os.path.join("/data/users/pldelisle/datasets/ABIDE/freesurfer/{}/mri".format(root_dir_number),
-                                     prefix + file_names[i]))])
-
-                transforms_(transformed_images[i])
-
-        for root, dirs, files in os.walk(self._root_dir_mrbrains):
-            root_dir_end = os.path.basename(os.path.normpath(root))
-
-            images = list(filter(re.compile(r"^LabelsFor.*\.nii").search, files))
-
-            for file in images:
-                if not os.path.exists(os.path.join(self._output_dir, os.path.join("MRBrainS/Triple_Standardized",
-                                                                                  root_dir_end))):
-                    os.makedirs(os.path.join(self._output_dir, os.path.join("MRBrainS/Triple_Standardized",
-                                                                            root_dir_end)))
-
-                transforms_ = transforms.Compose([ToNumpyArray(),
-                                                  CropToContent(),
-                                                  PadToShape(self._normalized_shape),
-                                                  ToNifti1Image(),
-                                                  NiftiToDisk(
-                                                      os.path.join(
-                                                          os.path.join(self._output_dir,
-                                                                       os.path.join("MRBrainS/Triple_Standardized",
-                                                                                    root_dir_end)),
-                                                          file))])
-
-                transforms_(os.path.join(root, file))
-
-        for root, dirs, files in os.walk(self._root_dir_iseg):
-            root_dir_end = os.path.basename(os.path.normpath(root))
-            if "ROI" in root_dir_end or "label" in root_dir_end:
-                for file in files:
-                    if not os.path.exists(os.path.join(self._output_dir, os.path.join("iSEG/Triple_Standardized",
-                                                                                      root_dir_end))):
-                        os.makedirs(os.path.join(self._output_dir, os.path.join("iSEG/Triple_Standardized",
-                                                                                root_dir_end)))
-                    transforms_ = transforms.Compose([ToNumpyArray(),
-                                                      CropToContent(),
-                                                      PadToShape(self._normalized_shape),
-                                                      ToNifti1Image(),
-                                                      NiftiToDisk(
-                                                          os.path.join(
-                                                              os.path.join(self._output_dir,
-                                                                           os.path.join("iSEG/Triple_Standardized",
-                                                                                        root_dir_end)),
-                                                              file))])
-
-                    transforms_(os.path.join(root, file))
-
-    def compute_normalized_shape_from_images_in(self, root_dir_1, root_dir_2, root_dir_3):
-        image_shapes_iSEG = []
-        image_shapes_MRBrainS = []
-        image_shapes_ABIDE = []
-
-        for root, dirs, files in os.walk(root_dir_1):
-            for file in list(filter(lambda path: Image.is_nifti(path), files)):
-                try:
-                    self.LOGGER.debug("Computing the bounding box of {}".format(file))
-                    c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
-                        ToNumpyArray()(os.path.join(root, file)))
-                    image_shapes_iSEG.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
-                except Exception as e:
-                    self.LOGGER.warning(
-                        "Error while computing the content bounding box for {} with error {}".format(file, e))
-
-        c, h, w, d = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
-                            image_shapes_iSEG)
-
-        for root, dirs, files in os.walk(root_dir_2):
-            for file in list(filter(lambda path: Image.is_nifti(path), files)):
-                try:
-                    self.LOGGER.debug("Computing the bounding box of {}".format(file))
-                    c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
-                        ToNumpyArray()(os.path.join(root, file)))
-                    image_shapes_MRBrainS.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
-                except Exception as e:
-                    self.LOGGER.warning(
-                        "Error while computing the content bounding box for {} with error {}".format(file, e))
-
-        c_2, h_2, w_2, d_2 = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
-                                    image_shapes_MRBrainS)
-
-        for root, dirs, files in os.walk(root_dir_3):
-            for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
-                try:
-                    self.LOGGER.debug("Computing the bounding box of {}".format(file))
-                    c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
-                        ToNumpyArray()(os.path.join(root, file)))
-                    image_shapes_ABIDE.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
-                except Exception as e:
-                    self.LOGGER.warning(
-                        "Error while computing the content bounding box for {} with error {}".format(file, e))
-
-        c_3, h_3, w_3, d_3 = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
-                                    image_shapes_ABIDE)
-
-        return max(c, c_2, c_3), max(h, h_2, h_3), max(w, w_2, w_3), max(d, d_2, d_3)
+        images_mean = np.array(images_means).mean()
+        img_std = np.array(images_stds).std()
+        print("Mean: {}, Std: {}".format(str(images_mean), str(img_std)))
+    #     transformed_images = list()
+    #
+    #     for root_dir, file_name in zip(root_dirs, file_names):
+    #         image = self._transforms(os.path.join(root_dir, file_name))
+    #         transformed_images.append(np.subtract(image, images_mean) / img_std)
+    #
+    #     # images_np = np.array(images).astype(np.float32)
+    #     # transformed_images = np.subtract(images_np, np.mean(images_np)) / np.std(images_np)
+    #
+    #     for i in range(len(transformed_images)):
+    #         if "MRBrainS" in root_dirs[i]:
+    #             root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
+    #             if not os.path.exists(
+    #                     os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number))):
+    #                 os.makedirs(
+    #                     os.path.join(self._output_dir, "MRBrainS/Triple_Standardized/{}".format(root_dir_number)))
+    #             transforms_ = transforms.Compose([
+    #                 ToNifti1Image(),
+    #                 NiftiToDisk(
+    #                     os.path.join(
+    #                         os.path.join(self._output_dir,
+    #                                      os.path.join("MRBrainS/Triple_Standardized",
+    #                                                   root_dir_number)),
+    #                         prefix + file_names[i]))])
+    #             transforms_(transformed_images[i])
+    #         elif "iSEG" in root_dirs[i]:
+    #             root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
+    #             if not os.path.exists(
+    #                     os.path.join(self._output_dir, "iSEG/Triple_Standardized/{}".format(root_dir_number))):
+    #                 os.makedirs(os.path.join(self._output_dir, "iSEG/Triple_Standardized/{}".format(root_dir_number)))
+    #             transforms_ = transforms.Compose([
+    #                 ToNifti1Image(),
+    #                 NiftiToDisk(
+    #                     os.path.join(
+    #                         os.path.join(self._output_dir,
+    #                                      os.path.join("iSEG/Triple_Standardized",
+    #                                                   root_dir_number)),
+    #                         prefix + file_names[i]))])
+    #
+    #             transforms_(transformed_images[i])
+    #         elif "ABIDE" in root_dirs[i]:
+    #             root_dir_number = os.path.basename(os.path.normpath(root_dirs[i]))
+    #             transforms_ = transforms.Compose([
+    #                 ToNifti1Image(),
+    #                 NiftiToDisk(
+    #                     os.path.join("/data/users/pldelisle/datasets/ABIDE/freesurfer/{}/mri".format(root_dir_number),
+    #                                  prefix + file_names[i]))])
+    #
+    #             transforms_(transformed_images[i])
+    #
+    #     for root, dirs, files in os.walk(self._root_dir_mrbrains):
+    #         root_dir_end = os.path.basename(os.path.normpath(root))
+    #
+    #         images = list(filter(re.compile(r"^LabelsFor.*\.nii").search, files))
+    #
+    #         for file in images:
+    #             if not os.path.exists(os.path.join(self._output_dir, os.path.join("MRBrainS/Triple_Standardized",
+    #                                                                               root_dir_end))):
+    #                 os.makedirs(os.path.join(self._output_dir, os.path.join("MRBrainS/Triple_Standardized",
+    #                                                                         root_dir_end)))
+    #
+    #             transforms_ = transforms.Compose([ToNumpyArray(),
+    #                                               CropToContent(),
+    #                                               PadToShape(self._normalized_shape),
+    #                                               ToNifti1Image(),
+    #                                               NiftiToDisk(
+    #                                                   os.path.join(
+    #                                                       os.path.join(self._output_dir,
+    #                                                                    os.path.join("MRBrainS/Triple_Standardized",
+    #                                                                                 root_dir_end)),
+    #                                                       file))])
+    #
+    #             transforms_(os.path.join(root, file))
+    #
+    #     for root, dirs, files in os.walk(self._root_dir_iseg):
+    #         root_dir_end = os.path.basename(os.path.normpath(root))
+    #         if "ROI" in root_dir_end or "label" in root_dir_end:
+    #             for file in files:
+    #                 if not os.path.exists(os.path.join(self._output_dir, os.path.join("iSEG/Triple_Standardized",
+    #                                                                                   root_dir_end))):
+    #                     os.makedirs(os.path.join(self._output_dir, os.path.join("iSEG/Triple_Standardized",
+    #                                                                             root_dir_end)))
+    #                 transforms_ = transforms.Compose([ToNumpyArray(),
+    #                                                   CropToContent(),
+    #                                                   PadToShape(self._normalized_shape),
+    #                                                   ToNifti1Image(),
+    #                                                   NiftiToDisk(
+    #                                                       os.path.join(
+    #                                                           os.path.join(self._output_dir,
+    #                                                                        os.path.join("iSEG/Triple_Standardized",
+    #                                                                                     root_dir_end)),
+    #                                                           file))])
+    #
+    #                 transforms_(os.path.join(root, file))
+    #
+    # def compute_normalized_shape_from_images_in(self, root_dir_1, root_dir_2, root_dir_3):
+    #     image_shapes_iSEG = []
+    #     image_shapes_MRBrainS = []
+    #     image_shapes_ABIDE = []
+    #
+    #     for root, dirs, files in os.walk(root_dir_1):
+    #         for file in list(filter(lambda path: Image.is_nifti(path), files)):
+    #             try:
+    #                 self.LOGGER.debug("Computing the bounding box of {}".format(file))
+    #                 c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
+    #                     ToNumpyArray()(os.path.join(root, file)))
+    #                 image_shapes_iSEG.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
+    #             except Exception as e:
+    #                 self.LOGGER.warning(
+    #                     "Error while computing the content bounding box for {} with error {}".format(file, e))
+    #
+    #     c, h, w, d = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
+    #                         image_shapes_iSEG)
+    #
+    #     for root, dirs, files in os.walk(root_dir_2):
+    #         for file in list(filter(lambda path: Image.is_nifti(path), files)):
+    #             try:
+    #                 self.LOGGER.debug("Computing the bounding box of {}".format(file))
+    #                 c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
+    #                     ToNumpyArray()(os.path.join(root, file)))
+    #                 image_shapes_MRBrainS.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
+    #             except Exception as e:
+    #                 self.LOGGER.warning(
+    #                     "Error while computing the content bounding box for {} with error {}".format(file, e))
+    #
+    #     c_2, h_2, w_2, d_2 = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
+    #                                 image_shapes_MRBrainS)
+    #
+    #     for root, dirs, files in os.walk(root_dir_3):
+    #         for file in list(filter(lambda path: Image.is_mgz(path) and "brainmask.mgz" in path, files)):
+    #             try:
+    #                 self.LOGGER.debug("Computing the bounding box of {}".format(file))
+    #                 c, d_min, d_max, h_min, h_max, w_min, w_max = CropToContent.extract_content_bounding_box_from(
+    #                     ToNumpyArray()(os.path.join(root, file)))
+    #                 image_shapes_ABIDE.append((c, d_max - d_min, h_max - h_min, w_max - w_min))
+    #             except Exception as e:
+    #                 self.LOGGER.warning(
+    #                     "Error while computing the content bounding box for {} with error {}".format(file, e))
+    #
+    #     c_3, h_3, w_3, d_3 = reduce(lambda a, b: (a[0], max(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])),
+    #                                 image_shapes_ABIDE)
+    #
+    #     return max(c, c_2, c_3), max(h, h_2, h_3), max(w, w_2, w_3), max(d, d_2, d_3)
 
 
 if __name__ == "__main__":

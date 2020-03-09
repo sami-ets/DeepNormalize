@@ -56,10 +56,11 @@ models:
         momentum: 0.9
         weight_decay: 0.01
     scheduler:
-      type: "MultiStepLR"
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [100, 120]
-        gamma: 0.1
+        factor: 0.1
+        patience: 5
+        min_lr: 1e-6
     criterion:
       DiceLoss:
         type: "DiceLoss"
@@ -117,7 +118,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 120]
+        milestones: [60, 100]
         gamma: 0.1
     criterion:
       NLLLoss:
@@ -140,12 +141,21 @@ dataset:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.2
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.3
+  ABIDE:
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    modalities: "T1"
+    max_subjects: !!null
+    max_num_patches: 15000
+    validation_split: 0.2
+    sites: !!null
 
 training:
   batch_size: 16
@@ -153,7 +163,7 @@ training:
   patience_segmentation: 3
   data_augmentation: True
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.50
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -161,4 +171,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_data_augmentation"
+  env: "deepNormalize_home_disc_ratio_0_50"

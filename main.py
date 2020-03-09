@@ -19,6 +19,7 @@ import multiprocessing
 
 import numpy as np
 import os
+import random
 import torch
 import torch.backends.cudnn as cudnn
 from kerosene.configs.configs import RunConfiguration, DatasetConfiguration
@@ -35,7 +36,7 @@ from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
 from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField
-from samitorch.inputs.utils import sample_collate, augmented_sample_collate
+from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
 from torchvision.transforms import Compose
@@ -51,6 +52,9 @@ from deepNormalize.utils.image_slicer import ImageReconstructor
 
 cudnn.benchmark = True
 cudnn.enabled = True
+
+np.random.seed(42)
+random.seed(42)
 
 if __name__ == '__main__':
     # Basic settings
@@ -104,6 +108,7 @@ if __name__ == '__main__':
             dataset_id=ISEG_ID,
             test_size=dataset_configs["iSEG"].validation_split,
             max_subjects=dataset_configs["iSEG"].max_subjects,
+            max_num_patches=dataset_configs["iSEG"].max_num_patches,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
@@ -125,6 +130,7 @@ if __name__ == '__main__':
             dataset_id=MRBRAINS_ID,
             test_size=dataset_configs["MRBrainS"].validation_split,
             max_subjects=dataset_configs["MRBrainS"].max_subjects,
+            max_num_patches=dataset_configs["MRBrainS"].max_num_patches,
             augmentation_strategy=augmentation_strategy)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
@@ -277,12 +283,6 @@ if __name__ == '__main__':
                                                  "store_history": True,
                                                  "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
-            .with_event_handler(
-            PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
-                                params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Background Generated Intensity Histogram",
                                                  "store_history": True,
@@ -380,6 +380,35 @@ if __name__ == '__main__':
                                     "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
                                     "title": "Discriminator Confusion Matrix"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
+                                                    params={"opts": {"title": "Runtime"}},
+                                                    every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence", every=1,
+                                         params={"title": "Jensen-Shannon Divergence on test data per Epoch",
+                                                 "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
+                                         params={"title": "Dice score per class per epoch",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed iSEG image",
+                                         every=1,
+                                         params={"title": "Dice score per class per epoch on reconstructed iSEG image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger,
+                                         "Dice score per class per epoch on reconstructed MRBrainS image", every=1,
+                                         params={
+                                             "title": "Dice score per class per epoch on reconstructed MRBrainS image",
+                                             "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed ABIDE image",
+                                         every=1,
+                                         params={"title": "Dice score per class per epoch on reconstructed ABIDE image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
@@ -460,31 +489,12 @@ if __name__ == '__main__':
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented ABIDE Image"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
-                                                    params={"opts": {"title": "Runtime"}},
-                                                    every=1), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
-            .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
             .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Jensen-Shannon Divergence", every=1,
-                                         params={"title": "Jensen-Shannon Divergence on test data per Epoch",
-                                                 "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
+            PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
-                                         params={"title": "Dice score per class per epoch",
-                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed iSEG image", every=1,
-                                         params={"title": "Dice score per class per epoch on reconstructed iSEG image",
-                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed MRBrainS image", every=1,
-                                         params={"title": "Dice score per class per epoch on reconstructed MRBrainS image",
-                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
-            .with_event_handler(
-            PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch on reconstructed ABIDE image", every=1,
-                                         params={"title": "Dice score per class per epoch on reconstructed ABIDE image",
-                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+            PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
+                                params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotGPUMemory(visdom_logger, "GPU {} Memory".format(run_config.local_rank),
                                               {"local_rank": run_config.local_rank}, every=50),
                                 Event.ON_TRAIN_BATCH_END) \

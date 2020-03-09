@@ -56,10 +56,11 @@ models:
         momentum: 0.9
         weight_decay: 0.01
     scheduler:
-      type: "MultiStepLR"
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [100, 120]
-        gamma: 0.1
+        factor: 0.1
+        patience: 5
+        min_lr: 0.000001
     criterion:
       DiceLoss:
         type: "DiceLoss"
@@ -117,7 +118,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 120]
+        milestones: [60, 100]
         gamma: 0.1
     criterion:
       NLLLoss:
@@ -140,11 +141,13 @@ dataset:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.2
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.3
   ABIDE:
     path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
@@ -157,7 +160,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 125
-  patience_segmentation: 3
+  patience_segmentation: 0
   data_augmentation: False
   variables:
     disc_ratio: 1.0

@@ -140,11 +140,13 @@ dataset:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.2
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
+    max_num_patches: !!null
     validation_split: 0.3
   ABIDE:
     path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"

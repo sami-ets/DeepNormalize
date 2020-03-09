@@ -17,30 +17,6 @@ from torchvision.transforms import Compose
 from deepNormalize.utils.utils import natural_sort
 
 
-class TestDataset(Dataset):
-    """
-    Create a dataset class in PyTorch for reading NIfTI files.
-    """
-
-    def __init__(self, source_paths: List[str], samples: List[Sample], modality: Modality,
-                 dataset_id: int = None, transforms: Optional[Callable] = None) -> None:
-        self._source_paths = source_paths
-        self._samples = samples
-        self._modality = modality
-        self._dataset_id = dataset_id
-        self._transform = transforms
-
-    def __len__(self):
-        return len(self._samples)
-
-    def __getitem__(self, idx: int):
-        sample = self._samples[idx]
-
-        if self._transform is not None:
-            sample = self._transform(sample)
-        return sample
-
-
 class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
@@ -68,30 +44,34 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
-                          dataset_id: int, test_size: float, max_subject: int = None,
+                          dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
                           augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list) and len(modalities) > 1:
             return iSEGSegmentationFactory._create_multimodal_train_test(source_dir, modalities,
                                                                          dataset_id, test_size, max_subject,
+                                                                         max_num_patches,
                                                                          augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_test(source_dir, modalities,
                                                                               dataset_id, test_size, max_subject,
+                                                                              max_num_patches,
                                                                               augmentation_strategy)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
-                                dataset_id: int, test_size: float, max_subjects: int = None,
+                                dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
                                 augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             return iSEGSegmentationFactory._create_multimodal_train_valid_test(source_dir, modalities,
                                                                                dataset_id, test_size, max_subjects,
+                                                                               max_num_patches,
                                                                                augmentation_strategy)
         else:
             return iSEGSegmentationFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                     dataset_id, test_size, max_subjects,
+                                                                                    max_num_patches,
                                                                                     augmentation_strategy)
 
     @staticmethod
@@ -483,31 +463,34 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
-                          dataset_id: int,
-                          test_size: float, augmentation_strategy: DataAugmentationStrategy = None):
+                          dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches: int = None,
+                          augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             return MRBrainSSegmentationFactory._create_multimodal_train_test(source_dir, modalities,
-                                                                             dataset_id, test_size,
+                                                                             dataset_id, test_size, max_subjects,
+                                                                             max_num_patches,
                                                                              augmentation_strategy)
         else:
             return MRBrainSSegmentationFactory._create_single_modality_train_test(source_dir, modalities,
-                                                                                  dataset_id, test_size,
+                                                                                  dataset_id, test_size, max_subjects,
+                                                                                  max_num_patches,
                                                                                   augmentation_strategy)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]], dataset_id: int,
-                                test_size: float, max_subjects: int = None,
+                                test_size: float, max_subjects: int = None, max_num_patches: int = None,
                                 augmentation_strategy: DataAugmentationStrategy = None):
 
         if isinstance(modalities, list):
             return MRBrainSSegmentationFactory._create_multimodal_train_valid_test(source_dir, modalities,
                                                                                    dataset_id, test_size, max_subjects,
+                                                                                   max_num_patches,
                                                                                    augmentation_strategy)
         else:
             return MRBrainSSegmentationFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                         dataset_id, test_size,
-                                                                                        max_subjects,
+                                                                                        max_subjects, max_num_patches,
                                                                                         augmentation_strategy)
 
     @staticmethod
