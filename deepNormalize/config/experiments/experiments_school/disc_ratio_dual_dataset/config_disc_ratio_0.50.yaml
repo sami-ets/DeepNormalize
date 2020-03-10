@@ -124,6 +124,7 @@ models:
       NLLLoss:
         type: "NLLLoss"
         params:
+          weight: !torch/tensor [0.5399795352, 0.4600204648, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
