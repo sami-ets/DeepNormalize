@@ -20,7 +20,7 @@ models:
       params:
         lr: 0.000001
         momentum: 0.9
-        weight_decay: 0.01
+        weight_decay: 0.1
     scheduler:
       type: "MultiStepLR"
       params:
@@ -54,7 +54,7 @@ models:
       params:
         lr: 0.001
         momentum: 0.9
-        weight_decay: 0.01
+        weight_decay: 0.1
     scheduler:
       type: "ReduceLROnPlateau"
       params:
@@ -160,7 +160,7 @@ dataset:
 training:
   batch_size: 16
   nb_epochs: 125
-  patience_segmentation: 0
+  patience_segmentation: 3
   data_augmentation: False
   variables:
     disc_ratio: 1.0

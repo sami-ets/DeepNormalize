@@ -1083,8 +1083,10 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-                1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+        # disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
+        #         1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+
+        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
 
         self._discriminator.update_train_loss("NLLLoss", disc_loss)
 
@@ -1118,8 +1120,10 @@ class DeepNormalizeTrainer(Trainer):
         loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_bad)
 
-        disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-                1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+        # disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
+        #         1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
+
+        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
 
         pred = self._merge_tensors(pred_D_X, pred_D_G_X)
         target = self._merge_tensors(target, y_bad)
