@@ -1039,13 +1039,8 @@ class DeepNormalizeTrainer(Trainer):
 
     def _evaluate_loss_D_G_X_as_X(self, inputs, target):
         pred_D_G_X = self._discriminator.forward(inputs)
-        ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
-                                       requires_grad=False)
-        loss_D_G_X_as_X = self._discriminator.compute_loss("NLLLoss",
-                                                           torch.nn.functional.log_softmax(
-                                                               ones - torch.nn.functional.softmax(pred_D_G_X, dim=1),
-                                                               dim=1),
-                                                           target)
+        
+        loss_D_G_X_as_X = -pred_D_G_X.mean()
 
         return loss_D_G_X_as_X
 
@@ -1065,28 +1060,14 @@ class DeepNormalizeTrainer(Trainer):
         # Forward on real data.
         pred_D_X = self._discriminator.forward(inputs)
 
-        # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_X, dim=1), target)
-
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
-
-        # Choose randomly 8 predictions (to balance with real domains).
-        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        # pred_D_G_X = pred_D_G_X[choices]
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
-        # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                      y_bad)
-
-        # disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-        #         1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
-
-        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
+        disc_loss = (-pred_D_X.mean() + pred_D_G_X.mean())
 
         self._discriminator.update_train_loss("NLLLoss", disc_loss)
 
@@ -1096,36 +1077,26 @@ class DeepNormalizeTrainer(Trainer):
         metric = self._discriminator.compute_metrics(pred, target)
         self._discriminator.update_train_metrics(metric)
 
+        for p in self._discriminator.parameters():
+            p.data.clamp_(-0.01, 0.01)
+
         return disc_loss, pred
 
     def _validate_discriminator(self, inputs, gen_pred, target, test=False):
         # Forward on real data.
         pred_D_X = self._discriminator.forward(inputs)
 
-        # Compute loss on real data with real targets.
-        loss_D_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_X, dim=1), target)
-
         # Forward on fake data.
         pred_D_G_X = self._discriminator.forward(gen_pred)
 
-        # Choose randomly 8 predictions (to balance with real domains).
-        # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)
-        # pred_D_G_X = pred_D_G_X[choices]
+        disc_loss = (-pred_D_X.mean() + pred_D_G_X.mean())
+
+        pred = self._merge_tensors(pred_D_X, pred_D_G_X)
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
-        # Compute loss on fake predictions with bad class tensor.
-        loss_D_G_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                      y_bad)
-
-        # disc_loss = ((self._num_datasets / self._num_datasets + 1.0) * loss_D_X + (
-        #         1.0 / self._num_datasets + 1.0) * loss_D_G_X) / 2.0
-
-        disc_loss = (loss_D_X + loss_D_G_X) / 2.0
-
-        pred = self._merge_tensors(pred_D_X, pred_D_G_X)
         target = self._merge_tensors(target, y_bad)
 
         metric = self._discriminator.compute_metrics(pred, target)
