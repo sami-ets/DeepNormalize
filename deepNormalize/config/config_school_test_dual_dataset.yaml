@@ -163,4 +163,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_test_dual_dataset"
+  env: "deepNormalize_school_test_dual_dataset_WGAN"

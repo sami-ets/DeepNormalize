@@ -16,7 +16,7 @@ models:
       interpolation: True
       scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.000001
         momentum: 0.9
@@ -50,7 +50,7 @@ models:
       interpolation: True
       scale_factor: !python/tuple [2, 2, 2] # Used as the multiplier for the image H/W/D in torch.nn.Upsample or as stride in case of ConvTranspose3d, must reverse the MaxPool3d operation from the corresponding encoder.
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.001
         momentum: 0.9
@@ -109,7 +109,7 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.0001
         momentum: 0.9
@@ -163,4 +163,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_test_dual_dataset"
+  env: "deepNormalize_home_test_dual_dataset_WGAN"
