@@ -380,6 +380,13 @@ if __name__ == '__main__':
                                     "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
                                     "title": "Discriminator Confusion Matrix"}},
                                 every=1), Event.ON_TEST_EPOCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix Training", PlotType.HEATMAP_PLOT,
+                                params={"opts": {
+                                    "columnnames": list(dataset_configs.keys()) + ["Generated"],
+                                    "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
+                                    "title": "Discriminator Confusion Matrix Training"}},
+                                every=1), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                     params={"opts": {"title": "Runtime"}},
                                                     every=1), Event.ON_TEST_EPOCH_END) \
@@ -482,7 +489,7 @@ if __name__ == '__main__':
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
-                                                 "title": "Reconstructed Ground Truth MRBrainS Image"}},
+                                                 "title": "Reconstructed Ground Truth ABIDE Image"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
