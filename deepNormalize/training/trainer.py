@@ -100,6 +100,7 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets + 1)
+        self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets + 1)
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
@@ -127,8 +128,9 @@ class DeepNormalizeTrainer(Trainer):
 
                 self._generator.step()
 
-            disc_loss, disc_pred = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
-                                                             target[DATASET_ID])
+            disc_loss, disc_pred, disc_target = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS],
+                                                                          gen_pred.detach(),
+                                                                          target[DATASET_ID])
             disc_loss.backward()
             self._discriminator.step()
 
@@ -194,11 +196,17 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator.zero_grad()
 
-            disc_loss, disc_pred = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
-                                                             target[DATASET_ID])
+            disc_loss, disc_pred, disc_target = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS],
+                                                                          gen_pred.detach(),
+                                                                          target[DATASET_ID])
             disc_loss.backward()
 
             self._discriminator.step()
+
+        self._discriminator_confusion_matrix_gauge_training.update((
+            to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
+                      num_classes=self._num_datasets + 1),
+            disc_target))
 
         if disc_pred is not None:
             self._make_disc_pie_plots(disc_pred, inputs, target)
@@ -500,6 +508,14 @@ class DeepNormalizeTrainer(Trainer):
         if self._run_config.local_rank == 0:
             self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_validation_gauge.compute()]
             self.custom_variables["Total Loss"] = [self._total_loss_validation_gauge.compute()]
+
+    def on_training_end(self):
+        if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
+            self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
+                np.fliplr(self._discriminator_confusion_matrix_gauge_training.compute().cpu().detach().numpy()))
+        else:
+            self.custom_variables["Discriminator Confusion Matrix Training"] = np.zeros(
+                (self._num_datasets + 1, self._num_datasets + 1))
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
@@ -1080,7 +1096,7 @@ class DeepNormalizeTrainer(Trainer):
         for p in self._discriminator.parameters():
             p.data.clamp_(-0.01, 0.01)
 
-        return disc_loss, pred
+        return disc_loss, pred, target
 
     def _validate_discriminator(self, inputs, gen_pred, target, test=False):
         # Forward on real data.
