@@ -37,7 +37,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -139,7 +139,7 @@ dataset:
 
 training:
   batch_size: 16
-  nb_epochs: 125
+  nb_epochs: 100
   patience_segmentation: 3
   data_augmentation: False
   variables:

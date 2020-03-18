@@ -37,7 +37,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -139,16 +139,16 @@ dataset:
 
 training:
   batch_size: 15
-  nb_epochs: 125
+  nb_epochs: 100
   patience_segmentation: 1
   data_augmentation: False
   variables:
-    disc_ratio: 0.05
+    disc_ratio: 1.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_test_dual_dataset_unet_0.05"
+  env: "deepNormalize_home_test_dual_dataset"

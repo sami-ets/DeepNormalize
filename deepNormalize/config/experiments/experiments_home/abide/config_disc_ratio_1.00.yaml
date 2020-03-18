@@ -124,30 +124,18 @@ models:
           average: True
 
 dataset:
-  iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
-    modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: !!null
-    validation_split: 0.2
-  MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
-    modalities: "T1_1mm"
-    max_subjects: !!null
-    max_num_patches: !!null
-    validation_split: 0.3
   ABIDE:
-    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 15000
     validation_split: 0.2
-    sites: !!null
+    sites: ["Stanford", "Yale", "UCLA", "NYU"]
 
 training:
-  batch_size: 24
+  batch_size: 16
   nb_epochs: 100
-  patience_segmentation: 1
+  patience_segmentation: 3
   data_augmentation: False
   variables:
     disc_ratio: 1.0
@@ -158,4 +146,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_test_triple_dataset"
+  env: "deepNormalize_home_abide_disc_ratio_1_00"

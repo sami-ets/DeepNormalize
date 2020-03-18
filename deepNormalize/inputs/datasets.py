@@ -4,6 +4,8 @@ import numpy as np
 import os
 import pandas
 from math import ceil
+
+import torch
 from samitorch.inputs.augmentation.strategies import DataAugmentationStrategy
 from samitorch.inputs.datasets import AbstractDatasetFactory, SegmentationDataset
 from samitorch.inputs.images import Modality
@@ -1004,28 +1006,66 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        train_dataset = ABIDESegmentationFactory.create(
-            source_paths=train_source_paths,
-            target_paths=train_target_paths,
-            modalities=modality,
-            dataset_id=dataset_id,
-            transforms=[ToNumpyArray(), ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+        if sites is not None:
+            train_datasets = list()
+            valid_datasets = list()
+            test_datasets = list()
 
-        valid_dataset = ABIDESegmentationFactory.create(
-            source_paths=valid_source_paths,
-            target_paths=valid_target_paths,
-            modalities=modality,
-            dataset_id=dataset_id,
-            transforms=[ToNumpyArray(), ToNDTensor()],
-            augmentation_strategy=None)
+            for i in range(len(sites)):
+                train_dataset = ABIDESegmentationFactory.create(
+                    source_paths=np.array([path for path in train_source_paths if sites[i] in path]),
+                    target_paths=np.array([path for path in train_target_paths if sites[i] in path]),
+                    modalities=modality,
+                    dataset_id=dataset_id + i,
+                    transforms=[ToNumpyArray(), ToNDTensor()],
+                    augmentation_strategy=augmentation_strategy)
+                train_datasets.append(train_dataset)
 
-        test_dataset = ABIDESegmentationFactory.create(source_paths=test_source_paths,
-                                                       target_paths=test_target_paths,
-                                                       modalities=modality,
-                                                       dataset_id=dataset_id,
-                                                       transforms=[ToNumpyArray(), ToNDTensor()],
-                                                       augmentation_strategy=None)
+                valid_dataset = ABIDESegmentationFactory.create(
+                    source_paths=np.array([path for path in valid_source_paths if sites[i] in path]),
+                    target_paths=np.array([path for path in valid_target_paths if sites[i] in path]),
+                    modalities=modality,
+                    dataset_id=dataset_id + i,
+                    transforms=[ToNumpyArray(), ToNDTensor()],
+                    augmentation_strategy=None)
+                valid_datasets.append(valid_dataset)
+
+                test_dataset = ABIDESegmentationFactory.create(
+                    source_paths=np.array([path for path in test_source_paths if sites[i] in path]),
+                    target_paths=np.array([path for path in test_target_paths if sites[i] in path]),
+                    modalities=modality,
+                    dataset_id=dataset_id + i,
+                    transforms=[ToNumpyArray(), ToNDTensor()],
+                    augmentation_strategy=None)
+                test_datasets.append(test_dataset)
+
+            train_dataset = torch.utils.data.ConcatDataset(train_datasets)
+            valid_dataset = torch.utils.data.ConcatDataset(valid_datasets)
+            test_dataset = torch.utils.data.ConcatDataset(test_datasets)
+
+        else:
+            train_dataset = ABIDESegmentationFactory.create(
+                source_paths=train_source_paths,
+                target_paths=train_target_paths,
+                modalities=modality,
+                dataset_id=dataset_id,
+                transforms=[ToNumpyArray(), ToNDTensor()],
+                augmentation_strategy=augmentation_strategy)
+
+            valid_dataset = ABIDESegmentationFactory.create(
+                source_paths=valid_source_paths,
+                target_paths=valid_target_paths,
+                modalities=modality,
+                dataset_id=dataset_id,
+                transforms=[ToNumpyArray(), ToNDTensor()],
+                augmentation_strategy=None)
+
+            test_dataset = ABIDESegmentationFactory.create(source_paths=test_source_paths,
+                                                           target_paths=test_target_paths,
+                                                           modalities=modality,
+                                                           dataset_id=dataset_id,
+                                                           transforms=[ToNumpyArray(), ToNDTensor()],
+                                                           augmentation_strategy=None)
 
         reconstruction_dataset = ABIDESegmentationFactory.create(source_paths=reconstruction_source_paths,
                                                                  target_paths=reconstruction_target_paths,
