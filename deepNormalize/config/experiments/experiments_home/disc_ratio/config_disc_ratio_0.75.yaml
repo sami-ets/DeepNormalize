@@ -158,4 +158,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_disc_ratio_0_75"
+  env: "deepNormalize_home_wgan_disc_ratio_0_75"

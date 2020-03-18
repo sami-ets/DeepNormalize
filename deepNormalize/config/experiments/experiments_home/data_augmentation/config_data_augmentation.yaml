@@ -148,9 +148,9 @@ training:
   batch_size: 16
   nb_epochs: 125
   patience_segmentation: 3
-  data_augmentation: False
+  data_augmentation: True
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.50
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -158,4 +158,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_test_triple_dataset_WGAN"
+  env: "deepNormalize_home_data_augmentation_wgan_disc_ratio_0.50"

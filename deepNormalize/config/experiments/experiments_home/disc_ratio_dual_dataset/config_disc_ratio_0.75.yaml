@@ -151,4 +151,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_iseg_mrbrains_disc_ratio_0_75"
+  env: "deepNormalize_home_iseg_mrbrains_wgan_disc_ratio_0_75"
