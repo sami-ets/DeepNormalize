@@ -349,20 +349,20 @@ class ResNet3D(torch.nn.Module):
         if self._padding is not None:
             x = self._padding(x)
 
-        x = self._conv1(x)
-        x = self._norm1(x)
-        x = self._activation(x)
-        x = self._maxpool(x)
+        x_conv1 = self._conv1(x)
+        x_norm1 = self._norm1(x_conv1)
+        x_activation = self._activation(x_norm1)
+        x_max_pool = self._maxpool(x_activation)
 
-        x = self._layer1(x)
-        x = self._layer2(x)
-        x = self._layer3(x)
+        x_layer1 = self._layer1(x_max_pool)
+        x_layer2 = self._layer2(x_layer1)
+        x_layer3 = self._layer3(x_layer2)
 
-        x = self._avgpool(x)
-        x = x.reshape(x.size(0), -1)
-        x = self._fc(x)
+        x_avg = self._avgpool(x_layer3)
+        x_reshaped = x_avg.reshape(x_avg.size(0), -1)
+        x = self._fc(x_reshaped)
 
-        return x
+        return x, x_conv1, x_layer1, x_layer2, x_layer3
 
 
 def _ResNet(block, layers, params):

@@ -50,6 +50,31 @@ class LabelMapper(object):
         return np.transpose(np.uint8(colored_label_map[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
 
 
+class FeatureMapSlicer(object):
+    DEFAULT_COLOR_MAP = plt.get_cmap('jet')
+
+    def __init__(self, colormap=None):
+        self._colormap = colormap if colormap is not None else self.DEFAULT_COLOR_MAP
+
+    @staticmethod
+    def _normalize(img):
+        return (img - np.min(img)) / (np.ptp(img) + EPSILON)
+
+    def get_colored_slice(self, slice_type, seg_map):
+        seg_map = self._normalize(seg_map)
+
+        if slice_type == SliceType.SAGITAL:
+            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, :, int(seg_map.shape[4] / 2)]), 2)
+        elif slice_type == SliceType.CORONAL:
+            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, int(seg_map.shape[3] / 2), :]), 2)
+        elif slice_type == SliceType.AXIAL:
+            colored_slice = self._colormap((seg_map[:, :, int(seg_map.shape[2] / 2), :, :])).squeeze(0)
+        else:
+            raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
+
+        return np.transpose(np.uint8(colored_slice[:, :, :, :3] * 255.0), axes=[0, 3, 1, 2])
+
+
 class SegmentationSlicer(object):
     DEFAULT_COLOR_MAP = plt.get_cmap('viridis')
 

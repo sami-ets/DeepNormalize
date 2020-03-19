@@ -497,6 +497,26 @@ if __name__ == '__main__':
                                                  "title": "Reconstructed Segmented ABIDE Image"}},
                                 every=5), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Conv1 FM", PlotType.IMAGES_PLOT,
+                                params={"nrow": 8, "opts": {"store_history": True,
+                                                            "title": "Conv1 FM"}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Layer1 FM", PlotType.IMAGES_PLOT,
+                                params={"nrow": 8, "opts": {"store_history": True,
+                                                            "title": "Layer1 FM"}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Layer2 FM", PlotType.IMAGES_PLOT,
+                                params={"nrow": 12, "opts": {"store_history": True,
+                                                            "title": "Layer2 FM"}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
+            PlotCustomVariables(visdom_logger, "Layer3 FM", PlotType.IMAGES_PLOT,
+                                params={"nrow": 16, "opts": {"store_history": True,
+                                                            "title": "Layer3 FM"}},
+                                every=100), Event.ON_TRAIN_BATCH_END) \
+            .with_event_handler(
             PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
