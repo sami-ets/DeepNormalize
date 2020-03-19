@@ -133,7 +133,7 @@ dataset:
     sites: ["Stanford", "Yale", "UCLA", "NYU"]
 
 training:
-  batch_size: 24
+  batch_size: 16
   nb_epochs: 100
   patience_segmentation: 3
   data_augmentation: False

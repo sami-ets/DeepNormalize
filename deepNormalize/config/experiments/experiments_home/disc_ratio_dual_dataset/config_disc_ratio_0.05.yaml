@@ -138,7 +138,7 @@ dataset:
     validation_split: 0.3
 
 training:
-  batch_size: 16
+  batch_size: 15
   nb_epochs: 100
   patience_segmentation: 3
   data_augmentation: False
@@ -149,6 +149,6 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.180.113.44"
+  server: "10.0.2.2"
   port: "8097"
   env: "deepNormalize_home_iseg_mrbrains_disc_ratio_0_05"
