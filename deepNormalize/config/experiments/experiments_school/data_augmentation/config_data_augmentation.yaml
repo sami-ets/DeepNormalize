@@ -127,22 +127,22 @@ dataset:
   iSEG:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
-    max_subjects: !!null
+    max_subjects: 5
     max_num_patches: !!null
-    validation_split: 0.2
+    validation_split: 0.3
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
-    max_subjects: !!null
+    max_subjects: 5
     max_num_patches: !!null
     validation_split: 0.3
   ABIDE:
     path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
     modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: 15000
-    validation_split: 0.2
-    sites: !!null
+    max_subjects: 5
+    max_num_patches: !!null
+    validation_split: 0.3
+    sites: ["Stanford", "NYU"]
 
 training:
   batch_size: 24

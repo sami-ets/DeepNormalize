@@ -214,7 +214,7 @@ class DeepNormalizeTrainer(Trainer):
         if disc_pred is not None:
             self._make_disc_pie_plots(disc_pred, inputs, target)
 
-        if self.current_train_step % 100 == 0:
+        if self.current_train_step % 400 == 0:
             self._update_image_plots(inputs[AUGMENTED_INPUTS].cpu().detach(), gen_pred.cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
@@ -242,10 +242,19 @@ class DeepNormalizeTrainer(Trainer):
                     torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
                 self.custom_variables["WM Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
-                self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear", align_corners=True).numpy()[0], 0))
-                self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear", align_corners=True).numpy()[0], 0))
-                self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear", align_corners=True).numpy()[0], 0))
-                self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear", align_corners=True).numpy()[0], 0))
+            if self.current_train_step % 500 == 0:
+                self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
@@ -550,8 +559,7 @@ class DeepNormalizeTrainer(Trainer):
                             self._augmented_reconstruction_datasets))
                     img_augmented = list(
                         map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                            augmented_patches,
-                            self._augmented_reconstructors))
+                            augmented_patches, self._augmented_reconstructors))
                     augmented_minus_inputs = list()
                     norm_minus_augmented = list()
 
@@ -1123,13 +1131,13 @@ class DeepNormalizeTrainer(Trainer):
 
     def _validate_discriminator(self, inputs, gen_pred, target, test=False):
         # Forward on real data.
-        pred_D_X = self._discriminator.forward(inputs)
+        pred_D_X, _, _, _, _ = self._discriminator.forward(inputs)
 
         # Compute loss on real data with real targets.
         loss_D_X = self._discriminator.compute_loss("NLLLoss", torch.nn.functional.log_softmax(pred_D_X, dim=1), target)
 
         # Forward on fake data.
-        pred_D_G_X = self._discriminator.forward(gen_pred)
+        pred_D_G_X, _, _, _, _ = self._discriminator.forward(gen_pred)
 
         # Choose randomly 8 predictions (to balance with real domains).
         # choices = np.random.choice(a=pred_D_G_X.size(0), size=(int(pred_D_G_X.size(0) / 2),), replace=False)

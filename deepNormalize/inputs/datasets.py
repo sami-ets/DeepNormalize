@@ -82,24 +82,25 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                            augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-        subjects = np.array([dir for dir in sorted(os.listdir(os.path.join(source_dir, str(modality))))]).astype(np.int)
+
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(subjects)), max_subjects, replace=False)
-            subjects = subjects[choices]
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
+        subjects = np.array(subject_dirs)[choices]
         train_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[
-            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), train_subjects))]
-        test_csv = filtered_csv[
-            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), test_subjects))]
-        reconstruction_csv = csv[
-            csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -160,7 +161,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = [dir for dir in sorted(os.listdir(os.path.join(source_dir, str(modality))))]
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -176,14 +177,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[
-            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), train_subjects))]
-        valid_csv = filtered_csv[
-            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), valid_subjects))]
-        test_csv = filtered_csv[
-            filtered_csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), test_subjects))]
-        reconstruction_csv = csv[
-            csv[str(modality)].str.match("{}/{}/{}".format(source_dir, str(modality), reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -254,28 +251,26 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                       augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-        subjects = np.array([dir for dir in sorted(os.listdir(os.path.join(source_dir, str(modalities[0]))))]).astype(
-            np.int)
+
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(subjects)), max_subjects, replace=False)
-            subjects = subjects[choices]
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
-        train_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+        subjects = np.array(subject_dirs)[choices]
+        train_subjects, valid_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(valid_subjects, test_size)
+
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[
-            filtered_csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), train_subjects))]
-        test_csv = filtered_csv[
-            filtered_csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), test_subjects))]
-        reconstruction_csv = csv[
-            csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -339,32 +334,27 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
                                             augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-        subjects = np.array([dir for dir in sorted(os.listdir(os.path.join(source_dir, str(modalities[0]))))]).astype(
-            np.int)
+
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(subjects)), max_subjects, replace=False)
-            subjects = subjects[choices]
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
+        else:
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
+        subjects = np.array(subject_dirs)[choices]
         train_subjects, valid_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = MRBrainSSegmentationFactory.shuffle_split(valid_subjects, test_size)
+        valid_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(valid_subjects, test_size)
+
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[
-            filtered_csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), train_subjects))]
-        valid_csv = filtered_csv[
-            filtered_csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), valid_subjects))]
-        test_csv = filtered_csv[
-            filtered_csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), test_subjects))]
-        reconstruction_csv = csv[
-            csv[str(modalities[0])].str.match(
-                "{}/{}/{}".format(source_dir, str(modalities[0]), reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -502,24 +492,24 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        all_dirs = next(os.walk(source_dir))[1]
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs), replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
-        subjects = np.array(sorted(all_dirs))[choices]
-        train_subjects, test_subjects = MRBrainSSegmentationFactory.shuffle_split(subjects, test_size)
+        subjects = np.array(subject_dirs)[choices]
+        train_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, train_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, test_subjects))]
-        reconstruction_csv = csv[csv[str(modality)].str.match("{}/{}".format(source_dir, reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -581,26 +571,26 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        all_dirs = next(os.walk(source_dir))[1]
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs), replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
-        subjects = np.array(sorted(all_dirs))[choices]
-        train_subjects, valid_subjects = MRBrainSSegmentationFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = MRBrainSSegmentationFactory.shuffle_split(valid_subjects, test_size)
+        subjects = np.array(subject_dirs)[choices]
+        train_subjects, valid_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, train_subjects))]
-        valid_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, valid_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modality)].str.match("{}/{}".format(source_dir, test_subjects))]
-        reconstruction_csv = csv[csv[str(modality)].str.match("{}/{}".format(source_dir, reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -673,24 +663,24 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        all_dirs = next(os.walk(source_dir))[1]
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs), replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
-        subjects = np.array(sorted(all_dirs))[choices]
-        train_subjects, test_subjects = MRBrainSSegmentationFactory.shuffle_split(subjects, test_size)
+        subjects = np.array(subject_dirs)[choices]
+        train_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, train_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, test_subjects))]
-        reconstruction_csv = csv[csv[str(modalities[0])].str.match("{}/{}".format(source_dir, reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -755,26 +745,26 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        all_dirs = next(os.walk(source_dir))[1]
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
 
         if max_subjects is not None:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
-            choices = np.random.choice(np.arange(0, len(all_dirs)), len(all_dirs), replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
-        subjects = np.array(sorted(all_dirs))[choices]
-        train_subjects, valid_subjects = MRBrainSSegmentationFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = MRBrainSSegmentationFactory.shuffle_split(valid_subjects, test_size)
+        subjects = np.array(subject_dirs)[choices]
+        train_subjects, valid_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, train_subjects))]
-        valid_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, valid_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modalities[0])].str.match("{}/{}".format(source_dir, test_subjects))]
-        reconstruction_csv = csv[csv[str(modalities[0])].str.match("{}/{}".format(source_dir, reconstruction_subject))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -904,26 +894,25 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                            max_num_patches: int = None, augmentation_strategy=None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-        subject_dirs = [dir for dir in sorted(os.listdir(source_dir))]
 
-        if sites is not None:
-            subject_dirs = ABIDESegmentationFactory.filter_subjects_by_sites(source_dir, sites)
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+
         if max_subjects is not None:
-            choices = np.random.choice(len(subject_dirs), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = ABIDESegmentationFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(train_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(list(test_subjects)))]
-        reconstruction_csv = csv[csv[str(modality)].str.contains("|".join(list(reconstruction_subject)))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -968,28 +957,27 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
                                                  augmentation_strategy: DataAugmentationStrategy = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
-        subject_dirs = [dir for dir in sorted(os.listdir(source_dir))]
 
-        if sites is not None:
-            subject_dirs = ABIDESegmentationFactory.filter_subjects_by_sites(source_dir, sites)
+        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+
         if max_subjects is not None:
-            choices = np.random.choice(len(subject_dirs), max_subjects, replace=False)
+            choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
         else:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = ABIDESegmentationFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = ABIDESegmentationFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = iSEGSegmentationFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSegmentationFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv[csv["center_class"].astype(np.int).isin([1, 2, 3])]
+        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(train_subjects))]
-        valid_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(valid_subjects))]
-        test_csv = filtered_csv[filtered_csv[str(modality)].str.contains("|".join(list(test_subjects)))]
-        reconstruction_csv = csv[csv[str(modality)].str.contains("|".join(list(reconstruction_subject)))]
+        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)

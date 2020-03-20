@@ -244,14 +244,14 @@ if __name__ == '__main__':
                                         "opts": {"store_history": True,
                                                  "title": "Generated Patches Process {}".format(
                                                      run_config.local_rank)}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
                                         "opts": {"store_history": True,
                                                  "title": "Input Patches Process {}".format(run_config.local_rank)}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                                         "opts": {"store_history": True,
                                                  "title": "Segmented Patches Process {}".format(
                                                      run_config.local_rank)}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger,
                                 "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
@@ -267,16 +267,16 @@ if __name__ == '__main__':
                                 params={"nrow": 4,
                                         "opts": {"store_history": True,
                                                  "title": "Ground Truth Patches Process {}".format(
-                                                     run_config.local_rank)}}, every=100),
-            Event.ON_TRAIN_BATCH_END) \
+                                                     run_config.local_rank)}},
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
                                 PlotType.IMAGES_PLOT,
                                 params={"nrow": 4,
                                         "opts": {"store_history": True,
                                                  "title": "Label Map Patches Process {}".format(
-                                                     run_config.local_rank)}}, every=100),
-            Event.ON_TRAIN_BATCH_END) \
+                                                     run_config.local_rank)}},
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                 params={"opts": {"title": "Generated Intensity Histogram",
@@ -500,22 +500,22 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Conv1 FM", PlotType.IMAGES_PLOT,
                                 params={"nrow": 8, "opts": {"store_history": True,
                                                             "title": "Conv1 FM"}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Layer1 FM", PlotType.IMAGES_PLOT,
                                 params={"nrow": 8, "opts": {"store_history": True,
                                                             "title": "Layer1 FM"}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Layer2 FM", PlotType.IMAGES_PLOT,
                                 params={"nrow": 12, "opts": {"store_history": True,
-                                                            "title": "Layer2 FM"}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                                             "title": "Layer2 FM"}},
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Layer3 FM", PlotType.IMAGES_PLOT,
                                 params={"nrow": 16, "opts": {"store_history": True,
-                                                            "title": "Layer3 FM"}},
-                                every=100), Event.ON_TRAIN_BATCH_END) \
+                                                             "title": "Layer3 FM"}},
+                                every=500), Event.ON_TRAIN_BATCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
