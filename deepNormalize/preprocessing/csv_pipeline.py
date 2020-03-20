@@ -110,7 +110,7 @@ class ToCSVMRBrainSPipeline(object):
         with open(os.path.join(self._output_dir, 'output.csv'), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(
-                ["T1_1mm", "T1", "T1_IR", "T2", "LabelsForTesting", "LabelsForTraining", "center_class", "subjects"])
+                ["T1_1mm", "T1", "T1_IR", "T2_FLAIR", "LabelsForTesting", "LabelsForTraining", "center_class", "subjects"])
 
             for source_path_t2, source_path_t1_ir, source_path_t1_1mm, source_path_t1, target_path, target_path_training, subject in zip(
                     source_paths_t2, source_paths_t1_ir, source_paths_t1_1mm, source_paths_t1, target_paths,
