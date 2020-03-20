@@ -37,7 +37,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -138,8 +138,8 @@ dataset:
     validation_split: 0.3
 
 training:
-  batch_size: 16
-  nb_epochs: 125
+  batch_size: 15
+  nb_epochs: 100
   patience_segmentation: 3
   data_augmentation: False
   variables:
@@ -149,6 +149,6 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.180.113.44"
+  server: "10.0.2.2"
   port: "8097"
   env: "deepNormalize_home_iseg_mrbrains_wgan_disc_ratio_0_05"

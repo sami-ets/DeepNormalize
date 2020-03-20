@@ -5,10 +5,10 @@ models:
     params:
       in_channels: 1
       out_channels: 1
-      leaky: False
       interpolate: True
+      leaky: False
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
         lr: 0.00001
         momentum: 0.9
@@ -35,9 +35,9 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -95,7 +95,7 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
         lr: 0.00001
         momentum: 0.9
@@ -139,16 +139,16 @@ dataset:
 
 training:
   batch_size: 15
-  nb_epochs: 125
+  nb_epochs: 100
   patience_segmentation: 1
   data_augmentation: False
   variables:
-    disc_ratio: 0.05
+    disc_ratio: 1.0
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_test_dual_dataset_WGAN"
+  env: "deepNormalize_home_test_dual_dataset"

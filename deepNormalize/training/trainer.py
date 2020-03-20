@@ -39,7 +39,7 @@ from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
     NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
-from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper
+from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, FeatureMapSlicer
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, natural_sort
 
 pynvml.nvmlInit()
@@ -61,6 +61,7 @@ class DeepNormalizeTrainer(Trainer):
         self._patience_segmentation = training_config.patience_segmentation
         self._slicer = ImageSlicer()
         self._seg_slicer = SegmentationSlicer()
+        self._fm_slicer = FeatureMapSlicer()
         self._label_mapper = LabelMapper()
         self._reconstruction_datasets = reconstruction_datasets
         self._augmented_reconstruction_datasets = augmented_reconstruction_datasets
@@ -128,9 +129,10 @@ class DeepNormalizeTrainer(Trainer):
 
                 self._generator.step()
 
-            disc_loss, disc_pred, disc_target = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS],
-                                                                          gen_pred.detach(),
-                                                                          target[DATASET_ID])
+            disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_discriminator(
+                inputs[NON_AUGMENTED_INPUTS],
+                gen_pred.detach(),
+                target[DATASET_ID])
             disc_loss.backward()
             self._discriminator.step()
 
@@ -196,9 +198,10 @@ class DeepNormalizeTrainer(Trainer):
 
             self._discriminator.zero_grad()
 
-            disc_loss, disc_pred, disc_target = self._train_discriminator(inputs[NON_AUGMENTED_INPUTS],
-                                                                          gen_pred.detach(),
-                                                                          target[DATASET_ID])
+            disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_discriminator(
+                inputs[NON_AUGMENTED_INPUTS],
+                gen_pred.detach(),
+                target[DATASET_ID])
             disc_loss.backward()
 
             self._discriminator.step()
@@ -211,7 +214,7 @@ class DeepNormalizeTrainer(Trainer):
         if disc_pred is not None:
             self._make_disc_pie_plots(disc_pred, inputs, target)
 
-        if self.current_train_step % 100 == 0:
+        if self.current_train_step % 400 == 0:
             self._update_image_plots(inputs[AUGMENTED_INPUTS].cpu().detach(), gen_pred.cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(), target[DATASET_ID].cpu().detach())
@@ -239,6 +242,19 @@ class DeepNormalizeTrainer(Trainer):
                     torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
                 self.custom_variables["WM Input Intensity Histogram"] = inputs[NON_AUGMENTED_INPUTS][
                     torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
+            if self.current_train_step % 500 == 0:
+                self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
+                self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                    torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                    align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
@@ -543,8 +559,7 @@ class DeepNormalizeTrainer(Trainer):
                             self._augmented_reconstruction_datasets))
                     img_augmented = list(
                         map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                            augmented_patches,
-                            self._augmented_reconstructors))
+                            augmented_patches, self._augmented_reconstructors))
                     augmented_minus_inputs = list()
                     norm_minus_augmented = list()
 
@@ -1055,7 +1070,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def _evaluate_loss_D_G_X_as_X(self, inputs, target):
         pred_D_G_X = self._discriminator.forward(inputs)
-        
+
         loss_D_G_X_as_X = -pred_D_G_X.mean()
 
         return loss_D_G_X_as_X
@@ -1074,10 +1089,10 @@ class DeepNormalizeTrainer(Trainer):
 
     def _train_discriminator(self, inputs, gen_pred, target):
         # Forward on real data.
-        pred_D_X = self._discriminator.forward(inputs)
+        pred_D_X, x_conv1, x_layer1, x_layer2, x_layer3 = self._discriminator.forward(inputs)
 
         # Forward on fake data.
-        pred_D_G_X = self._discriminator.forward(gen_pred)
+        pred_D_G_X, _, _, _, _ = self._discriminator.forward(gen_pred)
 
         # Forge bad class (K+1) tensor.
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
@@ -1096,14 +1111,14 @@ class DeepNormalizeTrainer(Trainer):
         for p in self._discriminator.parameters():
             p.data.clamp_(-0.01, 0.01)
 
-        return disc_loss, pred, target
+        return disc_loss, pred, target, x_conv1, x_layer1, x_layer2, x_layer3
 
     def _validate_discriminator(self, inputs, gen_pred, target, test=False):
         # Forward on real data.
-        pred_D_X = self._discriminator.forward(inputs)
+        pred_D_X, _, _, _, _ = self._discriminator.forward(inputs)
 
         # Forward on fake data.
-        pred_D_G_X = self._discriminator.forward(gen_pred)
+        pred_D_G_X, _, _, _, _ = self._discriminator.forward(gen_pred)
 
         disc_loss = (-pred_D_X.mean() + pred_D_G_X.mean())
 

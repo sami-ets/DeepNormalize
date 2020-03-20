@@ -5,8 +5,8 @@ models:
     params:
       in_channels: 1
       out_channels: 1
-      leaky: False
       interpolate: True
+      leaky: False
     optimizer:
       type: "FusedSGD"
       params:
@@ -86,7 +86,7 @@ models:
     type: "ResNet18"
     params:
       in_channels: 1
-      out_channels: 3
+      out_channels: 5
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
@@ -110,7 +110,7 @@ models:
       NLLLoss:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [0.379317992791794, 0.415858053784308, 0.204823953423898, 1]
+          weight: !torch/tensor [0.5346,  0.2502,  0.1482666667, 0.06693333333, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -124,25 +124,13 @@ models:
           average: True
 
 dataset:
-  iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
-    modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: !!null
-    validation_split: 0.2
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
-    modalities: "T1_1mm"
-    max_subjects: !!null
-    max_num_patches: !!null
-    validation_split: 0.3
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 15000
     validation_split: 0.2
-    sites: !!null
+    sites: ["Stanford", "Yale", "UCLA", "NYU"]
 
 training:
   batch_size: 16
@@ -150,7 +138,7 @@ training:
   patience_segmentation: 3
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.25
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -158,4 +146,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_wgan_disc_ratio_1_00"
+  env: "deepNormalize_school_abide_disc_ratio_0_25"

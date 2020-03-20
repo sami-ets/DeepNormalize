@@ -37,7 +37,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -136,10 +136,17 @@ dataset:
     max_subjects: !!null
     max_num_patches: !!null
     validation_split: 0.3
+  ABIDE:
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    modalities: "T1"
+    max_subjects: !!null
+    max_num_patches: 15000
+    validation_split: 0.2
+    sites: !!null
 
 training:
   batch_size: 16
-  nb_epochs: 125
+  nb_epochs: 100
   patience_segmentation: 3
   data_augmentation: True
   variables:
@@ -151,4 +158,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_data_augmentation_iseg_mrbrains_wgan_disc_ratio_0.50"
+  env: "deepNormalize_home_data_augmentation_wgan_disc_ratio_0.50"
