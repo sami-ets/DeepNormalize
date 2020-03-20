@@ -127,15 +127,17 @@ dataset:
   iSEG:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
-    max_subjects: !!null
+    max_subjects: 5
     max_num_patches: !!null
-    validation_split: 0.2
+    validation_split: 0.3
+    hist_shift_augmentation: False
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
     max_num_patches: !!null
     validation_split: 0.3
+    hist_shift_augmentation: False
 
 training:
   batch_size: 15

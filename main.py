@@ -35,7 +35,7 @@ from kerosene.training.events import Event
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
-from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField
+from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField, ShiftHistogram
 from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
@@ -89,11 +89,9 @@ if __name__ == '__main__':
     ABIDE_train = None
     ABIDE_CSV = None
 
-    if training_config.data_augmentation:
-        augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                      AddBiasField(exec_probability=1.0, alpha=0.001)]))
-    else:
-        augmentation_strategy = None
+    iSEG_augmentation_strategy = None
+    MRBrainS_augmentation_strategy = None
+    ABIDE_augmentation_strategy = None
 
     # Initialize the model trainers
     model_trainer_factory = ModelTrainerFactory(model_factory=CustomModelFactory(),
@@ -102,6 +100,19 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
+        if dataset_configs["iSEG"].hist_shift_augmentation:
+            if training_config.data_augmentation:
+                iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                                   AddBiasField(exec_probability=1.0, alpha=0.001),
+                                                                   ShiftHistogram(exec_probability=0.15, min_lambda=-5,
+                                                                                  max_lambda=5)]))
+            else:
+                iSEG_augmentation_strategy = AugmentInput(
+                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation:
+            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_augmented_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
@@ -109,7 +120,7 @@ if __name__ == '__main__':
             test_size=dataset_configs["iSEG"].validation_split,
             max_subjects=dataset_configs["iSEG"].max_subjects,
             max_num_patches=dataset_configs["iSEG"].max_num_patches,
-            augmentation_strategy=augmentation_strategy)
+            augmentation_strategy=iSEG_augmentation_strategy)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
@@ -124,6 +135,19 @@ if __name__ == '__main__':
         augmented_input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
+        if dataset_configs["MRBrainS"].hist_shift_augmentation:
+            if training_config.data_augmentation:
+                MRBRainS_augmentation_strategy = AugmentInput(
+                    Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                             AddBiasField(exec_probability=1.0, alpha=0.001),
+                             ShiftHistogram(exec_probability=0.50, min_lambda=-5,
+                                            max_lambda=5)]))
+            else:
+                MRBRainS_augmentation_strategy = AugmentInput(
+                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation:
+            MRBRainS_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                                   AddBiasField(exec_probability=1.0, alpha=0.001)]))
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_augmented_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
@@ -131,7 +155,7 @@ if __name__ == '__main__':
             test_size=dataset_configs["MRBrainS"].validation_split,
             max_subjects=dataset_configs["MRBrainS"].max_subjects,
             max_num_patches=dataset_configs["MRBrainS"].max_num_patches,
-            augmentation_strategy=augmentation_strategy)
+            augmentation_strategy=MRBrainS_augmentation_strategy)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
@@ -146,6 +170,18 @@ if __name__ == '__main__':
         augmented_input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
 
     if dataset_configs.get("ABIDE", None) is not None:
+        if dataset_configs["ABIDE"].hist_shift_augmentation:
+            if training_config.data_augmentation:
+                ABIDE_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                                    AddBiasField(exec_probability=1.0, alpha=0.001),
+                                                                    ShiftHistogram(exec_probability=0.05, min_lambda=-5,
+                                                                                   max_lambda=5)]))
+            else:
+                ABIDE_augmentation_strategy = AugmentInput(
+                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation:
+            ABIDE_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
@@ -154,7 +190,7 @@ if __name__ == '__main__':
             max_subjects=dataset_configs["ABIDE"].max_subjects,
             test_size=dataset_configs["ABIDE"].validation_split,
             max_num_patches=dataset_configs["ABIDE"].max_num_patches,
-            augmentation_strategy=augmentation_strategy)
+            augmentation_strategy=ABIDE_augmentation_strategy)
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)

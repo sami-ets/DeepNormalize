@@ -131,6 +131,7 @@ dataset:
     max_num_patches: 15000
     validation_split: 0.2
     sites: ["Stanford", "Yale", "UCLA", "NYU"]
+    hist_shift_augmentation: False
 
 training:
   batch_size: 16
@@ -144,6 +145,6 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.180.113.44"
+  server: "10.0.2.2"
   port: "8097"
   env: "deepNormalize_home_abide_disc_ratio_1_00"

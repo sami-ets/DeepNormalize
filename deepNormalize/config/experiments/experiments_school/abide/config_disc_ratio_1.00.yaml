@@ -131,6 +131,7 @@ dataset:
     max_num_patches: 15000
     validation_split: 0.2
     sites: ["Stanford", "Yale", "UCLA", "NYU"]
+    hist_shift_augmentation: False
 
 training:
   batch_size: 16

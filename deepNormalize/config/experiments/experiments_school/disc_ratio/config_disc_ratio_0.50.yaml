@@ -130,12 +130,14 @@ dataset:
     max_subjects: !!null
     max_num_patches: !!null
     validation_split: 0.2
+    hist_shift_augmentation: False
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
     max_subjects: !!null
     max_num_patches: !!null
     validation_split: 0.3
+    hist_shift_augmentation: False
   ABIDE:
     path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
     modalities: "T1"
@@ -143,6 +145,7 @@ dataset:
     max_num_patches: 15000
     validation_split: 0.2
     sites: !!null
+    hist_shift_augmentation: False
 
 training:
   batch_size: 24
