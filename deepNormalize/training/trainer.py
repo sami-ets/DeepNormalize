@@ -1069,7 +1069,7 @@ class DeepNormalizeTrainer(Trainer):
         self.custom_variables["Pie Plot True"] = real_count
 
     def _evaluate_loss_D_G_X_as_X(self, inputs, target):
-        pred_D_G_X = self._discriminator.forward(inputs)
+        pred_D_G_X, x_conv1, x_layer1, x_layer2, x_layer3 = self._discriminator.forward(inputs)
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
                                        requires_grad=False)
         loss_D_G_X_as_X = self._discriminator.compute_loss("NLLLoss",
