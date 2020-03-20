@@ -100,7 +100,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -180,7 +180,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -270,7 +270,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -354,7 +354,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -509,7 +509,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -590,7 +590,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -680,7 +680,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -764,7 +764,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -912,7 +912,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -977,7 +977,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
