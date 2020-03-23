@@ -127,25 +127,25 @@ dataset:
   iSEG:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/Patches/Aligned/Full"
     modalities: "T1"
-    max_subjects: 5
+    max_subjects: !!null
     max_num_patches: !!null
-    validation_split: 0.3
-    hist_shift_augmentation: False
+    validation_split: 0.2
+    hist_shift_augmentation: True
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
     modalities: "T1_1mm"
-    max_subjects: 5
+    max_subjects: !!null
     max_num_patches: !!null
     validation_split: 0.3
-    hist_shift_augmentation: False
+    hist_shift_augmentation: True
   ABIDE:
     path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
     modalities: "T1"
-    max_subjects: 5
-    max_num_patches: !!null
-    validation_split: 0.3
-    sites: !!null
-    hist_shift_augmentation: False
+    max_subjects: !!null
+    max_num_patches: 15000
+    validation_split: 0.2
+    sites: ["Stanford", "Caltech", "NYU", "Yale"]
+    hist_shift_augmentation: True
 
 training:
   batch_size: 24
@@ -153,7 +153,7 @@ training:
   patience_segmentation: 3
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.10
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -161,4 +161,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_disc_ratio_1_00"
+  env: "deepNormalize_school_hist_shift_disc_ratio_0_10"
