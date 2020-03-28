@@ -827,11 +827,11 @@ if __name__ == "__main__":
     #               ).run()
     #
     # MRBrainSPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Aligned",
-    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Full",
+    #                                    output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/TestData/Patches/Full_4",
     #                                    patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
     #                                                                                       keep_labels=False)
     # iSEGPatchPreProcessingPipeline(root_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Aligned",
-    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Full",
+    #                                output_dir="/mnt/md0/Data/Preprocessed/iSEG/Testing/Patches/Full_4",
     #                                patch_size=(1, 32, 32, 32), step=(1, 8, 8, 8)).run(keep_foreground_only=False,
     #                                                                                   keep_labels=False)
 
