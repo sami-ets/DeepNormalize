@@ -126,13 +126,25 @@ if __name__ == '__main__':
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
         augmented_reconstruction_datasets.append(iSEG_augmented_reconstruction)
-        normalized_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
-                                                            [model_trainers[GENERATOR]], normalize=True))
-        segmentation_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8],
-                                                              [model_trainers[GENERATOR],
-                                                               model_trainers[SEGMENTER]], segment=True))
-        input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
-        augmented_input_reconstructors.append(ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8]))
+        normalized_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                                                            [32, 32, 32],
+                                                            dataset_configs["iSEG"].step,
+                                                            [model_trainers[GENERATOR]],
+                                                            normalize=True))
+        segmentation_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["iSEG"].step,
+                               [model_trainers[GENERATOR],
+                                model_trainers[SEGMENTER]],
+                               segment=True))
+        input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                                                       [32, 32, 32],
+                                                       dataset_configs["iSEG"].step))
+        augmented_input_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["iSEG"].step))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
@@ -161,13 +173,24 @@ if __name__ == '__main__':
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
         augmented_reconstruction_datasets.append(MRBrainS_augmented_reconstruction)
-        normalized_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
-                                                            [model_trainers[GENERATOR]], normalize=True))
-        segmentation_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8],
-                                                              [model_trainers[GENERATOR],
-                                                               model_trainers[SEGMENTER]], segment=True))
-        input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
-        augmented_input_reconstructors.append(ImageReconstructor([160, 192, 160], [32, 32, 32], [8, 8, 8]))
+        normalized_reconstructors.append(
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["MRBrainS"].step,
+                               [model_trainers[GENERATOR]], normalize=True))
+        segmentation_reconstructors.append(
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["MRBrainS"].step,
+                               [model_trainers[GENERATOR],
+                                model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                                                       [32, 32, 32],
+                                                       dataset_configs["MRBrainS"].step))
+        augmented_input_reconstructors.append(
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["MRBrainS"].step))
 
     if dataset_configs.get("ABIDE", None) is not None:
         if dataset_configs["ABIDE"].hist_shift_augmentation:
@@ -195,12 +218,19 @@ if __name__ == '__main__':
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
-        normalized_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8],
+        normalized_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
+                                                            [32, 32, 32],
+                                                            dataset_configs["ABIDE"].step,
                                                             [model_trainers[GENERATOR]], normalize=True))
-        segmentation_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8],
-                                                              [model_trainers[GENERATOR],
-                                                               model_trainers[SEGMENTER]], segment=True))
-        input_reconstructors.append(ImageReconstructor([224, 224, 192], [32, 32, 32], [8, 8, 8]))
+        segmentation_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
+                               [32, 32, 32],
+                               dataset_configs["ABIDE"].step,
+                               [model_trainers[GENERATOR],
+                                model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
+                                                       [32, 32, 32],
+                                                       dataset_configs["ABIDE"].step))
 
     # Concat datasets.
     if len(dataset_configs) > 1:
@@ -456,82 +486,82 @@ if __name__ == '__main__':
             PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input iSEG Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Normalized iSEG Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented iSEG Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth iSEG Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise iSEG Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Initial Noise iSEG Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Noise iSEG After Normalization"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input MRBrainS Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Normalized MRBrainS Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented MRBrainS Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth MRBrainS Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise MRBrainS Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Initial Noise MRBrainS Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Noise MRBrainS After Normalization"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Input ABIDE Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Normalized ABIDE Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Ground Truth ABIDE Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
                                 params={"opts": {"store_history": True,
                                                  "title": "Reconstructed Segmented ABIDE Image"}},
-                                every=5), Event.ON_TEST_EPOCH_END) \
+                                every=10), Event.ON_TEST_EPOCH_END) \
             .with_event_handler(
             PlotCustomVariables(visdom_logger, "Conv1 FM", PlotType.IMAGES_PLOT,
                                 params={"nrow": 8, "opts": {"store_history": True,

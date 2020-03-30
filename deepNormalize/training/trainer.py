@@ -535,7 +535,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
-            if self.epoch % 5 == 0:
+            if self.epoch % 10 == 0:
                 all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
                                        self._reconstruction_datasets))
                 ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
