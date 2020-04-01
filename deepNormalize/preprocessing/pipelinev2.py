@@ -267,12 +267,12 @@ if __name__ == "__main__":
     parser.add_argument('--path-mrbrains', type=str, help='Path to the MRBrainS directory.', required=True)
     args = parser.parse_args()
 
-    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_4/iSEG/Training",
-                 step=(1, 4, 4, 4)).run()
-    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData",
+    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training",
+    #              step=(1, 4, 4, 4)).run()
+    MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData",
                      step=(1, 4, 4, 4)).run()
 
-    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_8/iSEG/Training",
+    iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_8/iSEG/Training",
                  step=(1, 8, 8, 8)).run()
-    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_8/MRBrainS/DataNii/TrainingData",
+    MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_8/MRBrainS/DataNii/TrainingData",
                      step=(1, 8, 8, 8)).run()

@@ -10,7 +10,7 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.00001
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -158,3 +158,5 @@ visdom:
   server: "10.0.3.9"
   port: "8097"
   env: "deepNormalize_home_iseg_mrbrains_disc_ratio_1_00"
+  offline: True
+  filename: "deepNormalize_home_iseg_mrbrains_disc_ratio_1_00.json"

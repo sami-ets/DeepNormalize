@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
+import os
 import time
 import uuid
 from datetime import timedelta
@@ -42,6 +42,9 @@ from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, FeatureMapSlicer
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, natural_sort
 
+from samitorch.inputs.transformers import ToNifti1Image, NiftiToDisk
+from torchvision.transforms.transforms import Compose
+
 pynvml.nvmlInit()
 
 
@@ -51,7 +54,7 @@ class DeepNormalizeTrainer(Trainer):
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
                  reconstruction_datasets: List[Dataset], augmented_reconstruction_datasets: List[Dataset],
                  normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
-                 augmented_reconstructors: list, run_config: RunConfiguration, dataset_config: dict):
+                 augmented_reconstructors: list, run_config: RunConfiguration, dataset_config: dict, save_folder: str):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    test_data_loader, model_trainers, run_config)
 
@@ -105,6 +108,7 @@ class DeepNormalizeTrainer(Trainer):
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
+        self._save_folder = save_folder
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
                                                       sum(p.numel() for p in self._discriminator.parameters())))
@@ -123,7 +127,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
                 self._generator.update_train_loss("MSELoss", gen_loss)
                 gen_loss.backward()
 
@@ -156,7 +160,7 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
 
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
             self._generator.update_train_loss("MSELoss", gen_loss)
 
             seg_pred = self._segmenter.forward(gen_pred)
@@ -260,7 +264,7 @@ class DeepNormalizeTrainer(Trainer):
         gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
             self._generator.update_valid_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, _ = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
@@ -314,7 +318,7 @@ class DeepNormalizeTrainer(Trainer):
         gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
             self._generator.update_test_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, _ = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
@@ -508,9 +512,6 @@ class DeepNormalizeTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
 
-        if self.epoch == self._training_config.patience_segmentation:
-            self.model_trainers[GENERATOR].optimizer_lr = 0.0001
-
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
             np.array(gpu_mem_get(self._run_config.local_rank))]
@@ -582,9 +583,31 @@ class DeepNormalizeTrainer(Trainer):
                     self.custom_variables[
                         "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
                         SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0))
-                    self.custom_variables[
-                        "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0))
+
+                    if not os.path.exists(os.path.join(self._save_folder, "reconstructed_images")):
+                        os.makedirs(os.path.join(self._save_folder, "reconstructed_images"))
+
+                    transform_img_norm = Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(self._save_folder, "reconstructed_images",
+                                                                   "Reconstructed_Normalized_{}_Image_{}.nii.gz".format(
+                                                                       dataset, str(self._current_epoch))))])
+                    transform_img_seg = Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(self._save_folder, "reconstructed_images",
+                                                                   "Reconstructed_Segmented_{}_Image_{}.nii.gz".format(
+                                                                       dataset, str(self._current_epoch))))])
+                    transform_img_gt = Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(self._save_folder, "reconstructed_images",
+                                                                   "Reconstructed_Ground_Truth_{}_Image_{}.nii.gz".format(
+                                                                       dataset, str(self._current_epoch))))])
+                    transform_img_input = Compose(
+                        [ToNifti1Image(), NiftiToDisk(os.path.join(self._save_folder, "reconstructed_images",
+                                                                   "Reconstructed_Input_{}_Image.nii.gz".format(
+                                                                       dataset, str(self._current_epoch))))])
+
+                    transform_img_norm(img_norm[dataset])
+                    transform_img_seg(img_seg[dataset])
+                    transform_img_gt(img_gt[dataset])
+                    transform_img_input(img_input[dataset])
 
                     metric = self._segmenter.compute_metrics(
                         to_onehot(torch.tensor(img_seg[dataset]).unsqueeze(0).long(), num_classes=4),

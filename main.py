@@ -298,7 +298,7 @@ if __name__ == '__main__':
                                        reconstruction_datasets, augmented_reconstruction_datasets,
                                        normalized_reconstructors, input_reconstructors,
                                        segmentation_reconstructors, augmented_input_reconstructors, run_config,
-                                       dataset_configs) \
+                                       dataset_configs, save_folder) \
             .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
             .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \

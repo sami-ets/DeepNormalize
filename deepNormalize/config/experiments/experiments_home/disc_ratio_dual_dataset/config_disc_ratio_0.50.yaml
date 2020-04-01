@@ -157,4 +157,6 @@ training:
 visdom:
   server: "10.0.2.2"
   port: "8097"
-  env: "deepNormalize_home_iseg_mrbrains_disc_ratio_0_50_3"
+  env: "deepNormalize_home_iseg_mrbrains_disc_ratio_0_50"
+  offline: True
+  filename: "deepNormalize_home_iseg_mrbrains_disc_ratio_0_50.json"
