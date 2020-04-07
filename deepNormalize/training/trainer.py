@@ -120,6 +120,8 @@ class DeepNormalizeTrainer(Trainer):
             size=(self._training_config.batch_size, 1, 32, 32, 32), dtype=torch.float, device="cpu")
 
         gen_pred = torch.nn.functional.relu(self._generator.forward(inputs[AUGMENTED_INPUTS]))
+        metric = self._generator.compute_metrics(gen_pred, inputs[AUGMENTED_INPUTS])
+        self._generator.update_train_metric("MeanSquaredError", metric["MeanSquaredError"] / 32768)
 
         if self._should_activate_autoencoder():
             self._generator.zero_grad()
@@ -127,7 +129,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.zero_grad()
 
             if self.current_train_step % self._training_config.variables["train_generator_every_n_steps"] == 0:
-                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
+                gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
                 self._generator.update_train_loss("MSELoss", gen_loss)
                 gen_loss.backward()
 
@@ -160,7 +162,7 @@ class DeepNormalizeTrainer(Trainer):
             self._discriminator.zero_grad()
             self._segmenter.zero_grad()
 
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_train_loss("MSELoss", gen_loss)
 
             seg_pred = self._segmenter.forward(gen_pred)
@@ -261,16 +263,18 @@ class DeepNormalizeTrainer(Trainer):
                                                     align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
+        gen_pred = self._generator.forward(inputs[NON_AUGMENTED_INPUTS])
+        metric = self._generator.compute_metrics(gen_pred, inputs[AUGMENTED_INPUTS])
+        self._generator.update_valid_metric("MeanSquaredError", metric["MeanSquaredError"] / 32768)
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_valid_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, _ = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
                                                                    target[DATASET_ID])
 
-            seg_pred = self._segmenter.forward(inputs[AUGMENTED_INPUTS])
+            seg_pred = self._segmenter.forward(inputs[NON_AUGMENTED_INPUTS])
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
@@ -283,7 +287,7 @@ class DeepNormalizeTrainer(Trainer):
             self._valid_dice_gauge.update(metric["Dice"])
 
         if self._should_activate_segmentation():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[NON_AUGMENTED_INPUTS])
             self._generator.update_valid_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, _ = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
@@ -315,16 +319,18 @@ class DeepNormalizeTrainer(Trainer):
             self._total_loss_validation_gauge.update(total_loss.item())
 
     def test_step(self, inputs, target):
-        gen_pred = self._generator.forward(inputs[AUGMENTED_INPUTS])
+        gen_pred = self._generator.forward(inputs[NON_AUGMENTED_INPUTS])
+        metric = self._generator.compute_metrics(gen_pred, inputs[AUGMENTED_INPUTS])
+        self._generator.update_train_metric("MeanSquaredError", metric["MeanSquaredError"] / 32768)
 
         if self._should_activate_autoencoder():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS]) / 32768
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
             self._generator.update_test_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, _ = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
                                                                    target[DATASET_ID], test=True)
 
-            seg_pred = self._segmenter.forward(inputs[AUGMENTED_INPUTS])
+            seg_pred = self._segmenter.forward(inputs[NON_AUGMENTED_INPUTS])
             seg_loss = self._segmenter.compute_loss("DiceLoss", torch.nn.functional.softmax(seg_pred, dim=1),
                                                     to_onehot(torch.squeeze(target[IMAGE_TARGET], dim=1).long(),
                                                               num_classes=4))
@@ -338,7 +344,7 @@ class DeepNormalizeTrainer(Trainer):
             self._segmenter.update_test_metrics(metric)
 
         if self._should_activate_segmentation():
-            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
+            gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[NON_AUGMENTED_INPUTS])
             self._generator.update_test_loss("MSELoss", gen_loss)
 
             disc_loss, disc_pred, disc_target = self._validate_discriminator(inputs[NON_AUGMENTED_INPUTS], gen_pred,
@@ -573,16 +579,16 @@ class DeepNormalizeTrainer(Trainer):
                 for dataset in self._dataset_configs.keys():
                     self.custom_variables[
                         "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset], 0), 0))
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset], 0), 0), 160)
                     self.custom_variables[
                         "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0)).squeeze(0)
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0), 160).squeeze(0)
                     self.custom_variables[
                         "Reconstructed Ground Truth {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0)).squeeze(0)
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
                     self.custom_variables[
                         "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0))
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
 
                     if not os.path.exists(os.path.join(self._save_folder, "reconstructed_images")):
                         os.makedirs(os.path.join(self._save_folder, "reconstructed_images"))
@@ -685,7 +691,7 @@ class DeepNormalizeTrainer(Trainer):
             if "iSEG" not in self._dataset_configs.keys():
                 self.custom_variables["Reconstructed Normalized iSEG Image"] = np.zeros((224, 192))
                 self.custom_variables["Reconstructed Segmented iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground iSEG ABIDE Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Ground Truth iSEG Image"] = np.zeros((224, 192))
                 self.custom_variables["Reconstructed Input iSEG Image"] = np.zeros((224, 192))
                 self.custom_variables["Reconstructed Initial Noise iSEG Image"] = np.zeros((224, 192))
                 self.custom_variables["Reconstructed Noise iSEG After Normalization"] = np.zeros((224, 192))
@@ -821,18 +827,19 @@ class DeepNormalizeTrainer(Trainer):
 
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
-        self.custom_variables["Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
-            SliceType.AXIAL, inputs)
         self.custom_variables[
-            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(SliceType.AXIAL,
-                                                                                                       generator_predictions)
+            "Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            SliceType.AXIAL, inputs, inputs.shape[2] // 2)
+        self.custom_variables[
+            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            SliceType.AXIAL, generator_predictions, generator_predictions.shape[2] // 2)
         self.custom_variables[
             "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
-            SliceType.AXIAL,
-            segmenter_predictions)
-        self.custom_variables["Segmentation Ground Truth Batch Process {}".format(
-            self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(SliceType.AXIAL,
-                                                                               target)
+            SliceType.AXIAL, segmenter_predictions, segmenter_predictions.shape[2] // 2)
+        self.custom_variables[
+            "Segmentation Ground Truth Batch Process {}".format(
+                self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            SliceType.AXIAL, target, target.shape[2] // 2)
         self.custom_variables[
             "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
             dataset_ids)

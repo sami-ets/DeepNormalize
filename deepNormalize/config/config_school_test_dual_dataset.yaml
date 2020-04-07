@@ -17,14 +17,14 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 5
+        patience: 7
         min_lr: 0.000000001
     criterion:
       MSELoss:
         type: "MSELoss"
     metrics:
-      Accuracy:
-        type: "Accuracy"
+      MeanSquaredError:
+        type: "MeanSquaredError"
 
   Segmenter:
     name: "UNet3D"

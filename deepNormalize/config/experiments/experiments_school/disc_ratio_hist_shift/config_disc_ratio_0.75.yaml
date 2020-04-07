@@ -23,8 +23,8 @@ models:
       MSELoss:
         type: "MSELoss"
     metrics:
-      Accuracy:
-        type: "Accuracy"
+      MeanSquaredError:
+        type: "MeanSquaredError"
 
   Segmenter:
     name: "UNet3D"

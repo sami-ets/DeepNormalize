@@ -23,8 +23,8 @@ models:
       MSELoss:
         type: "MSELoss"
     metrics:
-      Accuracy:
-        type: "Accuracy"
+      MeanSquaredError:
+        type: "MeanSquaredError"
 
   Segmenter:
     name: "UNet3D"
@@ -150,6 +150,8 @@ dataset:
     validation_split: 0.2
     sites: !!null
     hist_shift_augmentation: False
+    step: [4, 4, 4]
+    reconstruction_size: [224, 224, 192]
 
 training:
   batch_size: 24

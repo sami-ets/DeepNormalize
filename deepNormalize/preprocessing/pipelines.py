@@ -523,7 +523,8 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
 
     def run(self, prefix: str = ""):
         dirs = sorted(next(os.walk(self._root_dir))[1])
-        self._dispatch_jobs(dirs, 4)
+        # self._dispatch_jobs(dirs, 4)
+        self._do_job(dirs)
 
     @staticmethod
     def chunks(l, n):
@@ -544,10 +545,10 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
     def _do_job(self, dirs):
         for dir in dirs:
             if os.path.exists(os.path.join(self._root_dir, dir, "mri", "aparc+aseg.mgz")):
-                self._extract_labels(os.path.join(self._root_dir, dir, "mri"))
-                self._crop_to_content(os.path.join(self._root_dir, dir, "mri"))
-                self._align(os.path.join(self._root_dir, dir, "mri"))
-                self._apply_mask(os.path.join(self._root_dir, dir, "mri"))
+                # self._extract_labels(os.path.join(self._root_dir, dir, "mri"))
+                # self._crop_to_content(os.path.join(self._root_dir, dir, "mri"))
+                # self._align(os.path.join(self._root_dir, dir, "mri"))
+                # self._apply_mask(os.path.join(self._root_dir, dir, "mri"))
                 self._extract_patches(os.path.join(self._root_dir, dir, "mri"),
                                       os.path.join(self._root_dir, dir, "mri/patches"), keep_labels=True,
                                       keep_foreground_only=False)

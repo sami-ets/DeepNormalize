@@ -60,15 +60,15 @@ class FeatureMapSlicer(object):
     def _normalize(img):
         return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
-    def get_colored_slice(self, slice_type, seg_map):
-        seg_map = self._normalize(seg_map)
+    def get_colored_slice(self, slice_type, feature_map):
+        feature_map = self._normalize(feature_map)
 
         if slice_type == SliceType.SAGITAL:
-            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, :, int(seg_map.shape[4] / 2)]), 2)
+            colored_slice = self._colormap(np.rot90(feature_map[:, :, :, :, int(feature_map.shape[4] / 2)]), 2)
         elif slice_type == SliceType.CORONAL:
-            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, int(seg_map.shape[3] / 2), :]), 2)
+            colored_slice = self._colormap(np.rot90(feature_map[:, :, :, int(feature_map.shape[3] / 2), :]), 2)
         elif slice_type == SliceType.AXIAL:
-            colored_slice = self._colormap((seg_map[:, :, int(seg_map.shape[2] / 2), :, :])).squeeze(0)
+            colored_slice = self._colormap((feature_map[:, :, int(feature_map.shape[2] / 2), :, :])).squeeze(0)
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
@@ -85,15 +85,15 @@ class SegmentationSlicer(object):
     def _normalize(img):
         return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
-    def get_colored_slice(self, slice_type, seg_map):
+    def get_colored_slice(self, slice_type, seg_map, slice):
         seg_map = self._normalize(seg_map)
 
         if slice_type == SliceType.SAGITAL:
-            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, :, int(seg_map.shape[4] / 2)]), 2)
+            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, :, slice]), 2)
         elif slice_type == SliceType.CORONAL:
-            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, int(seg_map.shape[3] / 2), :]), 2)
+            colored_slice = self._colormap(np.rot90(seg_map[:, :, :, slice, :]), 2)
         elif slice_type == SliceType.AXIAL:
-            colored_slice = self._colormap((seg_map[:, :, int(seg_map.shape[2] / 2), :, :])).squeeze(1)
+            colored_slice = self._colormap((seg_map[:, :, slice, :, :])).squeeze(1)
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
@@ -109,15 +109,15 @@ class ImageSlicer(object):
     def _normalize(img):
         return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
-    def get_slice(self, slice_type, image):
+    def get_slice(self, slice_type, image, slice):
         image = self._normalize(image)
 
         if slice_type == SliceType.SAGITAL:
-            slice = image[:, :, :, :, int(image.shape[4] / 2)]
+            slice = image[:, :, :, :, slice]
         elif slice_type == SliceType.CORONAL:
-            slice = image[:, :, :, int(image.shape[3] / 2), :]
+            slice = image[:, :, :, slice, :]
         elif slice_type == SliceType.AXIAL:
-            slice = image[:, :, int(image.shape[2] / 2), :, :]
+            slice = image[:, :, slice, :, :]
         else:
             raise NotImplementedError("The provided slice type ({}) not found.".format(slice_type))
 
@@ -169,6 +169,6 @@ class ImageReconstructor(object):
             divisor[z:z + self._patch_size[0], y:y + self._patch_size[1], x:x + self._patch_size[2]] += 1
 
         if self._do_segment:
-            return np.floor(img / divisor)
+            return np.clip(np.round(img / divisor), a_min=0, a_max=3)
         else:
             return img / divisor
