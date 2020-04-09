@@ -5,12 +5,12 @@ models:
     params:
       in_channels: 1
       out_channels: 1
-      leaky: False
       interpolate: True
+      leaky: False
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.0001
+        lr: 0.00001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
@@ -23,8 +23,8 @@ models:
       MSELoss:
         type: "MSELoss"
     metrics:
-      Accuracy:
-        type: "Accuracy"
+      MeanSquaredError:
+        type: "MeanSquaredError"
 
   Segmenter:
     name: "UNet3D"
@@ -86,7 +86,7 @@ models:
     type: "ResNet18"
     params:
       in_channels: 1
-      out_channels: 3
+      out_channels: 4
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
@@ -110,7 +110,7 @@ models:
       NLLLoss:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [0.35, 0.65, 1]
+          weight: !torch/tensor [0.35, 0.65, 1, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -125,7 +125,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed_4/iSEG/Training/"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: !!null
@@ -134,7 +134,7 @@ dataset:
     step: [4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: !!null
@@ -142,6 +142,16 @@ dataset:
     hist_shift_augmentation: False
     step: [4, 4, 4]
     reconstruction_size: [256, 256, 192]
+  ABIDE:
+    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    modalities: "T1"
+    max_subjects: 10
+    max_num_patches: !!null
+    validation_split: 0.2
+    sites: ["NYU"]
+    step: [4, 4, 4]
+    reconstruction_size: [256, 256, 192]
+    hist_shift_augmentation: False
 
 training:
   batch_size: 15
@@ -155,7 +165,7 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.3.9"
+  server: "10.0.2.2"
   port: "8097"
   env: "deepNormalize_home_iseg_mrbrains_disc_ratio_1_00"
   offline: True

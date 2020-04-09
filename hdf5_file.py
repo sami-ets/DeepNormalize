@@ -90,7 +90,7 @@ class HDF5Writer(object):
                (reconstruction_source_paths, reconstruction_target_paths)
 
     def create_dataset_(self, group, dataset_name, source_paths):
-        dataset = group.create_dataset(dataset_name, compression="gzip", compression_opts=9,
+        dataset = group.create_dataset(dataset_name,
                                        shape=(len(source_paths), 1, 32, 32, 32),
                                        chunks=True,
                                        dtype=np.float32)
@@ -139,17 +139,17 @@ if __name__ == "__main__":
     #                    "iSEG", 0.3, ["T1", "T2"])
     # fm.create_file("/data/users/pldelisle/datasets/iseg.hdf5")
 
-    fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
-                    "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
-    fm.create_file("/home/AM54900/mrbrains.hd5f")
+    # fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
+    #                 "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
+    # fm.create_file("/home/AM54900/mrbrains.hd5f")
 
     # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
     #                 "iSEG", 0.3, ["T1", "T2"])
     # fm.create_file("/mnt/home/ETS/iseg.hd5f")
     #
-    # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
-    #                 "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
-    # fm.create_file("/mnt/home/ETS/mrbrains.hd5f")
+    fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
+                    "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
+    fm.create_file("/mnt/home/ETS/mrbrains.hd5f")
 
     # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
     #                 "iSEG", 0.3, ["T1", "T2"])

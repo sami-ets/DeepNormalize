@@ -104,10 +104,11 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("iSEGPipeline")
     PATCH_SIZE = (1, 32, 32, 32)
 
-    def __init__(self, root_dir, output_dir, step):
+    def __init__(self, root_dir, output_dir, step, do_extract_patches=True):
         self._root_dir = root_dir
         self._output_dir = output_dir
         self._step = step
+        self._do_extract_patches = do_extract_patches
 
     def run(self):
         images_T1 = natural_sort(extract_file_paths(os.path.join(self._root_dir, "T1")))
@@ -124,13 +125,22 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
             self.LOGGER.info("Processing file {}".format(file[2]))
             label = self._to_numpy_array(file[2])
             label = self._remap_class_ids(label)
-            self._extract_patches(label, subject, "Labels", self.PATCH_SIZE, self._step)
+            if self._do_extract_patches:
+                self._extract_patches(label, subject, "Labels", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(label, subject, "Labels")
             self.LOGGER.info("Processing file {}".format(file[0]))
             t1 = self._to_numpy_array(file[0])
-            self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
+            if self._do_extract_patches:
+                self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t1, subject, "T1")
             self.LOGGER.info("Processing file {}".format(file[1]))
             t2 = self._to_numpy_array(file[1])
-            self._extract_patches(t2, subject, "T2", self.PATCH_SIZE, self._step)
+            if self._do_extract_patches:
+                self._extract_patches(t2, subject, "T2", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t2, subject, "T2")
 
     def _to_numpy_array(self, file):
         transform_ = transforms.Compose([ToNumpyArray()])
@@ -140,6 +150,15 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
     def _remap_class_ids(self, file):
         transform_ = transforms.Compose([RemapClassIDs([10, 150, 250], [1, 2, 3])])
         return transform_(file)
+
+    def _write_image(self, image, subject, modality):
+        if not os.path.exists(os.path.join(self._output_dir, subject, modality)):
+            os.makedirs(os.path.join(self._output_dir, subject, modality))
+
+        transform_ = transforms.Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(self._output_dir, subject, modality, modality + ".nii.gz"))])
+
+        transform_(image)
 
     def _extract_patches(self, image, subject, modality, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
@@ -162,10 +181,11 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("MRBrainSPipeline")
     PATCH_SIZE = (1, 32, 32, 32)
 
-    def __init__(self, root_dir, output_dir, step):
+    def __init__(self, root_dir, output_dir, step, do_extract_patches=True):
         self._root_dir = root_dir
         self._output_dir = output_dir
         self._step = step
+        self._do_extract_patches = do_extract_patches
 
     def run(self):
         source_paths = list()
@@ -186,51 +206,73 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             label_for_testing = self._to_numpy_array(label_for_testing)
             label_for_testing = label_for_testing.transpose((3, 0, 1, 2))
             label_for_testing = np.rot90(label_for_testing, axes=(1, -2))
-            self._extract_patches(label_for_testing, subject, "LabelsForTesting", self.PATCH_SIZE, self._step)
-
+            if self._do_extract_patches:
+                self._extract_patches(label_for_testing, subject, "LabelsForTesting", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(label_for_testing, subject, "LabelsForTesting")
             self.LOGGER.info("Processing file {}".format(file[LABELSFORTRAINNG]))
             label_for_training = self._resample_to_template(file[LABELSFORTRAINNG], file[T1_1MM],
                                                             interpolation="linear")
             label_for_training = self._to_numpy_array(label_for_training)
             label_for_training = label_for_training.transpose((3, 0, 1, 2))
             label_for_training = np.rot90(label_for_training, axes=(1, -2))
-            self._extract_patches(label_for_training, subject, "LabelsForTraining", self.PATCH_SIZE, self._step)
-
+            if self._do_extract_patches:
+                self._extract_patches(label_for_training, subject, "LabelsForTraining", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(label_for_training, subject, "LabelsForTraining")
             self.LOGGER.info("Processing file {}".format(file[T1]))
             t1 = self._resample_to_template(file[T1], file[T1_1MM], interpolation="continuous")
             t1 = self._to_numpy_array(t1)
             t1 = t1.transpose((3, 0, 1, 2))
             t1 = np.rot90(t1, axes=(1, -2))
             t1 = self._apply_mask(t1, label_for_testing)
-            self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
-
+            if self._do_extract_patches:
+                self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t1, subject, "T1")
             self.LOGGER.info("Processing file {}".format(file[T1_IR]))
             t1_ir = self._resample_to_template(file[T1_IR], file[T1_1MM], interpolation="continuous")
             t1_ir = self._to_numpy_array(t1_ir)
             t1_ir = t1_ir.transpose((3, 0, 1, 2))
             t1_ir = np.rot90(t1_ir, axes=(1, -2))
             t1_ir = self._apply_mask(t1_ir, label_for_testing)
-            self._extract_patches(t1_ir, subject, "T1_IR", self.PATCH_SIZE, self._step)
-
+            if self._do_extract_patches:
+                self._extract_patches(t1_ir, subject, "T1_IR", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t1_ir, subject, "T1_IR")
             self.LOGGER.info("Processing file {}".format(file[T2_FLAIR]))
             t2 = self._resample_to_template(file[T2_FLAIR], file[T1_1MM], interpolation="continuous")
             t2 = self._to_numpy_array(t2)
             t2 = t2.transpose((3, 0, 1, 2))
             t2 = np.rot90(t2, axes=(1, -2))
             t2 = self._apply_mask(t2, label_for_testing)
-            self._extract_patches(t2, subject, "T2_FLAIR", self.PATCH_SIZE, self._step)
-
+            if self._do_extract_patches:
+                self._extract_patches(t2, subject, "T2_FLAIR", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t2, subject, "T2_FLAIR")
             self.LOGGER.info("Processing file {}".format(file[T1_1MM]))
             t1_1mm = self._to_numpy_array(file[T1_1MM])
             t1_1mm = np.rot90(np.rot90(t1_1mm, axes=(-1, 1)), axes=(1, -2))
             t1_1mm = np.flip(t1_1mm, axis=-1)
             t1_1mm = self._apply_mask(t1_1mm, label_for_testing)
-            self._extract_patches(t1_1mm, subject, "T1_1mm", self.PATCH_SIZE, self._step)
+            if self._do_extract_patches:
+                self._extract_patches(t1_1mm, subject, "T1_1mm", self.PATCH_SIZE, self._step)
+            else:
+                self._write_image(t1_1mm, subject, "T1_1mm")
 
     def _to_numpy_array(self, file):
         transform_ = transforms.Compose([ToNumpyArray()])
 
         return transform_(file)
+
+    def _write_image(self, image, subject, modality):
+        if not os.path.exists(os.path.join(self._output_dir, subject, modality)):
+            os.makedirs(os.path.join(self._output_dir, subject, modality))
+
+        transform_ = transforms.Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(self._output_dir, subject, modality, modality + ".nii.gz"))])
+
+        transform_(image)
 
     def _resample_to_template(self, file, nifti_template, interpolation):
         transforms_ = transforms.Compose([LoadNifti(),
@@ -269,10 +311,16 @@ if __name__ == "__main__":
 
     # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training",
     #              step=(1, 4, 4, 4)).run()
-    MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData",
-                     step=(1, 4, 4, 4)).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData",
+    #                  step=(1, 4, 4, 4)).run()
+    #
+    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_8/iSEG/Training",
+    #              step=(1, 8, 8, 8)).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_8/MRBrainS/DataNii/TrainingData",
+    #                  step=(1, 8, 8, 8)).run()
 
-    iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_8/iSEG/Training",
-                 step=(1, 8, 8, 8)).run()
-    MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_8/MRBrainS/DataNii/TrainingData",
-                     step=(1, 8, 8, 8)).run()
+    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed/iSEG/Training",
+                 step=None, do_extract_patches=False).run()
+
+    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData",
+                     step=None, do_extract_patches=False).run()
