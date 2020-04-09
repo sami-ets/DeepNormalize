@@ -86,7 +86,7 @@ models:
     type: "ResNet18"
     params:
       in_channels: 1
-      out_channels: 4
+      out_channels: 3
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
@@ -110,7 +110,7 @@ models:
       NLLLoss:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [0.35, 0.65, 1, 1]
+          weight: !torch/tensor [0.35, 0.65, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -142,16 +142,6 @@ dataset:
     hist_shift_augmentation: False
     step: [4, 4, 4]
     reconstruction_size: [256, 256, 192]
-  ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
-    modalities: "T1"
-    max_subjects: 10
-    max_num_patches: !!null
-    validation_split: 0.2
-    sites: ["NYU"]
-    step: [4, 4, 4]
-    reconstruction_size: [256, 256, 192]
-    hist_shift_augmentation: False
 
 training:
   batch_size: 15
