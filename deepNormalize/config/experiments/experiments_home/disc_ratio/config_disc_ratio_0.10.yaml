@@ -146,10 +146,12 @@ dataset:
     path: "/home/pierre-luc-delisle/ABIDE/5.1"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 15000
+    max_num_patches: !!null
     validation_split: 0.2
     sites: !!null
     hist_shift_augmentation: False
+    step: [4, 4, 4]
+    reconstruction_size: [224, 224, 192]
 
 training:
   batch_size: 16

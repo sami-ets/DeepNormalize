@@ -35,6 +35,7 @@ from kerosene.utils.tensors import flatten, to_onehot
 from scipy.spatial.distance import directed_hausdorff
 from torch.utils.data import DataLoader, Dataset
 
+from deepNormalize.inputs.datasets import SliceDataset
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
     NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS
@@ -54,7 +55,8 @@ class DeepNormalizeTrainer(Trainer):
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
                  reconstruction_datasets: List[Dataset], augmented_reconstruction_datasets: List[Dataset],
                  normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
-                 augmented_reconstructors: list, run_config: RunConfiguration, dataset_config: dict, save_folder: str):
+                 augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
+                 dataset_config: dict, save_folder: str):
         super(DeepNormalizeTrainer, self).__init__("DeepNormalizeTrainer", train_data_loader, valid_data_loader,
                                                    test_data_loader, model_trainers, run_config)
 
@@ -70,6 +72,7 @@ class DeepNormalizeTrainer(Trainer):
         self._augmented_reconstruction_datasets = augmented_reconstruction_datasets
         self._normalize_reconstructors = normalize_reconstructors
         self._input_reconstructors = input_reconstructors
+        self._gt_reconstructors = gt_reconstructors
         self._segmentation_reconstructors = segmentation_reconstructors
         self._augmented_reconstructors = augmented_reconstructors
         self._num_datasets = len(input_reconstructors)
@@ -109,6 +112,7 @@ class DeepNormalizeTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
+        self._sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
                                                       sum(p.numel() for p in self._discriminator.parameters())))
@@ -543,16 +547,24 @@ class DeepNormalizeTrainer(Trainer):
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
             if self.epoch % 10 == 0:
-                all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                                       self._reconstruction_datasets))
-                ground_truth_patches = list(map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
-                                                self._reconstruction_datasets))
+                if not self._sliced:
+                    all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
+                                           self._reconstruction_datasets))
+                    ground_truth_patches = list(
+                        map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
+                            self._reconstruction_datasets))
+                else:
+                    all_patches = list(map(lambda dataset: [patch.slice for patch in dataset._patches],
+                                           self._reconstruction_datasets))
+                    ground_truth_patches = list(
+                        map(lambda dataset: [patch.slice for patch in dataset._patches],
+                            self._reconstruction_datasets))
                 img_input = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                         self._input_reconstructors)))}
                 img_gt = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                        ground_truth_patches, self._input_reconstructors)))}
+                        ground_truth_patches, self._gt_reconstructors)))}
                 img_norm = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                         self._normalize_reconstructors)))}

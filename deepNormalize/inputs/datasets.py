@@ -79,41 +79,49 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
-                          augmentation_strategy: DataAugmentationStrategy = None):
+                          augmentation_strategy: DataAugmentationStrategy = None,
+                          patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                          step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list) and len(modalities) > 1:
             return iSEGSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                          dataset_id, test_size, max_subject,
                                                                          max_num_patches,
-                                                                         augmentation_strategy)
+                                                                         augmentation_strategy, patch_size, step)
         else:
             return iSEGSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                               dataset_id, test_size, max_subject,
                                                                               max_num_patches,
-                                                                              augmentation_strategy)
+                                                                              augmentation_strategy, patch_size, step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
-                                augmentation_strategy: DataAugmentationStrategy = None):
+                                augmentation_strategy: DataAugmentationStrategy = None,
+                                patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list):
             return iSEGSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
                                                                                dataset_id, test_size,
                                                                                max_subjects,
                                                                                max_num_patches,
-                                                                               augmentation_strategy)
+                                                                               augmentation_strategy,
+                                                                               patch_size, step)
         else:
             return iSEGSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                     dataset_id, test_size,
                                                                                     max_subjects,
                                                                                     max_num_patches,
-                                                                                    augmentation_strategy)
+                                                                                    augmentation_strategy, patch_size,
+                                                                                    step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            max_subjects: int = None, max_num_patches: int = None,
-                                           augmentation_strategy: DataAugmentationStrategy = None):
+                                           augmentation_strategy: DataAugmentationStrategy = None,
+                                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -142,7 +150,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -165,17 +173,17 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           (1, 32, 32, 32),
-                                                           (1, 4, 4, 4),
+                                                           patch_size,
+                                                           step,
                                                            keep_centered_on_foreground=True)
         reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
                                                                      reconstruction_targets,
-                                                                     (1, 32, 32, 32),
-                                                                     (1, 4, 4, 4),
+                                                                     patch_size,
+                                                                     step,
                                                                      keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -216,7 +224,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
                                       max_subjects: int = None, max_num_patches: int = None,
-                                      augmentation_strategy: DataAugmentationStrategy = None):
+                                      augmentation_strategy: DataAugmentationStrategy = None,
+                                      patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                      step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -247,7 +257,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -262,7 +272,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         for test_source_path, test_target_path in zip(test_source_paths, test_target_paths):
             test_images.append(np.stack([transform(path) for path in test_source_path], axis=0).squeeze(1))
-            train_targets.append(transform(test_target_path))
+            test_targets.append(transform(test_target_path))
 
         for reconstruction_source_path, reconstruction_target_path in zip(reconstruction_source_paths,
                                                                           reconstruction_target_paths):
@@ -271,17 +281,17 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           (1, 32, 32, 32),
-                                                           (1, 4, 4, 4),
+                                                           patch_size,
+                                                           step,
                                                            keep_centered_on_foreground=True)
         reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
                                                                      reconstruction_targets,
-                                                                     (1, 32, 32, 32),
-                                                                     (1, 4, 4, 4),
+                                                                     patch_size,
+                                                                     step,
                                                                      keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -322,7 +332,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None):
+                                                 augmentation_strategy: DataAugmentationStrategy = None,
+                                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -355,7 +367,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -384,26 +396,29 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         valid_patches = iSEGSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           (1, 32, 32, 32),
-                                                           (1, 4, 4, 4),
+                                                           patch_size,
+                                                           step,
                                                            keep_centered_on_foreground=True)
         reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
                                                                      reconstruction_targets,
-                                                                     (1, 32, 32, 32),
-                                                                     (1, 4, 4, 4),
+                                                                     patch_size,
+                                                                     step,
                                                                      keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
             train_patches = train_patches[choices]
+            choices = np.random.choice(np.arange(0, len(valid_patches)), int(max_num_patches * test_size),
+                                       replace=False)
+            valid_patches = valid_patches[choices]
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
@@ -449,7 +464,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality], dataset_id: int,
                                             test_size: float,
                                             max_subjects: int = None, max_num_patches: int = None,
-                                            augmentation_strategy: DataAugmentationStrategy = None):
+                                            augmentation_strategy: DataAugmentationStrategy = None,
+                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                            step: Union[List, Tuple] = (1, 4, 4, 4)):
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
         subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
@@ -484,7 +501,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -505,7 +522,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         for test_source_path, test_target_path in zip(test_source_paths, test_target_paths):
             test_images.append(np.stack([transform(path) for path in test_source_path], axis=0).squeeze(1))
-            train_targets.append(transform(test_target_path))
+            test_targets.append(transform(test_target_path))
 
         for reconstruction_source_path, reconstruction_target_path in zip(reconstruction_source_paths,
                                                                           reconstruction_target_paths):
@@ -514,21 +531,21 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         valid_patches = iSEGSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           (1, 32, 32, 32),
-                                                           (1, 4, 4, 4),
+                                                           patch_size,
+                                                           step,
                                                            keep_centered_on_foreground=True)
         reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
                                                                      reconstruction_targets,
-                                                                     (1, 32, 32, 32),
-                                                                     (1, 4, 4, 4),
+                                                                     patch_size,
+                                                                     step,
                                                                      keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -621,41 +638,50 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
-                          augmentation_strategy: DataAugmentationStrategy = None):
+                          augmentation_strategy: DataAugmentationStrategy = None,
+                          patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                          step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list) and len(modalities) > 1:
             return MRBrainSSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                              dataset_id, test_size, max_subject,
                                                                              max_num_patches,
-                                                                             augmentation_strategy)
+                                                                             augmentation_strategy, patch_size, step)
         else:
             return MRBrainSSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                   dataset_id, test_size, max_subject,
                                                                                   max_num_patches,
-                                                                                  augmentation_strategy)
+                                                                                  augmentation_strategy, patch_size,
+                                                                                  step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
-                                augmentation_strategy: DataAugmentationStrategy = None):
+                                augmentation_strategy: DataAugmentationStrategy = None,
+                                patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list):
             return MRBrainSSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
                                                                                    dataset_id, test_size,
                                                                                    max_subjects,
                                                                                    max_num_patches,
-                                                                                   augmentation_strategy)
+                                                                                   augmentation_strategy, patch_size,
+                                                                                   step)
         else:
             return MRBrainSSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                         dataset_id, test_size,
                                                                                         max_subjects,
                                                                                         max_num_patches,
-                                                                                        augmentation_strategy)
+                                                                                        augmentation_strategy,
+                                                                                        patch_size, step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            max_subjects: int = None, max_num_patches: int = None,
-                                           augmentation_strategy: DataAugmentationStrategy = None):
+                                           augmentation_strategy: DataAugmentationStrategy = None,
+                                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -684,7 +710,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -707,17 +733,17 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               (1, 32, 32, 32),
-                                                               (1, 4, 4, 4),
+                                                               patch_size,
+                                                               step,
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         (1, 32, 32, 32),
-                                                                         (1, 4, 4, 4),
+                                                                         patch_size,
+                                                                         step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -758,7 +784,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
                                       max_subjects: int = None, max_num_patches: int = None,
-                                      augmentation_strategy: DataAugmentationStrategy = None):
+                                      augmentation_strategy: DataAugmentationStrategy = None,
+                                      patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                      step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -789,7 +817,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -804,7 +832,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         for test_source_path, test_target_path in zip(test_source_paths, test_target_paths):
             test_images.append(np.stack([transform(path) for path in test_source_path], axis=0).squeeze(1))
-            train_targets.append(transform(test_target_path))
+            test_targets.append(transform(test_target_path))
 
         for reconstruction_source_path, reconstruction_target_path in zip(reconstruction_source_paths,
                                                                           reconstruction_target_paths):
@@ -813,17 +841,17 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               (1, 32, 32, 32),
-                                                               (1, 4, 4, 4),
+                                                               patch_size,
+                                                               step,
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         (1, 32, 32, 32),
-                                                                         (1, 4, 4, 4),
+                                                                         patch_size,
+                                                                         step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -864,7 +892,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None):
+                                                 augmentation_strategy: DataAugmentationStrategy = None,
+                                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -897,7 +927,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -926,26 +956,29 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         valid_patches = MRBrainSSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               (1, 32, 32, 32),
-                                                               (1, 4, 4, 4),
+                                                               patch_size,
+                                                               step,
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         (1, 32, 32, 32),
-                                                                         (1, 4, 4, 4),
+                                                                         patch_size,
+                                                                         step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
             train_patches = train_patches[choices]
+            choices = np.random.choice(np.arange(0, len(valid_patches)), int(max_num_patches * test_size),
+                                       replace=False)
+            valid_patches = valid_patches[choices]
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
@@ -991,7 +1024,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality], dataset_id: int,
                                             test_size: float,
                                             max_subjects: int = None, max_num_patches: int = None,
-                                            augmentation_strategy: DataAugmentationStrategy = None):
+                                            augmentation_strategy: DataAugmentationStrategy = None,
+                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                            step: Union[List, Tuple] = (1, 4, 4, 4)):
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
         subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
@@ -1026,7 +1061,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -1047,7 +1082,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         for test_source_path, test_target_path in zip(test_source_paths, test_target_paths):
             test_images.append(np.stack([transform(path) for path in test_source_path], axis=0).squeeze(1))
-            train_targets.append(transform(test_target_path))
+            test_targets.append(transform(test_target_path))
 
         for reconstruction_source_path, reconstruction_target_path in zip(reconstruction_source_paths,
                                                                           reconstruction_target_paths):
@@ -1056,21 +1091,21 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         valid_patches = MRBrainSSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                                (1, 32, 32, 32),
-                                                                (1, 4, 4, 4),
+                                                                patch_size,
+                                                                step,
                                                                 keep_centered_on_foreground=True)
         test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               (1, 32, 32, 32),
-                                                               (1, 4, 4, 4),
+                                                               patch_size,
+                                                               step,
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         (1, 32, 32, 32),
-                                                                         (1, 4, 4, 4),
+                                                                         patch_size,
+                                                                         step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -2226,7 +2261,9 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                          max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None):
+                          max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
+                          patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                          step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
@@ -2234,12 +2271,14 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             return ABIDESliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                dataset_id, test_size, sites,
                                                                                max_subjects, max_num_patches,
-                                                                               augmentation_strategy)
+                                                                               augmentation_strategy, patch_size, step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                                max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None):
+                                max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
+                                patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
@@ -2247,16 +2286,22 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             return ABIDESliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                      dataset_id, test_size, sites,
                                                                                      max_subjects, max_num_patches,
-                                                                                     augmentation_strategy)
+                                                                                     augmentation_strategy, patch_size,
+                                                                                     step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            sites: List[str] = None, max_subjects: int = None,
-                                           max_num_patches: int = None, augmentation_strategy=None):
+                                           max_num_patches: int = None, augmentation_strategy=None,
+                                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
-        filtered_csv = csv.loc[csv["site"].isin(sites)]
+        if sites is not None:
+            filtered_csv = csv.loc[csv["site"].isin(sites)]
+        else:
+            filtered_csv = csv
 
         subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
 
@@ -2276,10 +2321,6 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
         reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
 
-        if max_num_patches is not None:
-            train_csv = train_csv.sample(n=max_num_patches)
-            test_csv = test_csv.sample(n=ceil(max_num_patches * test_size))
-
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["labels"]))))
         test_source_paths, test_target_paths = shuffle(np.array(natural_sort(list(test_csv[str(modality)]))),
@@ -2288,7 +2329,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -2311,18 +2352,18 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = ABIDESliceDatasetFactory.get_patches(train_images, train_targets,
-                                                             (1, 32, 32, 32),
-                                                             (1, 4, 4, 4),
+                                                             patch_size,
+                                                             step,
                                                              keep_centered_on_foreground=True)
 
         test_patches = ABIDESliceDatasetFactory.get_patches(test_images, test_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
                                                                       reconstruction_targets,
-                                                                      (1, 32, 32, 32),
-                                                                      (1, 4, 4, 4),
+                                                                      patch_size,
+                                                                      step,
                                                                       keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -2364,11 +2405,16 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality,
                                                  dataset_id: int, test_size: float, sites: List[str] = None,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None):
+                                                 augmentation_strategy: DataAugmentationStrategy = None,
+                                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
-        filtered_csv = csv.loc[csv["site"].isin(sites)]
+        if sites is not None:
+            filtered_csv = csv.loc[csv["site"].isin(sites)]
+        else:
+            filtered_csv = csv
 
         subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
 
@@ -2400,7 +2446,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4))])
+        transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
         train_targets = list()
@@ -2416,8 +2462,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             train_targets.append(transform(train_target_path))
 
         for valid_source_path, valid_target_path in zip(valid_source_paths, valid_target_paths):
-            test_images.append(transform(valid_source_path))
-            test_targets.append(transform(valid_target_path))
+            valid_images.append(transform(valid_source_path))
+            valid_targets.append(transform(valid_target_path))
 
         for test_source_path, test_target_path in zip(test_source_paths, test_target_paths):
             test_images.append(transform(test_source_path))
@@ -2429,23 +2475,23 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         train_patches = ABIDESliceDatasetFactory.get_patches(train_images, train_targets,
-                                                             (1, 32, 32, 32),
-                                                             (1, 4, 4, 4),
+                                                             patch_size,
+                                                             step,
                                                              keep_centered_on_foreground=True)
 
         valid_patches = ABIDESliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                             (1, 32, 32, 32),
-                                                             (1, 4, 4, 4),
+                                                             patch_size,
+                                                             step,
                                                              keep_centered_on_foreground=True)
 
         test_patches = ABIDESliceDatasetFactory.get_patches(test_images, test_targets,
-                                                            (1, 32, 32, 32),
-                                                            (1, 4, 4, 4),
+                                                            patch_size,
+                                                            step,
                                                             keep_centered_on_foreground=True)
         reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
                                                                       reconstruction_targets,
-                                                                      (1, 32, 32, 32),
-                                                                      (1, 4, 4, 4),
+                                                                      patch_size,
+                                                                      step,
                                                                       keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
