@@ -15,4 +15,4 @@
 #SBATCH --job-name=config=config_disc_ratio_0_50
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/config/experiments/experiments_canada/config_disc_ratio_0_50.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/config/experiments/experiments_canada/disc_ratio_dual_dataset/config_disc_ratio_0_50.yaml

@@ -1,8 +1,9 @@
 #!/bin/bash
-#SBATCH --account=def-pld2602
+#SBATCH --account=def-lombaert
 #SBATCH --gres=gpu:1              # Number of GPUs (per node)
-#SBATCH --mem=32G                 # memory (per node)
-#SBATCH --time=7-00:00            # time (DD-HH:MM)
+#SBATCH --cpus-per-task=4         # CPU cores/threads
+#SBATCH --mem=150G                 # memory (per node)
+#SBATCH --time=3-00:00            # time (DD-HH:MM)
 #SBATCH --mail-user=pierre-luc.delisle@live.com
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
@@ -10,6 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --cpus-per-task=10
+#SBATCH --output=config=config_disc_ratio_1_00.out
+#SBATCH --job-name=config=config_disc_ratio_1_00
 nvidia-smi
-./python3 ../../../../../main.py --config=config_multimodal.yaml
+source /home/pld2602/venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/config/experiments/experiments_canada/disc_ratio/config_multimodal.yaml

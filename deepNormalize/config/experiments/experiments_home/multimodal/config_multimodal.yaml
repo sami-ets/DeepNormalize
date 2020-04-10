@@ -125,7 +125,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
     modalities: ["T1", "T2"]
     max_subjects: !!null
     max_num_patches: 40000
@@ -135,7 +135,7 @@ dataset:
     step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
     modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
     max_num_patches: 40000
@@ -158,6 +158,8 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.180.113.44"
+  server: "10.0.2.2"
   port: "8097"
-  env: "deepNormalize_school_disc_ratio_0_50"
+  env: "deepNormalize_home_iseg_mrbrains_multimodal_disc_ratio_0.50"
+  offline: True
+  filename: "deepNormalize_home_iseg_mrbrains_multimodal_disc_ratio_0.50.json"

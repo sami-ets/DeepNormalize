@@ -2,7 +2,7 @@
 #SBATCH --account=def-lombaert
 #SBATCH --gres=gpu:1              # Number of GPUs (per node)
 #SBATCH --cpus-per-task=4         # CPU cores/threads
-#SBATCH --mem=20G                 # memory (per node)
+#SBATCH --mem=150G                 # memory (per node)
 #SBATCH --time=3-00:00            # time (DD-HH:MM)
 #SBATCH --mail-user=pierre-luc.delisle@live.com
 #SBATCH --mail-type=BEGIN
@@ -12,6 +12,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
 #SBATCH --output=config=config_disc_ratio_1_00.out
-#SBATCH --job-name=config=config_disc_ratio_1_00    # Job name
+#SBATCH --job-name=config=config_disc_ratio_1_00
 nvidia-smi
-./python3 ../../../../../main.py --config=config_disc_ratio_1.00.yaml
+source /home/pld2602/venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/config/experiments/experiments_canada/disc_ratio/config_disc_ratio_1_00.yaml
