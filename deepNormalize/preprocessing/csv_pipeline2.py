@@ -151,8 +151,8 @@ class ToCSVABIDEPipeline(object):
 
 
 if __name__ == "__main__":
-    ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed/iSEG/Training/",
-                      output_dir="/mnt/md0/Data/Preprocessed/iSEG/Training").run()
-    ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/",
-                          output_dir="/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData").run()
+    # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_4/iSEG/Training/",
+    #                   output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training").run()
+    # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/",
+    #                       output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData").run()
     ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE/5.1/", output_dir="/mnt/md0/Data/").run()

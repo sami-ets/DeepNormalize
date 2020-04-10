@@ -125,37 +125,32 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed_4/iSEG/Training/"
-    modalities: "T1"
+    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
+    modalities: ["T1", "T2"]
     max_subjects: !!null
-    max_num_patches: !!null
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
-    modalities: "T1"
+    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
-    max_num_patches: !!null
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 256, 192]
-  ABIDE:
-    path: "/project/def-lombaert/pld2602/ABIDE/freesurfer"
-    modalities: "T1"
-    max_subjects: 5
-    max_num_patches: !!null
-    validation_split: 0.3
-    sites: !!null
-    hist_shift_augmentation: False
+
 
 training:
   batch_size: 32
   nb_epochs: 80
   patience_segmentation: 3
-  data_augmentation: True
+  data_augmentation: False
   variables:
     disc_ratio: 0.50
     seg_ratio: 1.0
@@ -165,4 +160,4 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_data_augmentation_iseg_mrbrains_disc_ratio_0_50"
+  env: "deepNormalize_school_disc_ratio_0_50"

@@ -122,34 +122,38 @@ models:
         type: "Recall"
         params:
           average: True
-
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed_4/iSEG/Training/"
+    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/project/def-lombaert/pld2602/ABIDE/freesurfer"
+    path: "/project/def-lombaert/pld2602/ABIDE/5.1"
     modalities: "T1"
-    max_subjects: 5
+    max_subjects: 25
     max_num_patches: 40000
     validation_split: 0.3
     sites: !!null
     hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
+    reconstruction_size: [224, 224, 192]
 
 training:
   batch_size: 32

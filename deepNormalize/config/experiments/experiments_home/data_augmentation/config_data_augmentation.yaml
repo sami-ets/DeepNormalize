@@ -131,7 +131,8 @@ dataset:
     max_num_patches: !!null
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
@@ -140,16 +141,20 @@ dataset:
     max_num_patches: !!null
     validation_split: 0.3
     hist_shift_augmentation: False
-    step: [4, 4, 4]
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 256, 192]
   ABIDE:
     path: "/home/pierre-luc-delisle/ABIDE/5.1"
     modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: 15000
-    validation_split: 0.2
+    max_subjects: 25
+    max_num_patches: 80000
+    validation_split: 0.3
     sites: !!null
     hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: !python/tuple [1, 4, 4, 4]
+    reconstruction_size: [224, 224, 192]
 
 training:
   batch_size: 16

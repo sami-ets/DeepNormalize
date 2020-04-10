@@ -12,4 +12,4 @@
 #SBATCH --output=%x-%j.out
 #SBATCH --cpus-per-task=10
 nvidia-smi
-./python3 ../../../../../main.py --config=config_data_augmentation.yaml
+./python3 ../../../../../main.py --config=config_multimodal.yaml

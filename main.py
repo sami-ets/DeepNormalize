@@ -46,7 +46,7 @@ from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.events.handlers.handlers import PlotGPUMemory, PlotCustomLinePlotWithLegend, PlotCustomLoss
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
-from deepNormalize.inputs.datasets import iSEGSliceDatasetFactory, MRBrainSSliceDatasetFactory, ABIDESliceDatasetFactory
+from deepNormalize.inputs.datasets import iSEGSegmentationFactory, iSEGSliceDatasetFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
 from deepNormalize.training.trainer import DeepNormalizeTrainer
 from deepNormalize.utils.constants import *
 from deepNormalize.utils.image_slicer import ImageReconstructor
@@ -81,6 +81,7 @@ if __name__ == '__main__':
     normalized_reconstructors = list()
     segmentation_reconstructors = list()
     input_reconstructors = list()
+    gt_reconstructors = list()
     augmented_input_reconstructors = list()
 
     iSEG_train = None
@@ -114,7 +115,7 @@ if __name__ == '__main__':
             iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
 
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_augmented_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
@@ -126,24 +127,29 @@ if __name__ == '__main__':
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
+        augmented_reconstruction_datasets.append(iSEG_augmented_reconstruction)
         normalized_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                            [32, 32, 32],
+                                                            dataset_configs['iSEG'].patch_size,
                                                             dataset_configs["iSEG"].step,
                                                             [model_trainers[GENERATOR]],
                                                             normalize=True))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['iSEG'].patch_size,
                                dataset_configs["iSEG"].step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]],
                                segment=True))
         input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                       [32, 32, 32],
+                                                       dataset_configs['iSEG'].patch_size,
                                                        dataset_configs["iSEG"].step))
+
+        gt_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                                                    dataset_configs['iSEG'].patch_size,
+                                                    dataset_configs["iSEG"].step))
         augmented_input_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['iSEG'].patch_size,
                                dataset_configs["iSEG"].step))
 
     if dataset_configs.get("MRBrainS", None) is not None:
@@ -160,7 +166,7 @@ if __name__ == '__main__':
         elif training_config.data_augmentation:
             MRBRainS_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                    AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_augmented_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
@@ -172,23 +178,27 @@ if __name__ == '__main__':
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
+        augmented_reconstruction_datasets.append(MRBrainS_augmented_reconstruction)
         normalized_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['MRBrainS'].patch_size,
                                dataset_configs["MRBrainS"].step,
                                [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['MRBrainS'].patch_size,
                                dataset_configs["MRBrainS"].step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]], segment=True))
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                                                       [32, 32, 32],
+                                                       dataset_configs['MRBrainS'].patch_size,
                                                        dataset_configs["MRBrainS"].step))
+        gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                                                    dataset_configs['MRBrainS'].patch_size,
+                                                    dataset_configs["MRBrainS"].step))
         augmented_input_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['MRBrainS'].patch_size,
                                dataset_configs["MRBrainS"].step))
 
     if dataset_configs.get("ABIDE", None) is not None:
@@ -204,7 +214,7 @@ if __name__ == '__main__':
         elif training_config.data_augmentation:
             ABIDE_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                 AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
+        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction, ABIDE_CSV = ABIDESegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
             dataset_id=ABIDE_ID,
@@ -218,18 +228,21 @@ if __name__ == '__main__':
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
         normalized_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                            [32, 32, 32],
+                                                            dataset_configs['ABIDE'].patch_size,
                                                             dataset_configs["ABIDE"].step,
                                                             [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                               [32, 32, 32],
+                               dataset_configs['ABIDE'].patch_size,
                                dataset_configs["ABIDE"].step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]], segment=True))
         input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                       [32, 32, 32],
+                                                       dataset_configs['ABIDE'].patch_size,
                                                        dataset_configs["ABIDE"].step))
+        gt_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
+                                                    dataset_configs['ABIDE'].patch_size,
+                                                    dataset_configs["ABIDE"].step))
 
     # Concat datasets.
     if len(dataset_configs) > 1:
@@ -284,8 +297,8 @@ if __name__ == '__main__':
     trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                    reconstruction_datasets, augmented_reconstruction_datasets,
                                    normalized_reconstructors, input_reconstructors,
-                                   segmentation_reconstructors, augmented_input_reconstructors, run_config,
-                                   dataset_configs, save_folder) \
+                                   segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
+                                   run_config, dataset_configs, save_folder) \
         .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
         .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
         .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \

@@ -1256,7 +1256,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+        filtered_csv = csv[csv["center_class"].isin([1, 2, 3])]
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
@@ -1335,7 +1335,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
+        filtered_csv = csv[csv["center_class"].isin([1, 2, 3])]
 
         train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
         valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
@@ -2055,7 +2055,10 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        filtered_csv = csv.loc[csv["site"].isin(sites)]
+        if sites is not None:
+            filtered_csv = csv.loc[csv["site"].isin(sites)]
+        else:
+            filtered_csv = csv
 
         subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
 
@@ -2121,7 +2124,10 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        filtered_csv = csv.loc[csv["site"].isin(sites)]
+        if sites is not None:
+            filtered_csv = csv.loc[csv["site"].isin(sites)]
+        else:
+            filtered_csv = csv
 
         subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
 

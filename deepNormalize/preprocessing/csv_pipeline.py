@@ -185,10 +185,10 @@ class ToCSVABIDEipeline(object):
 
 
 if __name__ == "__main__":
-    ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_4/iSEG/Training/",
-                      output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training/").run()
-    ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/",
-                          output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/").run()
+    # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_4/iSEG/Training/",
+    #                   output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training/").run()
+    # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/",
+    #                       output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/").run()
     ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_8/iSEG/Training/",
                       output_dir="/mnt/md0/Data/Preprocessed_8/iSEG/Training").run()
     ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_8/MRBrainS/DataNii/TrainingData/",
