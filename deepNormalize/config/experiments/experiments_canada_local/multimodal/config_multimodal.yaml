@@ -3,12 +3,12 @@ models:
     name: "UNet3D"
     type: "UNet3D"
     params:
-      in_channels: 1
-      out_channels: 1
+      in_channels: 2
+      out_channels: 2
       interpolate: True
       leaky: False
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
         lr: 0.00001
         momentum: 0.9
@@ -30,12 +30,12 @@ models:
     name: "UNet3D"
     type: "UNet3D"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 4
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
         lr: 0.001
         momentum: 0.9
@@ -85,7 +85,7 @@ models:
     name: "ResNet3D"
     type: "ResNet18"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 4
       num_groups: !!null
       conv_groups: 1
@@ -95,7 +95,7 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "SGD"
+      type: "FusedSGD"
       params:
         lr: 0.00001
         momentum: 0.9
@@ -109,6 +109,8 @@ models:
     criterion:
       NLLLoss:
         type: "NLLLoss"
+        params:
+          weight: !torch/tensor [0.379317992791794, 0.415858053784308, 0.204823953423898, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -124,7 +126,7 @@ models:
 dataset:
   iSEG:
     path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
-    modalities: "T1"
+    modalities: ["T1", "T2"]
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -134,7 +136,7 @@ dataset:
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
-    modalities: "T1"
+    modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -142,32 +144,20 @@ dataset:
     patch_size: !python/tuple [1, 32, 32, 32]
     step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 256, 192]
-  ABIDE:
-    path: "/project/def-lombaert/pld2602/ABIDE/5.1"
-    modalities: "T1"
-    max_subjects: !!null
-    max_num_patches: 40000
-    validation_split: 0.3
-    sites: !!null
-    hist_shift_augmentation: False
-    patch_size: !python/tuple [1, 32, 32, 32]
-    step: !python/tuple [1, 4, 4, 4]
-    reconstruction_size: [224, 224, 192]
+
 
 training:
   batch_size: 32
-  nb_epochs: 100
+  nb_epochs: 80
   patience_segmentation: 3
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.50
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_canada_disc_ratio_1_00"
-  offline: True
-  filename: "deepNormalize_canada_disc_ratio_1_00.json"
+  env: "deepNormalize_school_disc_ratio_0_50"

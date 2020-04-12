@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=config=config_disc_ratio_0_50.out
-#SBATCH --job-name=config=config_disc_ratio_0_50
+#SBATCH --output=deepNormalize_canada_disc_ratio_1_00.out
+#SBATCH --job-name=deepNormalize_canada_disc_ratio_0_10
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/config/experiments/experiments_canada/config_disc_ratio_0_50.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/config/experiments/experiments_canada/disc_ratio/config_disc_ratio_1.00.yaml

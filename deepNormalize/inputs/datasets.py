@@ -2519,8 +2519,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             augmentation_strategy=augmentation_strategy)
 
         valid_dataset = ABIDESliceDatasetFactory.create(
-            source_images=np.array(test_images),
-            target_images=np.array(test_targets),
+            source_images=np.array(valid_images),
+            target_images=np.array(valid_targets),
             patches=valid_patches,
             modalities=modality,
             dataset_id=dataset_id,
