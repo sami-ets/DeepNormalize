@@ -145,7 +145,7 @@ dataset:
   ABIDE:
     path: "/project/def-lombaert/pld2602/ABIDE/5.1"
     modalities: "T1"
-    max_subjects: !!null
+    max_subjects: 300
     max_num_patches: 40000
     validation_split: 0.3
     sites: !!null
