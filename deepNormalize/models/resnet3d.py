@@ -267,12 +267,21 @@ class ResNet3D(torch.nn.Module):
             raise ValueError("replace_stride_with_dilation should be None "
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
 
+        gaussian_weights = torch.distributions.normal.Normal(1, 1).sample((1, 1, 3, 3, 3))
+        gaussian_weights = gaussian_weights / torch.sum(gaussian_weights)
+
         if padding is not None:
             self._padding = self._padding_factory.create(PaddingLayers.ReplicationPad3d, padding)
+            self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=0,
+                                                    bias=False)
+            self._gaussian_filter.weight.data = gaussian_weights
             self._conv1 = torch.nn.Conv3d(in_channels, self._inplanes, kernel_size=7, stride=2, padding=0,
                                           bias=False)
         else:
             self._padding = None
+            self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=1,
+                                                    bias=False)
+            self._gaussian_filter.weight.data = gaussian_weights
             self._conv1 = torch.nn.Conv3d(in_channels, self._inplanes, kernel_size=7, stride=2, padding=3,
                                           bias=False)
 
@@ -349,7 +358,9 @@ class ResNet3D(torch.nn.Module):
         if self._padding is not None:
             x = self._padding(x)
 
-        x_conv1 = self._conv1(x)
+        with torch.no_grad():
+            filtered = self._gaussian_filter(x)
+        x_conv1 = self._conv1(filtered)
         x_norm1 = self._norm1(x_conv1)
         x_activation = self._activation(x_norm1)
         x_max_pool = self._maxpool(x_activation)
