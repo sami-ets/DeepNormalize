@@ -358,9 +358,9 @@ class ResNet3D(torch.nn.Module):
         if self._padding is not None:
             x = self._padding(x)
 
-        with torch.no_grad():
-            filtered = self._gaussian_filter(x)
-        x_conv1 = self._conv1(filtered)
+        # with torch.no_grad():
+        #     filtered = self._gaussian_filter(x)
+        x_conv1 = self._conv1(x)
         x_norm1 = self._norm1(x_conv1)
         x_activation = self._activation(x_norm1)
         x_max_pool = self._maxpool(x_activation)
