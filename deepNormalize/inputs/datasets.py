@@ -24,9 +24,10 @@ from deepNormalize.utils.utils import natural_sort
 class SliceDataset(Dataset):
     def __init__(self, source_images, target_images, patches: np.ndarray, modalities: Union[Modality, List[Modality]],
                  dataset_id: int = None, transforms: Optional[Callable] = None,
-                 augment: DataAugmentationStrategy = None) -> None:
+                 augment: DataAugmentationStrategy = None, augmented_images=None) -> None:
         self._source_images = source_images
         self._target_images = target_images
+        self._augmented_images = augmented_images
         self._patches = patches
         self._modalities = modalities
         self._dataset_id = dataset_id
@@ -49,13 +50,20 @@ class SliceDataset(Dataset):
 
         patch_sample = Sample(x=slice_x, y=slice_y, dataset_id=self._dataset_id, is_labeled=True)
 
+        if self._augmented_images is not None:
+            augmented_image = self._augmented_images[image_id]
+            slice_x_augmented = augmented_image[tuple(slice)]
+            patch_sample.augmented_x = slice_x_augmented
+
         if self._transform is not None:
             patch_sample = self._transform(patch_sample)
 
         if self._augment is not None:
-            patch_sample.augmented_x = self._augment(patch_sample.x)
+            patch_sample.augmented_x = self._augment(
+                patch_sample.x if patch_sample.augmented_x is None else patch_sample.augmented_x)
+
         else:
-            patch_sample.augmented_x = patch_sample.x
+            patch_sample.augmented_x = patch_sample.x if patch_sample.augmented_x is None else patch_sample.augmented_x
 
         return patch_sample
 
@@ -64,14 +72,14 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None):
+               augmentation_strategy: DataAugmentationStrategy = None, augmented_images: np.ndarray = None):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy)
+                                augment=augmentation_strategy, augmented_images=augmented_images)
 
         else:
             raise NotImplementedError
@@ -81,25 +89,27 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
                           augmentation_strategy: DataAugmentationStrategy = None,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                          step: Union[List, Tuple] = (1, 4, 4, 4)):
+                          step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         if isinstance(modalities, list) and len(modalities) > 1:
             return iSEGSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                          dataset_id, test_size, max_subject,
                                                                          max_num_patches,
-                                                                         augmentation_strategy, patch_size, step)
+                                                                         augmentation_strategy, patch_size, step,
+                                                                         augmented_path)
         else:
             return iSEGSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                               dataset_id, test_size, max_subject,
                                                                               max_num_patches,
-                                                                              augmentation_strategy, patch_size, step)
+                                                                              augmentation_strategy, patch_size,
+                                                                              step, augmented_path)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
                                 augmentation_strategy: DataAugmentationStrategy = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         if isinstance(modalities, list):
             return iSEGSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
@@ -107,21 +117,21 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                                max_subjects,
                                                                                max_num_patches,
                                                                                augmentation_strategy,
-                                                                               patch_size, step)
+                                                                               patch_size, step, augmented_path)
         else:
             return iSEGSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                     dataset_id, test_size,
                                                                                     max_subjects,
                                                                                     max_num_patches,
                                                                                     augmentation_strategy, patch_size,
-                                                                                    step)
+                                                                                    step, augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            max_subjects: int = None, max_num_patches: int = None,
                                            augmentation_strategy: DataAugmentationStrategy = None,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                           step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -142,10 +152,10 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         test_csv = csv[csv["subjects"].isin(test_subjects)]
         reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
-        train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
-                                                         np.array(natural_sort(list(train_csv["labels"]))))
-        test_source_paths, test_target_paths = shuffle(np.array(natural_sort(list(test_csv[str(modality)]))),
-                                                       np.array(natural_sort(list(test_csv["labels"]))))
+        train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
+                                                  np.array(natural_sort(list(train_csv["labels"]))))
+        test_source_paths, test_target_paths = (np.array(natural_sort(list(test_csv[str(modality)]))),
+                                                np.array(natural_sort(list(test_csv["labels"]))))
         reconstruction_source_paths, reconstruction_target_paths = (
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
@@ -153,10 +163,12 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
+        train_augmented_images = list()
         train_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
+        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -171,6 +183,25 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
+
+        if augmented_path is not None:
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+
+            train_augmented_paths, train_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_train_csv["labels"]))))
+
+            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
+
+            for train_augmented_path in train_augmented_paths:
+                train_augmented_images.append(transform(train_augmented_path))
+
+            for reconstruction_augmented_path in reconstruction_augmented_paths:
+                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
                                                             patch_size,
@@ -195,6 +226,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
+            augmented_images=np.array(train_augmented_images),
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
@@ -213,6 +245,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
+            augmented_images=np.array(reconstruction_augmented_images),
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,
@@ -226,7 +259,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                       max_subjects: int = None, max_num_patches: int = None,
                                       augmentation_strategy: DataAugmentationStrategy = None,
                                       patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                      step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                      step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -243,7 +276,11 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
+        if augmented_path is not None:
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            train_csv = csv_augmented["subjects"].isin(train_subjects)
+        else:
+            train_csv = csv[csv["subjects"].isin(train_subjects)]
         test_csv = csv[csv["subjects"].isin(test_subjects)]
         reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
@@ -334,7 +371,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                  max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -357,12 +394,12 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         test_csv = csv[csv["subjects"].isin(test_subjects)]
         reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
 
-        train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
-                                                         np.array(natural_sort(list(train_csv["labels"]))))
-        valid_source_paths, valid_target_paths = shuffle(np.array(natural_sort(list(valid_csv[str(modality)]))),
-                                                         np.array(natural_sort(list(valid_csv["labels"]))))
-        test_source_paths, test_target_paths = shuffle(np.array(natural_sort(list(test_csv[str(modality)]))),
-                                                       np.array(natural_sort(list(test_csv["labels"]))))
+        train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
+                                                  np.array(natural_sort(list(train_csv["labels"]))))
+        valid_source_paths, valid_target_paths = (np.array(natural_sort(list(valid_csv[str(modality)]))),
+                                                  np.array(natural_sort(list(valid_csv["labels"]))))
+        test_source_paths, test_target_paths = (np.array(natural_sort(list(test_csv[str(modality)]))),
+                                                np.array(natural_sort(list(test_csv["labels"]))))
         reconstruction_source_paths, reconstruction_target_paths = (
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
@@ -370,12 +407,14 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
+        train_augmented_images = list()
         train_targets = list()
         valid_images = list()
         valid_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
+        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -394,6 +433,25 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
+
+        if augmented_path is not None:
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+
+            train_augmented_paths, train_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_train_csv["labels"]))))
+
+            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
+
+            for train_augmented_path in train_augmented_paths:
+                train_augmented_images.append(transform(train_augmented_path))
+
+            for reconstruction_augmented_path in reconstruction_augmented_paths:
+                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
                                                             patch_size,
@@ -425,6 +483,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
+            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
@@ -452,6 +511,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
+            augmented_images=np.array(reconstruction_augmented_images) if len(
+                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,
@@ -466,7 +527,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                             max_subjects: int = None, max_num_patches: int = None,
                                             augmentation_strategy: DataAugmentationStrategy = None,
                                             patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                            step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                            step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
         subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
@@ -483,7 +544,11 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
+        if augmented_path is not None:
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
+        else:
+            train_csv = csv[csv["subjects"].isin(train_subjects)]
         valid_csv = csv[csv["subjects"].isin(valid_subjects)]
         test_csv = csv[csv["subjects"].isin(test_subjects)]
         reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
@@ -623,14 +688,14 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None):
+               augmentation_strategy: DataAugmentationStrategy = None, augmented_images: np.ndarray = None):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy)
+                                augment=augmentation_strategy, augmented_images=augmented_images)
 
         else:
             raise NotImplementedError
@@ -894,7 +959,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                  max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -930,12 +995,14 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
+        train_augmented_images = list()
         train_targets = list()
         valid_images = list()
         valid_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
+        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -954,6 +1021,25 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
+
+        if augmented_path is not None:
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+
+            train_augmented_paths, train_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_train_csv["labels"]))))
+
+            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
+                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
+                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
+
+            for train_augmented_path in train_augmented_paths:
+                train_augmented_images.append(transform(train_augmented_path))
+
+            for reconstruction_augmented_path in reconstruction_augmented_paths:
+                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
                                                                 patch_size,
@@ -985,6 +1071,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
+            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
@@ -1012,6 +1099,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
+            augmented_images=np.array(reconstruction_augmented_images) if len(
+                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,

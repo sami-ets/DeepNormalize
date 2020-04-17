@@ -102,14 +102,8 @@ if __name__ == '__main__':
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
         if dataset_configs["iSEG"].hist_shift_augmentation:
-            if training_config.data_augmentation:
-                iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                                   AddBiasField(exec_probability=1.0, alpha=0.001),
-                                                                   ShiftHistogram(exec_probability=0.15, min_lambda=-5,
-                                                                                  max_lambda=5)]))
-            else:
-                iSEG_augmentation_strategy = AugmentInput(
-                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
         elif training_config.data_augmentation:
             iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
@@ -123,7 +117,8 @@ if __name__ == '__main__':
             max_num_patches=dataset_configs["iSEG"].max_num_patches,
             augmentation_strategy=iSEG_augmentation_strategy,
             patch_size=dataset_configs["iSEG"].patch_size,
-            step=dataset_configs["iSEG"].step)
+            step=dataset_configs["iSEG"].step,
+            augmented_path=dataset_configs["iSEG"].path_augmented)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
