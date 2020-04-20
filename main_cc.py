@@ -102,14 +102,8 @@ if __name__ == '__main__':
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
         if dataset_configs["iSEG"].hist_shift_augmentation:
-            if training_config.data_augmentation:
-                iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                                   AddBiasField(exec_probability=1.0, alpha=0.001),
-                                                                   ShiftHistogram(exec_probability=0.15, min_lambda=-5,
-                                                                                  max_lambda=5)]))
-            else:
-                iSEG_augmentation_strategy = AugmentInput(
-                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
         elif training_config.data_augmentation:
             iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
@@ -123,7 +117,8 @@ if __name__ == '__main__':
             max_num_patches=dataset_configs["iSEG"].max_num_patches,
             augmentation_strategy=iSEG_augmentation_strategy,
             patch_size=dataset_configs["iSEG"].patch_size,
-            step=dataset_configs["iSEG"].step)
+            step=dataset_configs["iSEG"].step,
+            augmented_path=dataset_configs["iSEG"].path_augmented)
         train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
@@ -154,7 +149,8 @@ if __name__ == '__main__':
         augmented_input_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                dataset_configs['iSEG'].patch_size,
-                               dataset_configs["iSEG"].step))
+                               dataset_configs["iSEG"].step,
+                               test_image=iSEG_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
@@ -179,7 +175,8 @@ if __name__ == '__main__':
             max_num_patches=dataset_configs["MRBrainS"].max_num_patches,
             augmentation_strategy=MRBrainS_augmentation_strategy,
             patch_size=dataset_configs["MRBrainS"].patch_size,
-            step=dataset_configs["MRBrainS"].step)
+            step=dataset_configs["MRBrainS"].step,
+            augmented_path=dataset_configs["MRBrainS"].path_augmented)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
@@ -210,7 +207,8 @@ if __name__ == '__main__':
         augmented_input_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                dataset_configs['MRBrainS'].patch_size,
-                               dataset_configs["MRBrainS"].step))
+                               dataset_configs["MRBrainS"].step,
+                               test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
         if dataset_configs["ABIDE"].hist_shift_augmentation:
@@ -315,7 +313,7 @@ if __name__ == '__main__':
      ["Discriminator", "Generator", "Segmenter"]]
 
     trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                   reconstruction_datasets, augmented_reconstruction_datasets,
+                                   reconstruction_datasets,
                                    normalized_reconstructors, input_reconstructors,
                                    segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
                                    run_config, dataset_configs, save_folder) \
