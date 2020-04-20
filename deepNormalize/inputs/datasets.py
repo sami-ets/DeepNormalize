@@ -724,7 +724,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
                                 augmentation_strategy: DataAugmentationStrategy = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         if isinstance(modalities, list):
             return MRBrainSSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
@@ -739,7 +739,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                                         max_subjects,
                                                                                         max_num_patches,
                                                                                         augmentation_strategy,
-                                                                                        patch_size, step)
+                                                                                        patch_size, step, augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -1023,17 +1023,17 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_targets.append(transform(reconstruction_target_path))
 
         if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
+            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
             augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
             augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_train_csv["labels"]))))
+                np.array(natural_sort(list(augmented_train_csv["LabelsForTesting"]))))
 
             reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
+                np.array(natural_sort(list(augmented_reconstruction_csv["LabelsForTesting"]))))
 
             for train_augmented_path in train_augmented_paths:
                 train_augmented_images.append(transform(train_augmented_path))

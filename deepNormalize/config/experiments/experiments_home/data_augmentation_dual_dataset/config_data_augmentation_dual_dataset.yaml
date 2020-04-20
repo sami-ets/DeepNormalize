@@ -10,15 +10,14 @@ models:
     optimizer:
       type: "FusedSGD"
       params:
-        lr: 0.00001
+        lr: 0.0001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "ReduceLROnPlateau"
+      type: "MultiStepLR"
       params:
-        factor: 0.1
-        patience: 7
-        min_lr: 0.000000001
+        milestones: [25, 50]
+        gamma: 0.1
     criterion:
       MSELoss:
         type: "MSELoss"
@@ -90,7 +89,7 @@ models:
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
-      padding: !!null
+      padding: [1, 1, 1, 1, 1, 1]
       activation: "ReLU"
       zero_init_residual: False
       replace_stride_with_dilation: !!null
@@ -125,20 +124,22 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed_4/iSEG/Training/"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: !!null
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: !python/tuple [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: !!null
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -146,9 +147,9 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  batch_size: 16
+  batch_size: 15
   nb_epochs: 100
-  patience_segmentation: 3
+  patience_segmentation: 1
   data_augmentation: True
   variables:
     disc_ratio: 0.50
@@ -157,6 +158,9 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_disc_ratio_0_50"
+  env: "deepNormalize_home_data_augmentation_mrbrains_iseg_disc_0_50"
+  offline: False
+  filename: "deepNormalize_home_data_augmentation_mrbrains_iseg_disc_0_50.json"
+

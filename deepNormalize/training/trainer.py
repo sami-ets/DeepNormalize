@@ -53,7 +53,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
-                 reconstruction_datasets: List[Dataset], augmented_reconstruction_datasets: List[Dataset],
+                 reconstruction_datasets: List[Dataset],
                  normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
                  augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
                  dataset_config: dict, save_folder: str):
@@ -69,7 +69,6 @@ class DeepNormalizeTrainer(Trainer):
         self._fm_slicer = FeatureMapSlicer()
         self._label_mapper = LabelMapper()
         self._reconstruction_datasets = reconstruction_datasets
-        self._augmented_reconstruction_datasets = augmented_reconstruction_datasets
         self._normalize_reconstructors = normalize_reconstructors
         self._input_reconstructors = input_reconstructors
         self._gt_reconstructors = gt_reconstructors
@@ -517,6 +516,10 @@ class DeepNormalizeTrainer(Trainer):
         self._MRBrainS_confusion_matrix_gauge.reset()
         self._ABIDE_confusion_matrix_gauge.reset()
         self._discriminator_confusion_matrix_gauge.reset()
+        self._discriminator_confusion_matrix_gauge_training.reset()
+
+        if self._current_epoch == self._training_config.patience_segmentation:
+            self._generator.optimizer_lr = 0.001
 
     def on_train_batch_end(self):
         self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
@@ -542,7 +545,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
-            if self.epoch % 10 == 0:
+            if self.epoch % 100 == 0 and self.epoch is not 0:
                 if not self._sliced:
                     all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
                                            self._reconstruction_datasets))
@@ -569,9 +572,8 @@ class DeepNormalizeTrainer(Trainer):
                         self._segmentation_reconstructors)))}
 
                 if self._training_config.data_augmentation:
-                    augmented_patches = list(
-                        map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                            self._augmented_reconstruction_datasets))
+                    augmented_patches =list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
+                                           self._reconstruction_datasets))
                     img_augmented = list(
                         map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
                             augmented_patches, self._augmented_reconstructors))
@@ -688,6 +690,20 @@ class DeepNormalizeTrainer(Trainer):
                         self._construct_single_histogram(img_norm[list(self._dataset_configs.keys())[0]],
                                                          img_input[list(self._dataset_configs.keys())[0]],
                                                          )).transpose((2, 0, 1))
+            elif self.epoch % 100 == 0 and self.epoch is 0:
+                self.custom_variables["Reconstructed Normalized iSEG Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Segmented iSEG Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Ground Truth iSEG Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Input iSEG Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Initial Noise iSEG Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Noise iSEG After Normalization"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Normalized MRBrainS Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Segmented MRBrainS Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Ground Truth MRBrainS Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Input MRBrainS Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Initial Noise MRBrainS Image"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Noise MRBrainS After Normalization"] = np.zeros((224, 192))
+                self.custom_variables["Reconstructed Images Histograms"] = np.zeros((224, 192))
 
             if "ABIDE" not in self._dataset_configs.keys():
                 self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
