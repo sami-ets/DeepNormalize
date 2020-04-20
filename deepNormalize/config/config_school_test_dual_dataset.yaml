@@ -126,6 +126,7 @@ models:
 dataset:
   iSEG:
     path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/"
+    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_augmented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -136,6 +137,7 @@ dataset:
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -157,9 +159,9 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_home_test_dual_dataset_2_continued"
-  offline: True
-  filename: "deepNormalize_home_test_dual_dataset_2_continued.json"
+  env: "deepNormalize_school_test_dual_dataset"
+  offline: False
+  filename: "deepNormalize_school_test_dual_dataset.json"
 

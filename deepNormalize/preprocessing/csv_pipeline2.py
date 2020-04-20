@@ -28,7 +28,7 @@ class ToCSViSEGPipeline(object):
         self._output_dir = output_dir
         self._transforms = Compose([ToNumpyArray()])
 
-    def run(self):
+    def run(self, output_filename: str):
 
         source_paths_t2 = list()
         source_paths_t1 = list()
@@ -44,7 +44,7 @@ class ToCSViSEGPipeline(object):
         source_paths_t2 = natural_sort([item for sublist in source_paths_t2 for item in sublist])
         target_paths = natural_sort([item for sublist in target_paths for item in sublist])
 
-        with open(os.path.join(self._output_dir, 'output_iseg_images.csv'), mode='a+') as output_file:
+        with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(["T1", "T2", "labels", "subjects"])
 
@@ -68,7 +68,7 @@ class ToCSVMRBrainSPipeline(object):
         self._output_dir = output_dir
         self._transforms = Compose([ToNumpyArray()])
 
-    def run(self):
+    def run(self, output_filename: str):
         source_paths_t1_1mm = list()
         source_paths_t2 = list()
         source_paths_t1 = list()
@@ -87,7 +87,7 @@ class ToCSVMRBrainSPipeline(object):
 
         subjects = np.arange(1, 6)
 
-        with open(os.path.join(self._output_dir, 'output_mrbrains_images.csv'), mode='a+') as output_file:
+        with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(
                 ["T1_1mm", "T1", "T1_IR", "T2_FLAIR", "LabelsForTesting", "LabelsForTraining", "subjects"])
@@ -116,7 +116,7 @@ class ToCSVABIDEPipeline(object):
         self._output_dir = output_dir
         self._transforms = Compose([ToNumpyArray()])
 
-    def run(self):
+    def run(self, output_filename: str):
         source_paths = list()
         target_paths = list()
         subjects = list()
@@ -136,7 +136,7 @@ class ToCSVABIDEPipeline(object):
         source_paths = list(filter(None, source_paths))
         target_paths = list(filter(None, target_paths))
 
-        with open(os.path.join(self._output_dir, 'output_abide_images.csv'), mode='a+') as output_file:
+        with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(["T1", "labels", "subjects", "site"])
 
@@ -152,7 +152,21 @@ class ToCSVABIDEPipeline(object):
 
 if __name__ == "__main__":
     # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_4/iSEG/Training/",
-    #                   output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training").run()
+    #                   output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training").run('output.csv')
     # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/",
-    #                       output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData").run()
-    ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE/5.1/", output_dir="/mnt/md0/Data/").run()
+    #                       output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData").run("output,csv")
+    # ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE/5.1/", output_dir="/mnt/md0/Data/").run(
+    #     'output_mrbrains_images.csv')
+    # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/",
+    #                   output_dir="/mnt/md0/Data/Preprocessed_augmented/iSEG/Training").run(
+    #     "output_iseg_augmented_images.csv")
+    # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/",
+    #                       output_dir="/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData").run(
+    #     "output_mrbrains_augmented_images.csv")
+
+    ToCSViSEGPipeline("/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/",
+                      output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training").run(
+        "output_iseg_augmented_images.csv")
+    ToCSVMRBrainSPipeline("/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/",
+                          output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData").run(
+        "output_mrbrains_augmented_images.csv")
