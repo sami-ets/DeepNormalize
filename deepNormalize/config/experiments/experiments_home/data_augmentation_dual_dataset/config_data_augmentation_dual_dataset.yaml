@@ -2,7 +2,7 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Generator/Generator.tar"
+#    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Generator/Generator.tar"
     params:
       in_channels: 1
       out_channels: 1
@@ -29,7 +29,7 @@ models:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Segmenter/Segmenter.tar"
+#    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Segmenter/Segmenter.tar"
     params:
       in_channels: 1
       out_channels: 4
@@ -85,7 +85,7 @@ models:
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Discriminator/Discriminator.tar"
+#    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Discriminator/Discriminator.tar"
     params:
       in_channels: 1
       out_channels: 3
@@ -155,7 +155,7 @@ training:
   patience_segmentation: 1
   data_augmentation: True
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.01
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -164,6 +164,6 @@ visdom:
   server: "10.0.3.9"
   port: "8097"
   env: "deepNormalize_home_data_augmentation_dual_dataset"
-  offline: True
+  offline: False
   filename: "deepNormalize_home_data_augmentation_dual_dataset.json"
 

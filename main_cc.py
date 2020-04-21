@@ -154,18 +154,12 @@ if __name__ == '__main__':
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
-            if training_config.data_augmentation:
-                MRBRainS_augmentation_strategy = AugmentInput(
-                    Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                             AddBiasField(exec_probability=1.0, alpha=0.001),
-                             ShiftHistogram(exec_probability=0.50, min_lambda=-5,
-                                            max_lambda=5)]))
-            else:
-                MRBRainS_augmentation_strategy = AugmentInput(
-                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
         elif training_config.data_augmentation:
-            MRBRainS_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                                   AddBiasField(exec_probability=1.0, alpha=0.001)]))
+            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
@@ -212,17 +206,12 @@ if __name__ == '__main__':
 
     if dataset_configs.get("ABIDE", None) is not None:
         if dataset_configs["ABIDE"].hist_shift_augmentation:
-            if training_config.data_augmentation:
-                ABIDE_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                                    AddBiasField(exec_probability=1.0, alpha=0.001),
-                                                                    ShiftHistogram(exec_probability=0.05, min_lambda=-5,
-                                                                                   max_lambda=5)]))
-            else:
-                ABIDE_augmentation_strategy = AugmentInput(
-                    Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
         elif training_config.data_augmentation:
-            ABIDE_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
+            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+       
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
@@ -313,8 +302,7 @@ if __name__ == '__main__':
      ["Discriminator", "Generator", "Segmenter"]]
 
     trainer = DeepNormalizeTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                   reconstruction_datasets,
-                                   normalized_reconstructors, input_reconstructors,
+                                   reconstruction_datasets, normalized_reconstructors, input_reconstructors,
                                    segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
                                    run_config, dataset_configs, save_folder) \
         .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
@@ -460,15 +448,15 @@ if __name__ == '__main__':
         .with_event_handler(
         PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix", PlotType.HEATMAP_PLOT,
                             params={"opts": {
-                                "columnnames": list(dataset_configs.keys()) + ["Generated"],
-                                "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
+                                "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                "rownames": list(dataset_configs.keys()) + ["Generated"],
                                 "title": "Discriminator Confusion Matrix"}},
                             every=1), Event.ON_TEST_EPOCH_END) \
         .with_event_handler(
         PlotCustomVariables(visdom_logger, "Discriminator Confusion Matrix Training", PlotType.HEATMAP_PLOT,
                             params={"opts": {
-                                "columnnames": list(dataset_configs.keys()) + ["Generated"],
-                                "rownames": list(reversed(list(dataset_configs.keys()) + ["Generated"])),
+                                "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                "rownames": list(dataset_configs.keys()) + ["Generated"],
                                 "title": "Discriminator Confusion Matrix Training"}},
                             every=1), Event.ON_TEST_EPOCH_END) \
         .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,

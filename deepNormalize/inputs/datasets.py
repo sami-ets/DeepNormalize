@@ -18,7 +18,7 @@ from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from torchvision.transforms import Compose
 
-from deepNormalize.utils.utils import natural_sort
+from dualUnet.utils.utils import natural_sort
 
 
 class SliceDataset(Dataset):
@@ -739,7 +739,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                                         max_subjects,
                                                                                         max_num_patches,
                                                                                         augmentation_strategy,
-                                                                                        patch_size, step, augmented_path)
+                                                                                        patch_size, step,
+                                                                                        augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -1363,10 +1364,6 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject)))
-
         train_dataset = iSEGSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1390,18 +1387,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = iSEGSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modality,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -1446,10 +1432,6 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject)))
-
         train_dataset = iSEGSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1481,18 +1463,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = iSEGSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modality,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
@@ -1535,11 +1506,6 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = np.stack(natural_sort(list([extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject))) for
-                modality in modalities])), axis=1)
-
         train_dataset = iSEGSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1563,18 +1529,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = iSEGSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modalities,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality],
@@ -1622,11 +1577,6 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["labels"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = np.stack(natural_sort(list([extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject))) for
-                modality in modalities])), axis=1)
-
         train_dataset = iSEGSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1658,18 +1608,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = iSEGSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modalities,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def shuffle_split(subjects: np.ndarray, split_ratio: Union[float, int]):
@@ -1772,10 +1711,6 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full", str(reconstruction_subject), str(modality)))
-
         train_dataset = MRBrainSSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1799,18 +1734,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = MRBrainSSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modality,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int,
@@ -1856,10 +1780,6 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.array(natural_sort(list(reconstruction_csv[str(modality)]))),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full", str(reconstruction_subject), str(modality)))
-
         train_dataset = MRBrainSSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1891,18 +1811,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = MRBrainSSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modality,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality],
@@ -1945,11 +1854,6 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = np.stack(natural_sort(list([extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject))) for
-                modality in modalities])), axis=1)
-
         train_dataset = MRBrainSSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -1973,18 +1877,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = MRBrainSSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modalities,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality],
@@ -2032,11 +1925,6 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             np.stack([natural_sort(list(reconstruction_csv[str(modality)])) for modality in modalities], axis=1),
             np.array(natural_sort(list(reconstruction_csv["LabelsForTesting"]))))
 
-        if augmentation_strategy:
-            reconstruction_augmented_paths = np.stack(natural_sort(list([extract_file_paths(
-                os.path.join(source_dir, "../../Augmented/Full/", str(modality), str(reconstruction_subject))) for
-                modality in modalities])), axis=1)
-
         train_dataset = MRBrainSSegmentationFactory.create(
             source_paths=train_source_paths,
             target_paths=train_target_paths,
@@ -2067,18 +1955,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             transforms=[ToNumpyArray(), ToNDTensor()],
             augmentation_strategy=None)
 
-        if augmentation_strategy:
-            reconstruction_augmented_dataset = MRBrainSSegmentationFactory.create(
-                source_paths=reconstruction_augmented_paths,
-                target_paths=reconstruction_target_paths,
-                modalities=modalities,
-                dataset_id=dataset_id,
-                transforms=[ToNumpyArray(), ToNDTensor()],
-                augmentation_strategy=None)
-        else:
-            reconstruction_augmented_dataset = None
-
-        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, reconstruction_augmented_dataset, filtered_csv
+        return train_dataset, valid_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
     @staticmethod
     def shuffle_split(subjects: np.ndarray, split_ratio: Union[float, int]):

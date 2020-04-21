@@ -2,7 +2,6 @@ models:
   Generator:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Generator/Generator.tar"
     params:
       in_channels: 1
       out_channels: 1
@@ -30,7 +29,6 @@ models:
   Segmenter:
     name: "UNet3D"
     type: "UNet3D"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Segmenter/Segmenter.tar"
     params:
       in_channels: 1
       out_channels: 4
@@ -86,7 +84,6 @@ models:
   Discriminator:
     name: "ResNet3D"
     type: "ResNet18"
-    path: "/mnt/md0/Research/Code/deepNormalizev5/saves/deepNormalize_home_test_dual_dataset_2/Discriminator/Discriminator.tar"
     params:
       in_channels: 1
       out_channels: 3
@@ -129,7 +126,7 @@ models:
 dataset:
   iSEG:
     path: "/mnt/md0/Data/Preprocessed_4/iSEG/Training/"
-    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/"
+    path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -140,7 +137,7 @@ dataset:
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
-    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
+    path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -162,9 +159,9 @@ training:
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.0.2.2"
+  server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_test_dual_dataset_2_continued"
-  offline: True
-  filename: "deepNormalize_home_test_dual_dataset_2_continued.json"
+  env: "deepNormalize_home_test_dual_dataset"
+  offline: False
+  filename: "deepNormalize_home_test_dual_dataset.json"
 

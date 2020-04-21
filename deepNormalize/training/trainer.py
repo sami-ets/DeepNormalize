@@ -321,7 +321,7 @@ class DeepNormalizeTrainer(Trainer):
     def test_step(self, inputs, target):
         gen_pred = self._generator.forward(inputs[NON_AUGMENTED_INPUTS])
         metric = self._generator.compute_metrics(gen_pred, inputs[AUGMENTED_INPUTS])
-        self._generator.update_train_metric("MeanSquaredError", metric["MeanSquaredError"] / 32768)
+        self._generator.update_test_metric("MeanSquaredError", metric["MeanSquaredError"] / 32768)
 
         if self._should_activate_autoencoder():
             gen_loss = self._generator.compute_loss("MSELoss", gen_pred, inputs[AUGMENTED_INPUTS])
@@ -546,7 +546,7 @@ class DeepNormalizeTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self._run_config.local_rank == 0:
-            if self.epoch % 100 == 0 and self.epoch is not 0:
+            if self.epoch % 20 == 0:
                 if not self._sliced:
                     all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
                                            self._reconstruction_datasets))
@@ -573,20 +573,16 @@ class DeepNormalizeTrainer(Trainer):
                         self._segmentation_reconstructors)))}
 
                 if self._training_config.data_augmentation:
-                    augmented_patches = list(
-                        map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                            self._reconstruction_datasets))
-                    img_augmented = list(
+                    img_augmented = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
                         map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-                            augmented_patches, self._augmented_reconstructors))
-                    augmented_minus_inputs = list()
-                    norm_minus_augmented = list()
+                            all_patches,
+                            self._augmented_reconstructors)))}
 
-                    for input, augmented in zip(img_input, img_augmented):
-                        augmented_minus_inputs.append(augmented - input)
+                    augmented_minus_inputs = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
+                        map(lambda augmented, input: augmented - input, img_augmented.values(), img_input.values())))}
 
-                    for norm, augmented in zip(img_norm, img_augmented):
-                        norm_minus_augmented.append(norm - augmented)
+                    norm_minus_augmented = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
+                        map(lambda augmented, input: augmented - input, img_norm.values(), img_augmented.values())))}
 
                 for dataset in self._dataset_configs.keys():
                     self.custom_variables[
@@ -637,12 +633,12 @@ class DeepNormalizeTrainer(Trainer):
                             "Reconstructed Initial Noise {} Image".format(
                                 dataset)] = self._seg_slicer.get_colored_slice(
                             SliceType.AXIAL,
-                            np.expand_dims(np.expand_dims(augmented_minus_inputs[dataset], 0), 0)).squeeze(0)
+                            np.expand_dims(np.expand_dims(augmented_minus_inputs[dataset], 0), 0), 128).squeeze(0)
                         self.custom_variables[
                             "Reconstructed Noise {} After Normalization".format(
                                 dataset)] = self._seg_slicer.get_colored_slice(
                             SliceType.AXIAL,
-                            np.expand_dims(np.expand_dims(norm_minus_augmented[dataset], 0), 0)).squeeze(0)
+                            np.expand_dims(np.expand_dims(norm_minus_augmented[dataset], 0), 0), 128).squeeze(0)
                     else:
                         self.custom_variables[
                             "Reconstructed Initial Noise {} Image".format(
@@ -692,20 +688,6 @@ class DeepNormalizeTrainer(Trainer):
                         self._construct_single_histogram(img_norm[list(self._dataset_configs.keys())[0]],
                                                          img_input[list(self._dataset_configs.keys())[0]],
                                                          )).transpose((2, 0, 1))
-            elif self.epoch % 100 == 0 and self.epoch is 0:
-                self.custom_variables["Reconstructed Normalized iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Segmented iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground Truth iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Input iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Initial Noise iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Noise iSEG After Normalization"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Normalized MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Segmented MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground Truth MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Input MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Initial Noise MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Noise MRBrainS After Normalization"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Images Histograms"] = np.zeros((224, 192))
 
             if "ABIDE" not in self._dataset_configs.keys():
                 self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
