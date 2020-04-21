@@ -76,7 +76,6 @@ if __name__ == '__main__':
     valid_datasets = list()
     test_datasets = list()
     reconstruction_datasets = list()
-    augmented_reconstruction_datasets = list()
     normalized_reconstructors = list()
     segmentation_reconstructors = list()
     input_reconstructors = list()
@@ -108,7 +107,7 @@ if __name__ == '__main__':
             iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
 
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_augmented_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction, iSEG_CSV = iSEGSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
@@ -120,7 +119,6 @@ if __name__ == '__main__':
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
-        augmented_reconstruction_datasets.append(iSEG_augmented_reconstruction)
         normalized_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                                             dataset_configs['iSEG'].patch_size,
                                                             dataset_configs["iSEG"].step,
@@ -140,10 +138,6 @@ if __name__ == '__main__':
         gt_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                                     dataset_configs['iSEG'].patch_size,
                                                     dataset_configs["iSEG"].step))
-        augmented_input_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               dataset_configs['iSEG'].patch_size,
-                               dataset_configs["iSEG"].step))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
@@ -159,7 +153,7 @@ if __name__ == '__main__':
         elif training_config.data_augmentation:
             MRBRainS_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                    AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_augmented_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction, MRBrainS_CSV = MRBrainSSegmentationFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
@@ -171,7 +165,6 @@ if __name__ == '__main__':
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
-        augmented_reconstruction_datasets.append(MRBrainS_augmented_reconstruction)
         normalized_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                dataset_configs['MRBrainS'].patch_size,
@@ -189,10 +182,7 @@ if __name__ == '__main__':
         gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                     dataset_configs['MRBrainS'].patch_size,
                                                     dataset_configs["MRBrainS"].step))
-        augmented_input_reconstructors.append(
-            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               dataset_configs['MRBrainS'].patch_size,
-                               dataset_configs["MRBrainS"].step))
+
 
     if dataset_configs.get("ABIDE", None) is not None:
         if dataset_configs["ABIDE"].hist_shift_augmentation:
