@@ -11,7 +11,6 @@ from samitorch.inputs.images import Modality
 from samitorch.inputs.patch import CenterCoordinate, Patch
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, ToNDTensor, PadToPatchShape
-from samitorch.utils.files import extract_file_paths
 from samitorch.utils.slice_builder import SliceBuilder
 from sklearn.utils import shuffle
 from torch.utils.data.dataset import Dataset
@@ -109,7 +108,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
                                 augmentation_strategy: DataAugmentationStrategy = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                step: Union[List, Tuple] = (1, 4, 4, 4),
+                                test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
 
         if isinstance(modalities, list):
             return iSEGSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
@@ -124,7 +125,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                                     max_subjects,
                                                                                     max_num_patches,
                                                                                     augmentation_strategy, patch_size,
-                                                                                    step, augmented_path)
+                                                                                    step, test_patch_size, test_step,
+                                                                                    augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -371,7 +373,10 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                  max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                                 step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4),
+                                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16),
+                                                 augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -467,8 +472,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                            keep_centered_on_foreground=True)
         reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
                                                                      reconstruction_targets,
-                                                                     patch_size,
-                                                                     step,
+                                                                     test_patch_size,
+                                                                     test_step,
                                                                      keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -724,7 +729,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
                                 augmentation_strategy: DataAugmentationStrategy = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                step: Union[List, Tuple] = (1, 4, 4, 4),
+                                test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
 
         if isinstance(modalities, list):
             return MRBrainSSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
@@ -747,7 +754,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                            max_subjects: int = None, max_num_patches: int = None,
                                            augmentation_strategy: DataAugmentationStrategy = None,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                           step: Union[List, Tuple] = (1, 4, 4, 4),
+                                           test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                           test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -808,8 +817,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         patch_size,
-                                                                         step,
+                                                                         test_patch_size,
+                                                                         test_step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -852,7 +861,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                       max_subjects: int = None, max_num_patches: int = None,
                                       augmentation_strategy: DataAugmentationStrategy = None,
                                       patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                      step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                      step: Union[List, Tuple] = (1, 4, 4, 4),
+                                      test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                      test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -916,8 +927,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         patch_size,
-                                                                         step,
+                                                                         test_patch_size,
+                                                                         test_step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -960,7 +971,10 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                  max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                                 step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4),
+                                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16),
+                                                 augmented_path: str = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -1056,8 +1070,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         patch_size,
-                                                                         step,
+                                                                         test_patch_size,
+                                                                         test_step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -1116,7 +1130,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                             max_subjects: int = None, max_num_patches: int = None,
                                             augmentation_strategy: DataAugmentationStrategy = None,
                                             patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                            step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                            step: Union[List, Tuple] = (1, 4, 4, 4),
+                                            test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                            test_step: Union[List, Tuple] = (1, 16, 16, 16)):
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
         subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
@@ -1194,8 +1210,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                keep_centered_on_foreground=True)
         reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
                                                                          reconstruction_targets,
-                                                                         patch_size,
-                                                                         step,
+                                                                         test_patch_size,
+                                                                         test_step,
                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:

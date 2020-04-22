@@ -3,7 +3,7 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 from samitorch.inputs.images import Modality
-from samitorch.inputs.transformers import ToNumpyArray, PadToPatchShape
+from samitorch.inputs.transformers import ToNumpyArray, PadToPatchShape, ToNDTensor
 from samitorch.utils.files import extract_file_paths
 from torchvision.transforms import Compose
 
@@ -98,9 +98,11 @@ class SlicedImageReconstructorTest(unittest.TestCase):
         transforms = Compose([ToNumpyArray(), PadToPatchShape((1, 32, 32, 32), (1, 8, 8, 8))])
         self._image = transforms(self.FULL_IMAGE_PATH)
         self._target = transforms(self.TARGET_PATH)
-        patches = iSEGSliceDatasetFactory.get_patches([self._image], [self._target], (1, 32, 32, 32), (1, 8, 8, 8))
-        self._dataset = iSEGSliceDatasetFactory.create(self._image, self._target, patches, Modality.T1, 0)
-        self._reconstructor = ImageReconstructor([256, 192, 160], [1, 32, 32, 32], [1, 8, 8, 8], test_image=self._image)
+        patches = iSEGSliceDatasetFactory.get_patches([self._image], [self._target], (1, 32, 32, 32), (1, 16, 16, 16))
+        self._dataset = iSEGSliceDatasetFactory.create([self._image], [self._target], patches, Modality.T1, 0,
+                                                       transforms=[ToNDTensor()])
+        self._reconstructor = ImageReconstructor([256, 192, 160], [1,32, 32, 32], [1, 16, 16, 16], models=None,
+                                                 dataset=self._dataset, test_image=self._image)
 
     def test_should_output_reconstructed_image(self):
         all_patches = list(map(lambda dataset: [patch.slice for patch in dataset._patches],

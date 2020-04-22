@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from samitorch.inputs.transformers import ToNumpyArray
+from samitorch.inputs.utils import augmented_sample_collate
+from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import Compose
 
 from deepNormalize.inputs.images import SliceType
@@ -127,7 +129,8 @@ class ImageSlicer(object):
 class ImageReconstructor(object):
 
     def __init__(self, image_size: List[int], patch_size: List[int], step: List[int],
-                 models: List[torch.nn.Module] = None, normalize: bool = False, segment: bool = False,
+                 models: List[torch.nn.Module] = None, dataset: Dataset = None, normalize: bool = False,
+                 segment: bool = False,
                  test_image: np.ndarray = None):
         self._patch_size = patch_size
         self._image_size = image_size
@@ -137,6 +140,10 @@ class ImageReconstructor(object):
         self._do_segment = segment
         self._transform = Compose([ToNumpyArray()])
         self._test_image = test_image
+        self._dataset = dataset
+
+        self._dataloader = DataLoader(dataset, 64, shuffle=False, num_workers=0, collate_fn=augmented_sample_collate,
+                                      drop_last=False, pin_memory=True)
 
     @staticmethod
     def _normalize(img):

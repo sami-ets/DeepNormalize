@@ -131,6 +131,8 @@ dataset:
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
@@ -142,6 +144,8 @@ dataset:
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
 
 
