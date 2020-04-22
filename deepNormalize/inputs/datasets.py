@@ -18,7 +18,7 @@ from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from torchvision.transforms import Compose
 
-from dualUnet.utils.utils import natural_sort
+from deepNormalize.utils.utils import natural_sort
 
 
 class SliceDataset(Dataset):

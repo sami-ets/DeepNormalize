@@ -14,11 +14,10 @@ models:
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "ReduceLROnPlateau"
+      type: "MultiStepLR"
       params:
-        factor: 0.1
-        patience: 7
-        min_lr: 0.000000001
+        milestones: [25, 50]
+        gamma: 0.1
     criterion:
       MSELoss:
         type: "MSELoss"
@@ -109,8 +108,6 @@ models:
     criterion:
       NLLLoss:
         type: "NLLLoss"
-        params:
-          weight: !torch/tensor [0.35, 0.65, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -125,7 +122,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed_4/iSEG/Training/"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -133,10 +130,10 @@ dataset:
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
-    step: !python/tuple [1, 4, 4, 4]
+    step: [1, 4, 4, 4]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -144,8 +141,9 @@ dataset:
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
-    step: !python/tuple [1, 4, 4, 4]
+    step: [1, 4, 4, 4]
     reconstruction_size: [256, 256, 192]
+
 
 training:
   batch_size: 15

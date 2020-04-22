@@ -146,11 +146,13 @@ if __name__ == '__main__':
                                                     dataset_configs['iSEG'].patch_size,
                                                     dataset_configs["iSEG"].step,
                                                     test_image=iSEG_reconstruction._target_images[0]))
-        augmented_input_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               dataset_configs['iSEG'].patch_size,
-                               dataset_configs["iSEG"].step,
-                               test_image=iSEG_reconstruction._augmented_images[0]))
+
+        if dataset_configs["iSEG"].path_augmented is not None:
+            augmented_input_reconstructors.append(
+                ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
+                                   dataset_configs['iSEG'].patch_size,
+                                   dataset_configs["iSEG"].step,
+                                   test_image=iSEG_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
@@ -198,11 +200,13 @@ if __name__ == '__main__':
                                                     dataset_configs['MRBrainS'].patch_size,
                                                     dataset_configs["MRBrainS"].step,
                                                     test_image=MRBrainS_reconstruction._target_images[0]))
-        augmented_input_reconstructors.append(
-            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               dataset_configs['MRBrainS'].patch_size,
-                               dataset_configs["MRBrainS"].step,
-                               test_image=MRBrainS_reconstruction._augmented_images[0]))
+
+        if dataset_configs["MRBrainS"].path_augmented is not None:
+            augmented_input_reconstructors.append(
+                ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                                   dataset_configs['MRBrainS'].patch_size,
+                                   dataset_configs["MRBrainS"].step,
+                                   test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
         if dataset_configs["ABIDE"].hist_shift_augmentation:
@@ -211,7 +215,7 @@ if __name__ == '__main__':
         elif training_config.data_augmentation:
             iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
                                                                AddBiasField(exec_probability=1.0, alpha=0.001)]))
-       
+
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,

@@ -1,16 +1,22 @@
 import argparse
 import logging
 import multiprocessing
+from typing import Union
 
 import abc
 import nibabel as nib
 import numpy as np
 import os
+import pandas
 import re
+from functools import reduce
+from nipype.interfaces import freesurfer
 from samitorch.inputs.augmentation.transformers import AddBiasField, AddNoise
+from samitorch.inputs.images import Image
 from samitorch.inputs.patch import Patch, CenterCoordinate
+from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
-    ResampleNiftiImageToTemplate, LoadNifti, PadToPatchShape
+    ResampleNiftiImageToTemplate, LoadNifti, PadToPatchShape, CropToContent, Squeeze
 from samitorch.utils.files import extract_file_paths
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
@@ -98,6 +104,18 @@ class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
 
         return patches
 
+    @staticmethod
+    def get_filtered_patches(image, label, patch_size, step):
+        slices = SliceBuilder(image.shape, patch_size=patch_size, step=step).build_slices()
+
+        patches = list()
+
+        for slice in slices:
+            center_coordinate = CenterCoordinate(image[tuple(slice)], label[tuple(slice)])
+            patches.append(Patch(slice, 0, center_coordinate))
+
+        return np.array(list(filter(lambda patch: patch.center_coordinate.is_foreground, patches)))
+
 
 class iSEGPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("iSEGPipeline")
@@ -119,7 +137,7 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         files = np.stack((np.array(images_T1), np.array(images_T2), np.array(labels)), axis=1)
 
         self._dispatch_jobs(files, 5)
-        #self._do_job(files)
+        # self._do_job(files)
 
     def _do_job(self, files):
         for file in files:
