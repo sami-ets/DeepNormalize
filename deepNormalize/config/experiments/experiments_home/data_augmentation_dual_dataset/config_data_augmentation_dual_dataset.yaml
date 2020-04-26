@@ -5,26 +5,25 @@ models:
     params:
       in_channels: 1
       out_channels: 1
-      leaky: False
       interpolate: True
+      leaky: False
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
-        lr: 0.00001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "ReduceLROnPlateau"
+      type: "MultiStepLR"
       params:
-        factor: 0.1
-        patience: 7
-        min_lr: 0.000000001
+        milestones: [30, 60]
+        gamma: 0.1
     criterion:
       MSELoss:
         type: "MSELoss"
     metrics:
-      Accuracy:
-        type: "Accuracy"
+      MeanSquaredError:
+        type: "MeanSquaredError"
 
   Segmenter:
     name: "UNet3D"
@@ -35,7 +34,7 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.001
         momentum: 0.9
@@ -44,7 +43,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 7
+        patience: 12
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -95,22 +94,19 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
-        lr: 0.00001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "ReduceLROnPlateau"
+      type: "MultiStepLR"
       params:
-        factor: 0.1
-        patience: 7
-        min_lr: 0.00000001
+        milestones: [30, 60]
+        gamma: 0.1
     criterion:
       NLLLoss:
         type: "NLLLoss"
-        params:
-          weight: !torch/tensor [0.35, 0.65, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -125,37 +121,47 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/Patches/Aligned/Full"
+    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: !!null
-    validation_split: 0.2
-  MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/TrainingData/Patches/Aligned/Full"
-    modalities: "T1_1mm"
-    max_subjects: !!null
-    max_num_patches: !!null
+    max_num_patches: 40000
     validation_split: 0.3
-  ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [256, 192, 160]
+  MRBrainS:
+    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 15000
-    validation_split: 0.2
-    sites: !!null
+    max_num_patches: 40000
+    validation_split: 0.3
+    hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [256, 256, 192]
 
 training:
-  batch_size: 16
+  batch_size: 15
   nb_epochs: 100
   patience_segmentation: 3
-  data_augmentation: True
+  data_augmentation: False
+  build_augmented_images: True
   variables:
-    disc_ratio: 0.50
+    disc_ratio: 0.05
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
 
 visdom:
-  server: "10.180.113.44"
+  server: "10.0.3.9"
   port: "8097"
-  env: "deepNormalize_home_data_augmentation_wgan_disc_ratio_0.50"
+  env: "deepNormalize_home_data_augmentation_iseg_mrbrains_disc_ratio_0_05_2"
+  offline: True
+  filename: "deepNormalize_home_data_augmentation_iseg_mrbrains_disc_ratio_0_05_2.json"
