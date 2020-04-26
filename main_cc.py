@@ -101,12 +101,18 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
-        if dataset_configs["iSEG"].hist_shift_augmentation:
+        if training_config.data_augmentation and dataset_configs["iSEG"].hist_shift_augmentation:
             iSEG_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001),
+                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation and not dataset_configs["iSEG"].hist_shift_augmentation:
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
+        elif not training_config.data_augmentation and dataset_configs["iSEG"].hist_shift_augmentation:
+            iSEG_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
 
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
@@ -158,12 +164,18 @@ if __name__ == '__main__':
                                    test_image=iSEG_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        if dataset_configs["MRBrainS"].hist_shift_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+        if training_config.data_augmentation and dataset_configs["MRBrainS"].hist_shift_augmentation:
+            MRBrainS_augmentation_strategy = AugmentInput(
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001),
+                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation and not dataset_configs["MRBrainS"].hist_shift_augmentation:
+            MRBrainS_augmentation_strategy = AugmentInput(
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
+        elif not training_config.data_augmentation and dataset_configs["MRBrainS"].hist_shift_augmentation:
+            MRBrainS_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
 
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
@@ -175,7 +187,9 @@ if __name__ == '__main__':
             augmentation_strategy=MRBrainS_augmentation_strategy,
             patch_size=dataset_configs["MRBrainS"].patch_size,
             step=dataset_configs["MRBrainS"].step,
-            augmented_path=dataset_configs["MRBrainS"].path_augmented)
+            augmented_path=dataset_configs["MRBrainS"].path_augmented,
+            test_patch_size=dataset_configs["MRBrainS"].test_patch_size,
+            test_step=dataset_configs["MRBrainS"].test_step)
         train_datasets.append(MRBrainS_train)
         valid_datasets.append(MRBrainS_valid)
         test_datasets.append(MRBrainS_test)
@@ -212,12 +226,18 @@ if __name__ == '__main__':
                                    test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
-        if dataset_configs["ABIDE"].hist_shift_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.15, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                                                               AddBiasField(exec_probability=1.0, alpha=0.001)]))
+        if training_config.data_augmentation and dataset_configs["ABIDE"].hist_shift_augmentation:
+            ABIDE_augmentation_strategy = AugmentInput(
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001),
+                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+        elif training_config.data_augmentation and not dataset_configs["ABIDE"].hist_shift_augmentation:
+            ABIDE_augmentation_strategy = AugmentInput(
+                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
+                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
+        elif not training_config.data_augmentation and dataset_configs["ABIDE"].hist_shift_augmentation:
+            ABIDE_augmentation_strategy = AugmentInput(
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
 
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
@@ -229,33 +249,35 @@ if __name__ == '__main__':
             max_num_patches=dataset_configs["ABIDE"].max_num_patches,
             augmentation_strategy=ABIDE_augmentation_strategy,
             patch_size=dataset_configs["ABIDE"].patch_size,
-            step=dataset_configs["ABIDE"].step)
+            step=dataset_configs["ABIDE"].step,
+            test_patch_size=dataset_configs["ABIDE"].test_patch_size,
+            test_step=dataset_configs["ABIDE"].test_step)
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
         normalized_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                            dataset_configs['ABIDE'].patch_size,
-                                                            dataset_configs["ABIDE"].step,
+                                                            dataset_configs['ABIDE'].test_patch_size,
+                                                            dataset_configs["ABIDE"].test_step,
                                                             [model_trainers[GENERATOR]],
                                                             normalize=True,
                                                             test_image=ABIDE_reconstruction._source_images[0]))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                               dataset_configs['ABIDE'].patch_size,
-                               dataset_configs["ABIDE"].step,
+                               dataset_configs['ABIDE'].test_patch_size,
+                               dataset_configs["ABIDE"].test_step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]],
                                segment=True,
                                test_image=ABIDE_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                       dataset_configs['ABIDE'].patch_size,
-                                                       dataset_configs["ABIDE"].step,
+                                                       dataset_configs['ABIDE'].test_patch_size,
+                                                       dataset_configs["ABIDE"].test_step,
                                                        test_image=ABIDE_reconstruction._source_images[0]))
 
         gt_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                    dataset_configs['ABIDE'].patch_size,
-                                                    dataset_configs["ABIDE"].step,
+                                                    dataset_configs['ABIDE'].test_patch_size,
+                                                    dataset_configs["ABIDE"].test_step,
                                                     test_image=ABIDE_reconstruction._target_images[0]))
 
     # Concat datasets.

@@ -739,6 +739,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                                    max_subjects,
                                                                                    max_num_patches,
                                                                                    augmentation_strategy, patch_size,
+                                                                                   test_patch_size, test_step,
                                                                                    step)
         else:
             return MRBrainSSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
@@ -747,6 +748,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                                         max_num_patches,
                                                                                         augmentation_strategy,
                                                                                         patch_size, step,
+                                                                                        test_patch_size, test_step,
                                                                                         augmented_path)
 
     @staticmethod
@@ -2251,7 +2253,9 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                           dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
                           max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                          step: Union[List, Tuple] = (1, 4, 4, 4)):
+                          step: Union[List, Tuple] = (1, 4, 4, 4),
+                          test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                          test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
@@ -2259,14 +2263,17 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             return ABIDESliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                dataset_id, test_size, sites,
                                                                                max_subjects, max_num_patches,
-                                                                               augmentation_strategy, patch_size, step)
+                                                                               augmentation_strategy, patch_size, step,
+                                                                               test_patch_size, test_step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
                                 max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                step: Union[List, Tuple] = (1, 4, 4, 4),
+                                test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
@@ -2275,14 +2282,16 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                                                      dataset_id, test_size, sites,
                                                                                      max_subjects, max_num_patches,
                                                                                      augmentation_strategy, patch_size,
-                                                                                     step)
+                                                                                     step, test_patch_size, test_step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            sites: List[str] = None, max_subjects: int = None,
                                            max_num_patches: int = None, augmentation_strategy=None,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                           step: Union[List, Tuple] = (1, 4, 4, 4),
+                                           test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                           test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
@@ -2350,8 +2359,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                             keep_centered_on_foreground=True)
         reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
                                                                       reconstruction_targets,
-                                                                      patch_size,
-                                                                      step,
+                                                                      test_patch_size,
+                                                                      test_step,
                                                                       keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
@@ -2395,7 +2404,9 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                  max_subjects: int = None, max_num_patches: int = None,
                                                  augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                                 step: Union[List, Tuple] = (1, 4, 4, 4)):
+                                                 step: Union[List, Tuple] = (1, 4, 4, 4),
+                                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
+                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
@@ -2478,8 +2489,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                             keep_centered_on_foreground=True)
         reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
                                                                       reconstruction_targets,
-                                                                      patch_size,
-                                                                      step,
+                                                                      test_patch_size,
+                                                                      test_step,
                                                                       keep_centered_on_foreground=False)
 
         if max_num_patches is not None:

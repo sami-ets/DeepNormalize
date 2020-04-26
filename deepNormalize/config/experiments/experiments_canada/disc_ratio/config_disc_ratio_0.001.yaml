@@ -161,7 +161,6 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [224, 224, 192]
 
-
 training:
   batch_size: 32
   nb_epochs: 200
@@ -169,7 +168,7 @@ training:
   data_augmentation: False
   build_augmented_images: False
   variables:
-    disc_ratio: 0.50
+    disc_ratio: 0.001
     seg_ratio: 1.0
     train_generator_every_n_steps: 1
     train_generator_every_n_steps_seg: 1
@@ -177,6 +176,7 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_canada_disc_ratio_0_50"
+  env: "deepNormalize_canada_disc_ratio_0_001"
   offline: True
-  filename: "deepNormalize_canada_disc_ratio_0_50.json"
+  filename: "deepNormalize_canada_disc_ratio_0_001.json"
+

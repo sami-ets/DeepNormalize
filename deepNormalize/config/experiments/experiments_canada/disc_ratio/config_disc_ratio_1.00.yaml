@@ -8,15 +8,15 @@ models:
       interpolate: True
       leaky: False
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
-        lr: 0.00001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [25, 50]
+        milestones: [30, 60]
         gamma: 0.1
     criterion:
       MSELoss:
@@ -34,7 +34,7 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.001
         momentum: 0.9
@@ -94,17 +94,16 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
-        lr: 0.00001
+        lr: 0.001
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "ReduceLROnPlateau"
+      type: "MultiStepLR"
       params:
-        factor: 0.1
-        patience: 7
-        min_lr: 0.00000001
+        milestones: [30, 60]
+        gamma: 0.1
     criterion:
       NLLLoss:
         type: "NLLLoss"
@@ -131,6 +130,8 @@ dataset:
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
@@ -142,25 +143,31 @@ dataset:
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
     path: "/project/def-lombaert/pld2602/ABIDE/5.1"
     path_augmented: !!null
     modalities: "T1"
-    max_subjects: 150
+    max_subjects: 300
     max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     sites: !!null
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
-    reconstruction_size: [256, 256, 192]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [224, 224, 192]
+
 
 training:
-  batch_size: 24
-  nb_epochs: 100
+  batch_size: 32
+  nb_epochs: 200
   patience_segmentation: 3
   data_augmentation: False
+  build_augmented_images: False
   variables:
     disc_ratio: 1.0
     seg_ratio: 1.0
@@ -170,4 +177,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "deepNormalize_school_disc_ratio_1_00"
+  env: "deepNormalize_canada_disc_ratio_1_00"
+  offline: True
+  filename: "deepNormalize_canada_disc_ratio_1_00.json"

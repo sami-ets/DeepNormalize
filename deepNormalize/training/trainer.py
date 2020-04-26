@@ -111,7 +111,7 @@ class DeepNormalizeTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
-        self._sampler = Sampler(0.3)
+        self._sampler = Sampler(1.0)
         self._sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._segmenter.parameters()) +
                                                       sum(p.numel() for p in self._generator.parameters()) +
@@ -453,6 +453,9 @@ class DeepNormalizeTrainer(Trainer):
                             dim=1, keepdim=False),
                         num_classes=4),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)].long(), dim=1)))
+            else:
+                self._ABIDE_dice_gauge.update(np.zeros((3,)))
+                self._ABIDE_hausdorff_gauge.update(np.zeros((3,)))
 
             self._class_hausdorff_distance_gauge.update(
                 self._compute_mean_hausdorff_distance(
@@ -571,7 +574,7 @@ class DeepNormalizeTrainer(Trainer):
                 map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
                     self._segmentation_reconstructors)))}
 
-            if self._training_config.data_augmentation:
+            if self._training_config.build_augmented_images:
                 img_augmented = {k: v for (k, v) in zip(self._dataset_configs.keys(), list(
                     map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
                         all_patches,
@@ -627,7 +630,7 @@ class DeepNormalizeTrainer(Trainer):
                     torch.tensor(img_gt[dataset]).unsqueeze(0).long())
                 self._class_dice_gauge_on_reconstructed_images.update(np.array(metric["Dice"]))
 
-                if self._training_config.data_augmentation:
+                if self._training_config.build_augmented_images:
                     self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = self._seg_slicer.get_colored_slice(

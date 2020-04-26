@@ -3,10 +3,12 @@ import logging
 import multiprocessing
 
 import abc
+import math
 import nibabel as nib
 import numpy as np
 import os
 import pandas
+from kerosene.metrics.gauges import AverageGauge
 from samitorch.inputs.patch import Patch, CenterCoordinate
 from samitorch.inputs.transformers import ToNumpyArray, ApplyMask, \
     ResampleNiftiImageToTemplate, LoadNifti, PadToPatchShape, RemapClassIDs
@@ -56,9 +58,9 @@ class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     def _do_job(self, *args):
         raise NotImplementedError
 
-    def _dispatch_jobs(self, files, job_number):
+    def _dispatch_jobs(self, files, num_jobs):
         total = len(files)
-        chunk_size = int(total / job_number)
+        chunk_size = int(total / num_jobs)
         slices = iSEGPipeline.chunks(files, chunk_size)
         jobs = []
 
@@ -67,6 +69,14 @@ class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
             jobs.append(j)
         for j in jobs:
             j.start()
+
+    def _dispatch_jobs_in_pool(self, files, num_jobs, func):
+        total = len(files)
+        chunk_size = math.ceil(total / num_jobs)
+        slices = iSEGPipeline.chunks(files, chunk_size)
+
+        pool = multiprocessing.Pool(processes=num_jobs)
+        return pool.map(func, slices)
 
     @staticmethod
     def get_patches_from_sample(sample, patch_size, step, keep_foreground_only: bool = True, keep_labels: bool = True):
@@ -145,7 +155,7 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
 
         dataset_mean = np.mean([np.mean(patch) for patch in patches])
 
-        std = np.sqrt(np.array([(((patch - dataset_mean)**2).mean()) for patch in patches]).mean())
+        std = np.sqrt(np.array([(((patch - dataset_mean) ** 2).mean()) for patch in patches]).mean())
 
         print("Mean: {}".format(np.mean(dataset_mean)))
         print("Std: {}".format(np.mean(np.array(std))))
@@ -188,19 +198,19 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
         patches = list()
         for file in files:
             self.LOGGER.info("Processing file {}".format(file[LABELSFORTESTING]))
-            label_for_testing = self._resample_to_template(file[LABELSFORTESTING], file[T1_1MM],
-                                                           interpolation="linear")
-            label_for_testing = self._to_numpy_array(label_for_testing)
+            label_for_testing = MRBrainSPipeline.resample_to_template(file[LABELSFORTESTING], file[T1_1MM],
+                                                                      interpolation="linear")
+            label_for_testing = MRBrainSPipeline.to_numpy_array(label_for_testing)
             label_for_testing = label_for_testing.transpose((3, 0, 1, 2))
             label_for_testing = np.rot90(label_for_testing, axes=(1, -2))
 
             self.LOGGER.info("Processing file {}".format(file[T1]))
-            t1 = self._resample_to_template(file[T1], file[T1_1MM], interpolation="continuous")
-            t1 = self._to_numpy_array(t1)
+            t1 = MRBrainSPipeline.resample_to_template(file[T1], file[T1_1MM], interpolation="continuous")
+            t1 = MRBrainSPipeline.to_numpy_array(t1)
             t1 = t1.transpose((3, 0, 1, 2))
             t1 = np.rot90(t1, axes=(1, -2))
-            t1 = self._apply_mask(t1, label_for_testing)
-            patches.append(self._extract_patches(t1, label_for_testing, self.PATCH_SIZE, self.STEP))
+            t1 = MRBrainSPipeline.apply_mask(t1, label_for_testing)
+            patches.append(MRBrainSPipeline.extract_patches(t1, label_for_testing, self.PATCH_SIZE, self.STEP))
 
         patches_np = list()
         for image in patches:
@@ -215,29 +225,34 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
         print("Mean: {}".format(np.mean(dataset_mean)))
         print("Std: {}".format(np.mean(std)))
 
-    def _pad_to_shape(self, image, patch_size, step):
+    @staticmethod
+    def pad_to_shape(image, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
 
         return transforms_(image)
 
-    def _to_numpy_array(self, file):
+    @staticmethod
+    def to_numpy_array(file):
         transform_ = transforms.Compose([ToNumpyArray()])
 
         return transform_(file)
 
-    def _resample_to_template(self, file, nifti_template, interpolation):
+    @staticmethod
+    def resample_to_template(file, nifti_template, interpolation):
         transforms_ = transforms.Compose([LoadNifti(),
                                           ResampleNiftiImageToTemplate(clip=False,
                                                                        template=nifti_template,
                                                                        interpolation=interpolation)])
         return transforms_(file)
 
-    def _apply_mask(self, file, mask):
+    @staticmethod
+    def apply_mask(file, mask):
         transform_ = transforms.Compose([ApplyMask(mask)])
 
         return transform_(file)
 
-    def _extract_patches(self, image, label, patch_size, step):
+    @staticmethod
+    def extract_patches(image, label, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
         transformed_image = transforms_(image)
         transformed_label = transforms_(label)
@@ -260,6 +275,9 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
             root_dir: Root directory where all files are located.
         """
         self._csv_path = csv_path
+        self._mean_gauge = AverageGauge()
+        self._std_gauge = AverageGauge()
+        self._dataset_mean = 0.0
 
     def run(self, prefix: str = ""):
         files = pandas.read_csv(self._csv_path)
@@ -268,28 +286,49 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
 
         files = np.stack((np.array(images_T1), np.array(labels)), axis=1)
 
-        self._do_job(files)
+        means = self._dispatch_jobs_in_pool(files, 8, self._find_average)
 
-    def _do_job(self, files):
-        patches = list()
+        self._dataset_mean = np.mean(means)
+
+        std = self._dispatch_jobs_in_pool(files, 8, self._find_std)
+
+        std = np.sqrt(np.mean(std))
+
+        print("Dataset mean : {}".format(self._dataset_mean))
+        print("Dataset std : {}".format(std))
+
+    def _find_average(self, files):
         for file in files:
             self.LOGGER.info("Processing file {}".format(file[1]))
             label = self._to_numpy_array(file[1])
             self.LOGGER.info("Processing file {}".format(file[0]))
             t1 = self._to_numpy_array(file[0])
-            patches.append(self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP))
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                mean = np.mean(patch)
+                self._mean_gauge.update(mean)
 
-        patches_np = list()
-        for image in patches:
-            patches_np.append(list(map(lambda patch: patch.slice, image)))
+        return self._mean_gauge.compute()
 
-        patches = [item for sublist in patches_np for item in sublist]
+    def _find_std(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[1]))
+            label = self._to_numpy_array(file[1])
+            self.LOGGER.info("Processing file {}".format(file[0]))
+            t1 = self._to_numpy_array(file[0])
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                std = np.array(((patch - self._dataset_mean) ** 2).mean())
+                self._std_gauge.update(std)
 
-        dataset_mean = np.mean([np.mean(patch) for patch in patches])
+        return self._std_gauge.compute()
 
-        std = np.sqrt(np.array([(((patch - dataset_mean) ** 2).mean()) for patch in patches]).mean())
+    def _do_job(self, files):
+        std = np.sqrt(self._std_gauge.compute())
 
-        print("Mean: {}".format(np.mean(dataset_mean)))
+        print("Mean: {}".format(np.mean(self._mean_gauge.compute())))
         print("Std: {}".format(np.mean(std)))
 
     def _to_numpy_array(self, file):
@@ -305,19 +344,189 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         return ABIDEPreprocessingPipeline.get_filtered_patches(transformed_image, transformed_label, patch_size, step)
 
 
+class MultipleDatasetPipeline(AbstractPreProcessingPipeline):
+    """
+    An ABIDE data pre-processing pipeline. Extract necessary tissues for brain segmentation among other transformations.
+    """
+    LOGGER = logging.getLogger("PreProcessingPipeline")
+    PATCH_SIZE = (1, 32, 32, 32)
+    STEP = (1, 4, 4, 4)
+
+    def __init__(self, root_dirs):
+        """
+        Pre-processing pipeline constructor.
+        Args:
+            root_dir: Root directory where all files are located.
+        """
+        self._root_dirs = root_dirs
+        self._mean_gauge_iSEG = AverageGauge()
+        self._mean_gauge_MRBrainS = AverageGauge()
+        self._mean_gauge_ABIDE = AverageGauge()
+        self._std_gauge_iSEG = AverageGauge()
+        self._std_gauge_MRBrainS = AverageGauge()
+        self._std_gauge_ABIDE = AverageGauge()
+        self._dataset_mean_iSEG = 0.0
+        self._dataset_mean_MRBrainS = 0.0
+        self._dataset_mean_ABIDE = 0.0
+        self._dataset_std_iSEG = 0.0
+        self._dataset_std_MRBrainS = 0.0
+        self._dataset_std_ABIDE = 0.0
+
+    def run(self, prefix: str = ""):
+        images_T1 = natural_sort(extract_file_paths(os.path.join(self._root_dirs["iSEG"], "T1")))
+        labels = natural_sort(extract_file_paths(os.path.join(self._root_dirs["iSEG"], "label")))
+        files = np.stack((np.array(images_T1), np.array(labels)), axis=1)
+
+        self._dataset_mean_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_mean_iseg))
+        self._dataset_std_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_std_iseg))
+
+        files = list()
+        for subject in sorted(os.listdir(os.path.join(self._root_dirs["MRBrainS"]))):
+            files.append(extract_file_paths(os.path.join(self._root_dirs["MRBrainS"], subject)))
+
+        self._dataset_mean_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_mean_mrbrains))
+        self._dataset_std_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_std_mrbrains))
+
+        files = pandas.read_csv(self._root_dirs["ABIDE"])
+        images_T1 = np.asarray(files["T1"])
+        labels = np.asarray(files["labels"])
+        files = np.stack((np.array(images_T1), np.array(labels)), axis=1)
+
+        self._dataset_mean_ABIDE = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_mean_abide))
+        self._dataset_std_ABIDE = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_std_abide))
+
+        print("Triple Dataset mean: {}".format(
+            np.mean([self._dataset_mean_iSEG, self._dataset_mean_MRBrainS, self._dataset_mean_ABIDE])))
+        print("Triple Dataset std: {}".format(
+            np.sqrt(np.mean([self._dataset_std_iSEG, self._dataset_std_MRBrainS, self._dataset_std_ABIDE]))))
+
+        print("Dual Dataset mean: {}".format(
+            np.mean([self._dataset_mean_iSEG, self._dataset_mean_MRBrainS])))
+        print("Dual Dataset std: {}".format(
+            np.sqrt(np.mean([self._dataset_std_iSEG, self._dataset_std_MRBrainS]))))
+
+    def _get_mean_iseg(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[1]))
+            label = self._to_numpy_array(file[1])
+            self.LOGGER.info("Processing file {}".format(file[0]))
+            t1 = self._to_numpy_array(file[0])
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                mean = np.mean(patch)
+                self._mean_gauge_iSEG.update(mean)
+
+        return self._mean_gauge_iSEG.compute()
+
+    def _get_std_iseg(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[1]))
+            label = self._to_numpy_array(file[1])
+            self.LOGGER.info("Processing file {}".format(file[0]))
+            t1 = self._to_numpy_array(file[0])
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                std = np.array(((patch - self._dataset_mean_iSEG) ** 2).mean())
+                self._std_gauge_iSEG.update(std)
+
+        return self._std_gauge_iSEG.compute()
+
+    def _get_mean_mrbrains(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[LABELSFORTESTING]))
+            label_for_testing = MRBrainSPipeline.resample_to_template(file[LABELSFORTESTING], file[T1_1MM],
+                                                                      interpolation="linear")
+            label_for_testing = self._to_numpy_array(label_for_testing)
+            label_for_testing = label_for_testing.transpose((3, 0, 1, 2))
+            label_for_testing = np.rot90(label_for_testing, axes=(1, -2))
+
+            self.LOGGER.info("Processing file {}".format(file[T1]))
+            t1 = MRBrainSPipeline.resample_to_template(file[T1], file[T1_1MM], interpolation="continuous")
+            t1 = self._to_numpy_array(t1)
+            t1 = t1.transpose((3, 0, 1, 2))
+            t1 = np.rot90(t1, axes=(1, -2))
+            t1 = MRBrainSPipeline.apply_mask(t1, label_for_testing)
+            patches = self._extract_patches(t1, label_for_testing, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+
+            for patch in patches:
+                mean = np.mean(patch)
+                self._mean_gauge_MRBrainS.update(mean)
+
+        return self._mean_gauge_MRBrainS.compute()
+
+    def _get_std_mrbrains(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[LABELSFORTESTING]))
+            label_for_testing = MRBrainSPipeline.resample_to_template(file[LABELSFORTESTING], file[T1_1MM],
+                                                                      interpolation="linear")
+            label_for_testing = self._to_numpy_array(label_for_testing)
+            label_for_testing = label_for_testing.transpose((3, 0, 1, 2))
+            label_for_testing = np.rot90(label_for_testing, axes=(1, -2))
+
+            self.LOGGER.info("Processing file {}".format(file[T1]))
+            t1 = MRBrainSPipeline.resample_to_template(file[T1], file[T1_1MM], interpolation="continuous")
+            t1 = self._to_numpy_array(t1)
+            t1 = t1.transpose((3, 0, 1, 2))
+            t1 = np.rot90(t1, axes=(1, -2))
+            t1 = MRBrainSPipeline.apply_mask(t1, label_for_testing)
+            patches = self._extract_patches(t1, label_for_testing, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+
+            for patch in patches:
+                std = np.array(((patch - self._dataset_mean_MRBrainS) ** 2).mean())
+                self._std_gauge_MRBrainS.update(std)
+
+        return self._std_gauge_MRBrainS.compute()
+
+    def _get_mean_abide(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[1]))
+            label = self._to_numpy_array(file[1])
+            self.LOGGER.info("Processing file {}".format(file[0]))
+            t1 = self._to_numpy_array(file[0])
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                mean = np.mean(patch)
+                self._mean_gauge_ABIDE.update(mean)
+
+        return self._mean_gauge_ABIDE.compute()
+
+    def _get_std_abide(self, files):
+        for file in files:
+            self.LOGGER.info("Processing file {}".format(file[1]))
+            label = self._to_numpy_array(file[1])
+            self.LOGGER.info("Processing file {}".format(file[0]))
+            t1 = self._to_numpy_array(file[0])
+            patches = self._extract_patches(t1, label, self.PATCH_SIZE, self.STEP)
+            patches = list(map(lambda patch: patch.slice, patches))
+            for patch in patches:
+                std = np.array(((patch - self._dataset_mean_ABIDE) ** 2).mean())
+                self._std_gauge_ABIDE.update(std)
+
+        return self._std_gauge_ABIDE.compute()
+
+    def _to_numpy_array(self, file):
+        transform_ = transforms.Compose([ToNumpyArray()])
+
+        return transform_(file)
+
+    def _extract_patches(self, image, label, patch_size, step):
+        transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
+        transformed_image = transforms_(image)
+        transformed_label = transforms_(label)
+
+        return MultipleDatasetPipeline.get_filtered_patches(transformed_image, transformed_label, patch_size, step)
+
+
 if __name__ == "__main__":
-    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training",
-    #              step=(1, 4, 4, 4)).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData",
-    #                  step=(1, 4, 4, 4)).run()
-    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_8/iSEG/Training",
-    #              step=(1, 8, 8, 8)).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_8/MRBrainS/DataNii/TrainingData",
-    #                  step=(1, 8, 8, 8)).run()
     # iSEGPipeline("/mnt/md0/Data/Direct/iSEG/Training").run()
-    # MRBrainSPipeline("/mnt/md0/Data/Direct/iSEG/Training").run()
-    ABIDEPreprocessingPipeline("/home/pierre-luc-delisle/ABIDE/5.1/output_abide_images.csv").run()
-    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training",
-    #              step=None, do_extract_patches=False, augment=True).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData",
-    #                  step=None, do_extract_patches=False, augment=True).run()
+    # MRBrainSPipeline("/mnt/md0/Data/Direct/MRBrainS/DataNii/TrainingData").run()
+    # ABIDEPreprocessingPipeline("/home/pierre-luc-delisle/ABIDE/5.1/output_abide_images.csv").run()
+
+    MultipleDatasetPipeline({"iSEG": "/mnt/md0/Data/Direct/iSEG/Training",
+                             "MRBrainS": "/mnt/md0/Data/Direct/MRBrainS/DataNii/TrainingData",
+                             "ABIDE": "/home/pierre-luc-delisle/ABIDE/5.1/output_abide_images.csv"}).run()

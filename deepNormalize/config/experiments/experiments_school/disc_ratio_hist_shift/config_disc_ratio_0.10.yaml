@@ -8,7 +8,7 @@ models:
       interpolate: True
       leaky: False
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.00001
         momentum: 0.9
@@ -34,7 +34,7 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.001
         momentum: 0.9
@@ -94,7 +94,7 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
     optimizer:
-      type: "FusedSGD"
+      type: "SGD"
       params:
         lr: 0.00001
         momentum: 0.9

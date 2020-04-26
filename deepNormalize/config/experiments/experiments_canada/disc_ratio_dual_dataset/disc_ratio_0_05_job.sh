@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=deepNormalize_canada_disc_ratio_dual_dataset_0_50.out
-#SBATCH --job-name=deepNormalize_canada_disc_ratio_dual_dataset_0_50
+#SBATCH --output=deepNormalize_canada_disc_ratio_dual_dataset_0_05.out
+#SBATCH --job-name=deepNormalize_canada_disc_ratio_dual_dataset_0_05
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/config/experiments/experiments_canada/disc_ratio_dual_dataset/config_disc_ratio_0.50.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/config/experiments/experiments_canada/disc_ratio_dual_dataset/config_disc_ratio_0.05.yaml
