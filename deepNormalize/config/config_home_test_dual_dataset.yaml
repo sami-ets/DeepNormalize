@@ -106,8 +106,10 @@ models:
         patience: 7
         min_lr: 0.00000001
     criterion:
-      NLLLoss:
-        type: "NLLLoss"
+      Pred Real:
+        type: "MeanLoss"
+      Pred Fake:
+        type: "MeanLoss"
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -150,6 +152,7 @@ dataset:
 
 
 training:
+  architecture: "DCGAN"
   batch_size: 15
   nb_epochs: 100
   patience_segmentation: 0

@@ -130,14 +130,14 @@ class ImageReconstructor(object):
 
     def __init__(self, image_size: List[int], patch_size: List[int], step: List[int],
                  models: List[torch.nn.Module] = None, dataset: Dataset = None, normalize: bool = False,
-                 segment: bool = False,
-                 test_image: np.ndarray = None):
+                 segment: bool = False, normalize_and_segment: bool = False, test_image: np.ndarray = None):
         self._patch_size = patch_size
         self._image_size = image_size
         self._step = step
         self._models = models
         self._do_normalize = normalize
         self._do_segment = segment
+        self._do_normalize_and_segment = normalize_and_segment
         self._transform = Compose([ToNumpyArray()])
         self._test_image = test_image
         self._dataset = dataset
@@ -176,6 +176,11 @@ class ImageReconstructor(object):
                         p = torch.unsqueeze(p, 0)
                     p = self._models[0].forward(p).cpu().detach().numpy()
                 elif self._do_segment:
+                    if len(p.size()) < 5:
+                        p = torch.unsqueeze(p, 0)
+                    p = torch.argmax(torch.nn.functional.softmax(self._models[0].forward(p), dim=1), dim=1,
+                                     keepdim=True).float().cpu().detach().numpy()
+                elif self._do_normalize_and_segment:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
                     p = self._models[0].forward(p)

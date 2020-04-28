@@ -46,7 +46,7 @@ from deepNormalize.events.handlers.handlers import PlotGPUMemory, PlotCustomLine
 from deepNormalize.factories.customCriterionFactory import CustomCriterionFactory
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.inputs.datasets import iSEGSegmentationFactory, MRBrainSSegmentationFactory, ABIDESegmentationFactory
-from deepNormalize.training.trainer import DeepNormalizeTrainer
+from deepNormalize.training.gan import DeepNormalizeTrainer
 from deepNormalize.utils.constants import *
 from deepNormalize.utils.image_slicer import ImageReconstructor
 
