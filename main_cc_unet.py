@@ -30,7 +30,7 @@ from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
-from samitorch.inputs.augmentation.transformers import AddNoise, AddBiasField, ShiftHistogram
+from samitorch.inputs.transformers import Normalize
 from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
@@ -99,18 +99,9 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
-        if training_config.data_augmentation and dataset_configs["iSEG"].hist_shift_augmentation:
+        if training_config.data_augmentation:
             iSEG_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001),
-                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation and not dataset_configs["iSEG"].hist_shift_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        elif not training_config.data_augmentation and dataset_configs["iSEG"].hist_shift_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
@@ -155,18 +146,9 @@ if __name__ == '__main__':
                                    test_image=iSEG_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        if training_config.data_augmentation and dataset_configs["MRBrainS"].hist_shift_augmentation:
+        if training_config.data_augmentation:
             MRBrainS_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001),
-                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation and not dataset_configs["MRBrainS"].hist_shift_augmentation:
-            MRBrainS_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        elif not training_config.data_augmentation and dataset_configs["MRBrainS"].hist_shift_augmentation:
-            MRBrainS_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
@@ -211,18 +193,9 @@ if __name__ == '__main__':
                                    test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
-        if training_config.data_augmentation and dataset_configs["ABIDE"].hist_shift_augmentation:
+        if training_config.data_augmentation:
             ABIDE_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001),
-                         ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-        elif training_config.data_augmentation and not dataset_configs["ABIDE"].hist_shift_augmentation:
-            ABIDE_augmentation_strategy = AugmentInput(
-                Compose([AddNoise(exec_probability=1.0, noise_type="rician"),
-                         AddBiasField(exec_probability=1.0, alpha=0.001)]))
-        elif not training_config.data_augmentation and dataset_configs["ABIDE"].hist_shift_augmentation:
-            ABIDE_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,

@@ -231,7 +231,7 @@ class ResNet3D(torch.nn.Module):
 
     def __init__(self, block: torch.nn.Module, n_blocks_per_layer: list, in_channels: int, out_channels: int,
                  num_groups: int, conv_groups: int, width_per_group: int, padding: tuple, activation: ActivationLayers,
-                 zero_init_residual: bool, replace_stride_with_dilation: bool):
+                 zero_init_residual: bool, replace_stride_with_dilation: bool, gaussian_filter: bool):
         """
         ResNet 3D model initializer.
         Args:
@@ -255,6 +255,7 @@ class ResNet3D(torch.nn.Module):
         self._replace_stride_with_dilation = replace_stride_with_dilation
         self._inplanes = 64
         self._dilation = 1
+        self._has_gaussian_filter = gaussian_filter
 
         if self._replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
@@ -358,8 +359,9 @@ class ResNet3D(torch.nn.Module):
         if self._padding is not None:
             x = self._padding(x)
 
-        # with torch.no_grad():
-        #     filtered = self._gaussian_filter(x)
+        if self._has_gaussian_filter:
+            with torch.no_grad():
+                x = self._gaussian_filter(x)
         x_conv1 = self._conv1(x)
         x_norm1 = self._norm1(x_conv1)
         x_activation = self._activation(x_norm1)

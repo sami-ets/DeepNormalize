@@ -50,23 +50,57 @@ class TrainerFactory(object):
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Training Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Generated Patches Process {}".format(
+                                                     "title": "Training Generated Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Input Patches Process {}".format(
+                                                     "title": "Validation Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Generated Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Input Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Validation Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
@@ -75,72 +109,126 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger,
-                                    "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    "Validation Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Ground Truth Patches Process {}".format(
+                                                     "title": "Validation Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Segmented Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Training Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Ground Truth Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Label Map Patches Process {}".format(
+                                                     "title": "Validation Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Label Map Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                    params={
-                                        "opts": {"title": "Inputs Intensity Histogram",
-                                                 "store_history": True,
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                    params={"opts": {"title": "Inputs Intensity Histogram",
+                                                     "store_history": True,
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                         params={"opts": {"title": "Classification hit per classes",
                                                                          "legend": list(map(lambda key: key,
@@ -342,7 +430,7 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
@@ -365,23 +453,57 @@ class TrainerFactory(object):
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Training Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Generated Patches Process {}".format(
+                                                     "title": "Training Generated Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Input Patches Process {}".format(
+                                                     "title": "Validation Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Generated Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Input Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Validation Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
@@ -390,72 +512,126 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger,
-                                    "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    "Validation Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Ground Truth Patches Process {}".format(
+                                                     "title": "Validation Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Segmented Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Training Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Ground Truth Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Label Map Patches Process {}".format(
+                                                     "title": "Validation Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Label Map Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
-                                    params={
-                                        "opts": {"title": "Inputs Intensity Histogram",
-                                                 "store_history": True,
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                    params={"opts": {"title": "Inputs Intensity Histogram",
+                                                     "store_history": True,
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Pie Plot", PlotType.PIE_PLOT,
                                                         params={"opts": {"title": "Classification hit per classes",
                                                                          "legend": list(map(lambda key: key,
@@ -657,7 +833,7 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
@@ -678,23 +854,57 @@ class TrainerFactory(object):
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Generated Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Training Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Generated Patches Process {}".format(
+                                                     "title": "Training Generated Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Generated Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Input Patches Process {}".format(
+                                                     "title": "Validation Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Generated Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Generated Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Input Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Validation Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
@@ -703,72 +913,127 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger,
-                                    "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    "Validation Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Ground Truth Patches Process {}".format(
+                                                     "title": "Validation Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Segmented Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Training Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Ground Truth Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Label Map Patches Process {}".format(
+                                                     "title": "Validation Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Label Map Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Generated Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Generated Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={
                                         "opts": {"title": "Inputs Intensity Histogram",
                                                  "store_history": True,
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                 "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                         params={"opts": {"title": "Mean Hausdorff Distance",
                                                                          "legend": ["Test"]}},
@@ -920,7 +1185,7 @@ class TrainerFactory(object):
                                     every=100), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
@@ -940,15 +1205,31 @@ class TrainerFactory(object):
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Input Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Training Input Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Input Patches Process {}".format(
+                                                     "title": "Training Input Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Segmented Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger, "Validation Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Input Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Input Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
@@ -957,47 +1238,102 @@ class TrainerFactory(object):
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger,
-                                    "Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    "Validation Segmented Batch Process {}".format(run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Ground Truth Patches Process {}".format(
+                                                     "title": "Validation Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Test Segmented Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Segmented Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Training Segmentation Ground Truth Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Ground Truth Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Label Map Batch Process {}".format(run_config.local_rank),
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
                                     PlotType.IMAGES_PLOT,
                                     params={"nrow": 4,
                                             "opts": {"store_history": True,
-                                                     "title": "Label Map Patches Process {}".format(
+                                                     "title": "Validation Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Segmentation Ground Truth Batch Process {}".format(
+                                        run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Ground Truth Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Training Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Training Label Map Patches Process {}".format(
                                                          run_config.local_rank)}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Validation Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Validation Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_VALID_BATCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger,
+                                    "Test Label Map Batch Process {}".format(run_config.local_rank),
+                                    PlotType.IMAGES_PLOT,
+                                    params={"nrow": 4,
+                                            "opts": {"store_history": True,
+                                                     "title": "Test Label Map Patches Process {}".format(
+                                                         run_config.local_rank)}},
+                                    every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={
                                         "opts": {"title": "Inputs Intensity Histogram",
                                                  "store_history": True,
-                                                 "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                 "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Background Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "Background Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "CSF Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "CSF Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "GM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "GM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "WM Input Intensity Histogram", PlotType.HISTOGRAM_PLOT,
                                     params={"opts": {"title": "WM Input Intensity Histogram",
                                                      "store_history": True,
-                                                     "numbins": 128}}, every=100), Event.ON_TRAIN_BATCH_END) \
+                                                     "numbins": 128}}, every=100), Event.ON_TEST_BATCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Mean Hausdorff Distance", PlotType.LINE_PLOT,
                                                         params={"opts": {"title": "Mean Hausdorff Distance",
                                                                          "legend": ["Test"]}},

@@ -62,8 +62,6 @@ if __name__ == '__main__':
     model_trainer_configs, training_config = YamlConfigurationParser.parse(args.config_file)
     dataset_configs = YamlConfigurationParser.parse_section(args.config_file, "dataset")
     dataset_configs = {k: DatasetConfiguration(v) for k, v, in dataset_configs.items()}
-    if not isinstance(model_trainer_configs, list):
-        model_trainer_configs = [model_trainer_configs]
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs.values())),
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
 

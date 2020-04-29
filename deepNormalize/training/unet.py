@@ -149,29 +149,30 @@ class UNetTrainer(Trainer):
         seg_pred, _ = self._train_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS],
                                     target[AUGMENTED_TARGETS][IMAGE_TARGET])
 
-        if self.current_train_step % 100 == 0:
-            self.custom_variables["Input Intensity Histogram"] = flatten(
-                inputs[AUGMENTED_INPUTS].cpu().detach())
-            self.custom_variables["Background Input Intensity Histogram"] = inputs[AUGMENTED_INPUTS][
-                torch.where(target[AUGMENTED_INPUTS][IMAGE_TARGET] == 0)].cpu().detach()
-            self.custom_variables["CSF Input Intensity Histogram"] = inputs[AUGMENTED_INPUTS][
-                torch.where(target[AUGMENTED_INPUTS][IMAGE_TARGET] == 1)].cpu().detach()
-            self.custom_variables["GM Input Intensity Histogram"] = inputs[AUGMENTED_INPUTS][
-                torch.where(target[AUGMENTED_INPUTS][IMAGE_TARGET] == 2)].cpu().detach()
-            self.custom_variables["WM Input Intensity Histogram"] = inputs[AUGMENTED_INPUTS][
-                torch.where(target[AUGMENTED_INPUTS][IMAGE_TARGET] == 3)].cpu().detach()
-
         if self.current_train_step % 500 == 0:
-            self._update_image_plots(inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
-                                     target[NON_AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
-                                     target[NON_AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
+                                     target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
+                                     target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
     def validate_step(self, inputs, target):
-        _, _ = self._valid_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+        seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+
+        if self.current_valid_step % 100 == 0:
+            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def test_step(self, inputs, target):
         seg_pred, _ = self._test_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+
+        if self.current_test_step % 100 == 0:
+            self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target)
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
         if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
             self._iSEG_dice_gauge.update(np.array(self._model_trainers[0].compute_metrics(
@@ -434,7 +435,7 @@ class UNetTrainer(Trainer):
             self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                 [0.0])]
 
-    def _update_image_plots(self, inputs, segmenter_predictions, target, dataset_ids):
+    def _update_image_plots(self, phase, inputs, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).numpy()
         segmenter_predictions = torch.nn.functional.interpolate(
@@ -444,15 +445,28 @@ class UNetTrainer(Trainer):
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
         self.custom_variables[
-            "Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            "{} Input Batch Process {}".format(phase, self._run_config.local_rank)] = self._slicer.get_slice(
             SliceType.AXIAL, inputs, inputs.shape[2] // 2)
         self.custom_variables[
-            "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmented Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, segmenter_predictions, segmenter_predictions.shape[2] // 2)
         self.custom_variables[
-            "Segmentation Ground Truth Batch Process {}".format(
-                self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmentation Ground Truth Batch Process {}".format(phase,
+                                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, target, target.shape[2] // 2)
         self.custom_variables[
-            "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
+            "{} Label Map Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._label_mapper.get_label_map(
             dataset_ids)
+
+    def _update_histograms(self, inputs, target):
+        self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
+        self.custom_variables["Background Input Intensity Histogram"] = inputs[
+            torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
+        self.custom_variables["CSF Input Intensity Histogram"] = inputs[
+            torch.where(target[IMAGE_TARGET] == 1)].cpu().detach()
+        self.custom_variables["GM Input Intensity Histogram"] = inputs[
+            torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
+        self.custom_variables["WM Input Intensity Histogram"] = inputs[
+            torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()

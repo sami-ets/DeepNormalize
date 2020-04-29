@@ -174,7 +174,7 @@ class ImageReconstructor(object):
                 if self._do_normalize:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
-                    p = self._models[0].forward(p).cpu().detach().numpy()
+                    p = torch.nn.functional.relu(self._models[0].forward(p)).cpu().detach().numpy()
                 elif self._do_segment:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
@@ -183,14 +183,14 @@ class ImageReconstructor(object):
                 elif self._do_normalize_and_segment:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
-                    p = self._models[0].forward(p)
+                    p = torch.nn.functional.relu(self._models[0].forward(p))
                     p = torch.argmax(torch.nn.functional.softmax(self._models[1].forward(p), dim=1), dim=1,
                                      keepdim=True).float().cpu().detach().numpy()
 
             img[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += p[0][0]
             divisor[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += 1
 
-        if self._do_segment:
+        if self._do_segment or self._do_normalize_and_segment:
             return np.clip(np.round(img / divisor), a_min=0, a_max=3)
         else:
             return img / divisor

@@ -34,10 +34,11 @@ from torch.utils.data import DataLoader, Dataset
 
 from deepNormalize.inputs.datasets import SliceDataset
 from deepNormalize.inputs.images import SliceType
+from deepNormalize.inputs.pools import ImagePool
 from deepNormalize.metrics.metrics import mean_hausdorff_distance
 from deepNormalize.training.sampler import Sampler
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
-    NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, NON_AUGMENTED_TARGETS
+    NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, NON_AUGMENTED_TARGETS, AUGMENTED_TARGETS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, FeatureMapSlicer
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, \
@@ -111,6 +112,9 @@ class WGANTrainer(Trainer):
         self._wasserstein_distance_train_gauge = AverageGauge()
         self._wasserstein_distance_valid_gauge = AverageGauge()
         self._wasserstein_distance_test_gauge = AverageGauge()
+        self._fake_T1_pool = ImagePool()
+        self._real_T1_pool = ImagePool()
+        self._n_critics = training_config.n_critics
         self._is_sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
         print("Total number of parameters: {}".format(
             sum(p.numel() for p in self._model_trainers[SEGMENTER].parameters()) +
@@ -300,18 +304,20 @@ class WGANTrainer(Trainer):
         if self._should_activate_autoencoder():
             gen_pred = self._train_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
-            disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
-                self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred,
-                target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_train_gauge)
+            for iter_critic in range(self._n_critics):
+                real_images, real_targets = self._real_T1_pool.query(
+                    (inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS]))
+                fake_images, _ = self._fake_T1_pool.query((gen_pred, target[NON_AUGMENTED_TARGETS]))
+
+                disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
+                    self._model_trainers[DISCRIMINATOR], real_images, fake_images, real_targets[DATASET_ID],
+                    self._wasserstein_distance_train_gauge)
 
             seg_pred, _ = self._train_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
                                         target[NON_AUGMENTED_TARGETS][IMAGE_TARGET])
 
-            if self.current_train_step % 100 == 0:
-                self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS], gen_pred)
-
             if self.current_train_step % 500 == 0:
-                self._update_image_plots(inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                          gen_pred.cpu().detach(),
                                          seg_pred.cpu().detach(),
                                          target[NON_AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
@@ -323,12 +329,17 @@ class WGANTrainer(Trainer):
         if self._should_activate_segmentation():
             gen_pred = self._train_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS], backward=False)
 
-            disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
-                self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred,
-                target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_train_gauge)
+            for iter_critic in range(self._n_critics):
+                real_images, real_targets = self._real_T1_pool.query(
+                    (inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS]))
+                fake_images, _ = self._fake_T1_pool.query((gen_pred, target[AUGMENTED_TARGETS]))
+
+                disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
+                    self._model_trainers[DISCRIMINATOR], real_images, fake_images, real_targets[DATASET_ID],
+                    self._wasserstein_distance_train_gauge)
 
             seg_pred, loss_S = self._train_s(self._model_trainers[SEGMENTER], gen_pred,
-                                             target[NON_AUGMENTED_TARGETS][IMAGE_TARGET], backward=False)
+                                             target[AUGMENTED_TARGETS][IMAGE_TARGET], backward=False)
 
             pred_fake, _, _, _, _ = self._model_trainers[DISCRIMINATOR].forward(gen_pred)
             disc_loss_as_X = -1.0 * self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake", pred_fake, None)
@@ -343,15 +354,12 @@ class WGANTrainer(Trainer):
             self._model_trainers[SEGMENTER].step()
             self._model_trainers[GENERATOR].step()
 
-            if self.current_train_step % 100 == 0:
-                self._update_histograms(inputs[AUGMENTED_INPUTS], target[AUGMENTED_INPUTS], gen_pred)
-
             if self.current_train_step % 500 == 0:
-                self._update_image_plots(inputs[AUGMENTED_INPUTS].cpu().detach(),
+                self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                          gen_pred.cpu().detach(),
                                          seg_pred.cpu().detach(),
-                                         target[AUGMENTED_INPUTS][IMAGE_TARGET].cpu().detach(),
-                                         target[AUGMENTED_INPUTS][DATASET_ID].cpu().detach())
+                                         target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
+                                         target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
                 self._make_disc_pie_plots(disc_pred, inputs[AUGMENTED_INPUTS], target[AUGMENTED_INPUTS],
                                           self._num_datasets)
@@ -382,7 +390,8 @@ class WGANTrainer(Trainer):
                 self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
                 target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_train_gauge)
 
-            _, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+            seg_pred, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
+                                        target[IMAGE_TARGET])
 
         if self._should_activate_segmentation():
             gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
@@ -390,8 +399,7 @@ class WGANTrainer(Trainer):
             self._valid_d(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred,
                           target[DATASET_ID], self._wasserstein_distance_train_gauge)
 
-            _, loss_S = self._valid_s(self._model_trainers[SEGMENTER], gen_pred,
-                                      target[IMAGE_TARGET])
+            seg_pred, loss_S = self._valid_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
 
             pred_fake, _, _, _, _ = self._model_trainers[DISCRIMINATOR].forward(gen_pred)
             disc_loss_as_X = -1.0 * self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake", pred_fake, None)
@@ -401,6 +409,13 @@ class WGANTrainer(Trainer):
             self._D_G_X_as_X_valid_gauge.update(disc_loss_as_X.item())
             self._total_loss_valid_gauge.update(total_loss.item())
 
+        if self.current_valid_step % 100 == 0:
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                                     gen_pred.cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
+
     def test_step(self, inputs, target):
         if self._should_activate_autoencoder():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
@@ -409,7 +424,8 @@ class WGANTrainer(Trainer):
                 self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred, target[DATASET_ID],
                 self._wasserstein_distance_train_gauge)
 
-            _, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+            seg_pred, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
+                                       target[IMAGE_TARGET])
 
         if self._should_activate_segmentation():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS])
@@ -541,6 +557,14 @@ class WGANTrainer(Trainer):
 
             self._js_div_inputs_gauge.update(js_div(inputs_).item())
             self._js_div_gen_gauge.update(js_div(gen_pred_).item())
+
+        if self.current_test_step % 100 == 0:
+            self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                                     gen_pred.cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def scheduler_step(self):
         self._model_trainers[GENERATOR].scheduler_step()
@@ -831,7 +855,7 @@ class WGANTrainer(Trainer):
         self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
         self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_test_gauge.compute()]
 
-    def _update_image_plots(self, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
+    def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).numpy()
         generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
@@ -843,20 +867,22 @@ class WGANTrainer(Trainer):
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
         self.custom_variables[
-            "Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            "{} Input Batch Process {}".format(phase, self._run_config.local_rank)] = self._slicer.get_slice(
             SliceType.AXIAL, inputs, inputs.shape[2] // 2)
         self.custom_variables[
-            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            "{} Generated Batch Process {}".format(phase, self._run_config.local_rank)] = self._slicer.get_slice(
             SliceType.AXIAL, generator_predictions, generator_predictions.shape[2] // 2)
         self.custom_variables[
-            "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmented Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, segmenter_predictions, segmenter_predictions.shape[2] // 2)
         self.custom_variables[
-            "Segmentation Ground Truth Batch Process {}".format(
-                self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmentation Ground Truth Batch Process {}".format(phase,
+                                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, target, target.shape[2] // 2)
         self.custom_variables[
-            "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
+            "{} Label Map Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._label_mapper.get_label_map(
             dataset_ids)
 
     def _make_disc_pie_plots(self, disc_pred, inputs, target, fill_value):

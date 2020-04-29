@@ -35,12 +35,12 @@ from deepNormalize.inputs.images import SliceType
 from deepNormalize.metrics.metrics import mean_hausdorff_distance
 from deepNormalize.training.sampler import Sampler
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
-    NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, NON_AUGMENTED_TARGETS
+    NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, NON_AUGMENTED_TARGETS, AUGMENTED_TARGETS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
 from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper
 from deepNormalize.utils.utils import construct_double_histrogram, construct_single_histogram, \
-    construct_triple_histrogram, construct_class_histogram, get_all_patches, rebuild_images, save_rebuilt_images, \
-    rebuild_augmented_images, save_augmented_rebuilt_images, rebuild_image, save_rebuilt_image
+    construct_triple_histrogram, construct_class_histogram, get_all_patches, rebuild_augmented_images, \
+    save_augmented_rebuilt_images, rebuild_image, save_rebuilt_image
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
 
 pynvml.nvmlInit()
@@ -200,11 +200,8 @@ class DualUNetTrainer(Trainer):
             seg_pred, _ = self._train_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
                                         target[NON_AUGMENTED_TARGETS][IMAGE_TARGET])
 
-            if self.current_train_step % 100 == 0:
-                self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS], gen_pred)
-
             if self.current_train_step % 500 == 0:
-                self._update_image_plots(inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                          gen_pred.cpu().detach(),
                                          seg_pred.cpu().detach(),
                                          target[NON_AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
@@ -221,32 +218,38 @@ class DualUNetTrainer(Trainer):
             self._model_trainers[SEGMENTER].step()
             self._model_trainers[GENERATOR].step()
 
-            if self.current_train_step % 100 == 0:
-                self._update_histograms(inputs[AUGMENTED_INPUTS], target[AUGMENTED_INPUTS], gen_pred)
-
             if self.current_train_step % 500 == 0:
-                self._update_image_plots(inputs[AUGMENTED_INPUTS].cpu().detach(),
+                self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                          gen_pred.cpu().detach(),
                                          seg_pred.cpu().detach(),
-                                         target[AUGMENTED_INPUTS][IMAGE_TARGET].cpu().detach(),
-                                         target[AUGMENTED_INPUTS][DATASET_ID].cpu().detach())
+                                         target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
+                                         target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
     def validate_step(self, inputs, target):
         if self._should_activate_autoencoder():
-            _ = self._valid_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
+            gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
-            _, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+            seg_pred, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
+                                        target[IMAGE_TARGET])
 
         if self._should_activate_segmentation():
             gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS])
 
-            _, _ = self._valid_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
+            seg_pred, _ = self._valid_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
+
+        if self.current_valid_step % 100 == 0:
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                                     gen_pred.cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def test_step(self, inputs, target):
         if self._should_activate_autoencoder():
-            _ = self._test_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
+            gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
-            _, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+            seg_pred, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
+                                       target[IMAGE_TARGET])
 
         if self._should_activate_segmentation():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS])
@@ -357,6 +360,14 @@ class DualUNetTrainer(Trainer):
 
             self._js_div_inputs_gauge.update(js_div(inputs_).item())
             self._js_div_gen_gauge.update(js_div(gen_pred_).item())
+
+        if self.current_test_step % 100 == 0:
+            self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+                                     gen_pred.cpu().detach(),
+                                     seg_pred.cpu().detach(),
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def scheduler_step(self):
         self._model_trainers[GENERATOR].scheduler_step()
@@ -602,7 +613,7 @@ class DualUNetTrainer(Trainer):
                 self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                     [0.0])]
 
-    def _update_image_plots(self, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
+    def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
                                                  align_corners=True).numpy()
         generator_predictions = torch.nn.functional.interpolate(generator_predictions, scale_factor=5, mode="trilinear",
@@ -614,20 +625,22 @@ class DualUNetTrainer(Trainer):
         target = torch.nn.functional.interpolate(target.float(), scale_factor=5, mode="nearest").numpy()
 
         self.custom_variables[
-            "Input Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            "{} Input Batch Process {}".format(phase, self._run_config.local_rank)] = self._slicer.get_slice(
             SliceType.AXIAL, inputs, inputs.shape[2] // 2)
         self.custom_variables[
-            "Generated Batch Process {}".format(self._run_config.local_rank)] = self._slicer.get_slice(
+            "{} Generated Batch Process {}".format(phase, self._run_config.local_rank)] = self._slicer.get_slice(
             SliceType.AXIAL, generator_predictions, generator_predictions.shape[2] // 2)
         self.custom_variables[
-            "Segmented Batch Process {}".format(self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmented Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, segmenter_predictions, segmenter_predictions.shape[2] // 2)
         self.custom_variables[
-            "Segmentation Ground Truth Batch Process {}".format(
-                self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
+            "{} Segmentation Ground Truth Batch Process {}".format(phase,
+                                                                   self._run_config.local_rank)] = self._seg_slicer.get_colored_slice(
             SliceType.AXIAL, target, target.shape[2] // 2)
         self.custom_variables[
-            "Label Map Batch Process {}".format(self._run_config.local_rank)] = self._label_mapper.get_label_map(
+            "{} Label Map Batch Process {}".format(phase,
+                                                   self._run_config.local_rank)] = self._label_mapper.get_label_map(
             dataset_ids)
 
     def _should_activate_autoencoder(self):

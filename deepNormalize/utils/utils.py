@@ -486,17 +486,15 @@ def count(tensor, n_classes):
 
 def get_all_patches(reconstruction_datasets, is_sliced=False):
     if not is_sliced:
-        all_patches = list(map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]),
-                               reconstruction_datasets))
+        all_patches = list(
+            map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]), reconstruction_datasets))
         ground_truth_patches = list(
-            map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]),
-                reconstruction_datasets))
+            map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]), reconstruction_datasets))
     else:
-        all_patches = list(map(lambda dataset: [patch.slice for patch in dataset._patches],
-                               reconstruction_datasets))
+        all_patches = list(
+            map(lambda dataset: [patch.slice for patch in dataset._patches], reconstruction_datasets))
         ground_truth_patches = list(
-            map(lambda dataset: [patch.slice for patch in dataset._patches],
-                reconstruction_datasets))
+            map(lambda dataset: [patch.slice for patch in dataset._patches], reconstruction_datasets))
 
     return all_patches, ground_truth_patches
 
