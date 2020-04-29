@@ -135,26 +135,26 @@ class HDF5Writer(object):
 
 
 if __name__ == "__main__":
-    # fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training/output.csv",
-    #                    "iSEG", 0.3, ["T1", "T2"])
-    # fm.create_file("/data/users/pldelisle/datasets/iseg.hdf5")
+    fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training/output.csv",
+                       "iSEG", 0.3, ["T1", "T2"])
+    fm.create_file("/data/users/pldelisle/datasets/iseg.hdf5")
 
-    # fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
-    #                 "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
-    # fm.create_file("/home/AM54900/mrbrains.hd5f")
+    fm = HDF5Writer("/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
+                    "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
+    fm.create_file("/home/AM54900/mrbrains.hd5f")
 
-    # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
-    #                 "iSEG", 0.3, ["T1", "T2"])
-    # fm.create_file("/mnt/home/ETS/iseg.hd5f")
-    #
+    fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
+                    "iSEG", 0.3, ["T1", "T2"])
+    fm.create_file("/mnt/home/ETS/iseg.hd5f")
+
     fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
                     "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
     fm.create_file("/mnt/home/ETS/mrbrains.hd5f")
 
-    # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
-    #                 "iSEG", 0.3, ["T1", "T2"])
-    # fm.create_file("/mnt/md0/iseg.hdf5")
+    fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/iSEG/Training/output.csv",
+                    "iSEG", 0.3, ["T1", "T2"])
+    fm.create_file("/mnt/md0/iseg.hdf5")
 
-    # fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
-    #                 "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
-    # fm.create_file("/mnt/md0/mrbrains.hdf5")
+    fm = HDF5Writer("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/output.csv",
+                    "MRBrainS", 0.3, ["T1", "T2_FLAIR"])
+    fm.create_file("/mnt/md0/mrbrains.hdf5")
