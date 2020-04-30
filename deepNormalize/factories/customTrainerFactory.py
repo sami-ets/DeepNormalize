@@ -15,7 +15,7 @@ from deepNormalize.training.wgan import WGANTrainer
 
 class TrainerType(Enum):
     WGAN = "WGAN"
-    DCGAN = "DCGAN"
+    DCGAN = "ResNet"
     DUALUNET = "DualUNet"
     UNET = "UNet"
 

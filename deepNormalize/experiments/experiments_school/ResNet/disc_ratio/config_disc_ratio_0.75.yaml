@@ -1,0 +1,184 @@
+models:
+  Generator:
+    name: "UNet3D"
+    type: "UNet3D"
+    params:
+      in_channels: 1
+      out_channels: 1
+      interpolate: True
+      leaky: True
+    optimizer:
+      type: "SGD"
+      params:
+        lr: 0.001
+        momentum: 0.9
+        weight_decay: 0.001
+    scheduler:
+      type: "MultiStepLR"
+      params:
+        milestones: [100, 125]
+        gamma: 0.1
+    criterion:
+      MSELoss:
+        type: "MSELoss"
+    metrics:
+      MeanSquaredError:
+        type: "MeanSquaredError"
+
+  Segmenter:
+    name: "UNet3D"
+    type: "UNet3D"
+    params:
+      in_channels: 1
+      out_channels: 4
+      interpolate: True
+      leaky: True
+    optimizer:
+      type: "SGD"
+      params:
+        lr: 0.001
+        momentum: 0.9
+        weight_decay: 0.001
+    scheduler:
+      type: "ReduceLROnPlateau"
+      params:
+        factor: 0.1
+        patience: 15
+        min_lr: 0.00000001
+    criterion:
+      DiceLoss:
+        type: "DiceLoss"
+        params:
+          reduction: !!null
+          ignore_index: -100
+          weight: !torch/tensor [0.22, 0.28, 0.20, 0.30]
+    metrics:
+      Dice:
+        type: "Dice"
+        params:
+          num_classes: 4
+          reduction: !!null
+          ignore_index: 0
+          average: !!null
+          weight: !!null
+      IoU:
+        type: "IoU"
+        params:
+          num_classes: 4
+          reduction: !!null
+          ignore_index: 0
+          average: !!null
+          weight: !!null
+      Accuracy:
+        type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
+
+  Discriminator:
+    name: "ResNet3D"
+    type: "ResNet18"
+    params:
+      in_channels: 1
+      out_channels: 4
+      num_groups: !!null
+      conv_groups: 1
+      width_per_group: 64
+      padding: [1, 1, 1, 1, 1, 1]
+      activation: "ReLU"
+      zero_init_residual: False
+      replace_stride_with_dilation: !!null
+      gaussian_filter: False
+    optimizer:
+      type: "SGD"
+      params:
+        lr: 0.0001
+        momentum: 0.9
+        weight_decay: 0.001
+    scheduler:
+      type: "MultiStepLR"
+      params:
+        milestones: [100, 125]
+        gamma: 0.1
+    criterion:
+      Pred Real:
+        type: "NLLLoss"
+      Pred Fake:
+        type: "NLLLoss"
+    metrics:
+      Accuracy:
+        type: "Accuracy"
+      Precision:
+        type: "Precision"
+        params:
+          average: True
+      Recall:
+        type: "Recall"
+        params:
+          average: True
+
+dataset:
+  iSEG:
+    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/"
+    path_augmented: !!null
+    modalities: "T1"
+    max_subjects: !!null
+    max_num_patches: 40000
+    validation_split: 0.3
+    hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [256, 192, 160]
+  MRBrainS:
+    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path_augmented: !!null
+    modalities: "T1"
+    max_subjects: !!null
+    max_num_patches: 40000
+    validation_split: 0.3
+    hist_shift_augmentation: False
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [256, 256, 192]
+  ABIDE:
+    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
+    path_augmented: !!null
+    modalities: "T1"
+    max_subjects: 150
+    max_num_patches: 40000
+    validation_split: 0.3
+    hist_shift_augmentation: False
+    sites: !!null
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [224, 224, 192]
+
+training:
+  trainer: "ResNet"
+  batch_size: 22
+  n_critics: 3
+  nb_epochs: 150
+  patience_segmentation: 3
+  build_augmented_images: False
+  data_augmentation: False
+  variables:
+    disc_ratio: 0.75
+    seg_ratio: 1.0
+
+visdom:
+  server: "10.180.113.44"
+  port: "8097"
+  env: "ResNet_school_disc_ratio_0_75"
+  offline: True
+  filename: "ResNet_school_disc_ratio_0_75.json"
