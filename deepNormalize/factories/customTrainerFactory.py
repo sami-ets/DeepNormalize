@@ -15,9 +15,10 @@ from deepNormalize.training.wgan import WGANTrainer
 
 class TrainerType(Enum):
     WGAN = "WGAN"
-    DCGAN = "ResNet"
+    ResNet = "ResNet"
     DUALUNET = "DualUNet"
     UNET = "UNet"
+    DCGAN = "DCGAN"
 
     def __str__(self):
         return self.value
@@ -441,7 +442,7 @@ class TrainerFactory(object):
 
             return trainer
 
-        elif self._trainer == TrainerType.DCGAN:
+        elif self._trainer == TrainerType.DCGAN or self._trainer == TrainerType.ResNet:
             trainer = DCGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                    dataloaders[2],
                                    reconstruction_datasets, normalized_reconstructors, input_reconstructors,

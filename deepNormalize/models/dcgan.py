@@ -1,13 +1,13 @@
 from torch import nn
 
-class Discriminator(nn.Module):
-    def __init__(self, in_channels):
-        super(Discriminator, self).__init__()
+class DCGAN(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(DCGAN, self).__init__()
 
         def discriminator_block(in_filters, out_filters, bn=True):
-            block = [nn.Conv2d(in_filters, out_filters, 3, 2, 1), nn.LeakyReLU(0.2, inplace=True), nn.Dropout2d(0.25)]
+            block = [nn.ReplicationPad3d((1, 1, 1, 1, 1, 1)), nn.Conv3d(in_filters, out_filters, 3, 2, 1), nn.LeakyReLU(0.2, inplace=True), nn.Dropout3d(0.25)]
             if bn:
-                block.append(nn.BatchNorm2d(out_filters, 0.8))
+                block.append(nn.BatchNorm3d(out_filters, 0.8))
             return block
 
         self.model = nn.Sequential(
@@ -19,7 +19,7 @@ class Discriminator(nn.Module):
 
         # The height and width of downsampled image
         ds_size = 32 // 2 ** 4
-        self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size ** 2, 1), nn.Sigmoid())
+        self.adv_layer = nn.Sequential(nn.Linear(128 * ds_size ** 2, out_channels), nn.Sigmoid())
 
     def forward(self, img):
         out = self.model(img)

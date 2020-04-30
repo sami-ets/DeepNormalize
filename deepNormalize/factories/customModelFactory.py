@@ -19,6 +19,7 @@ from kerosene.models.models import ModelFactory
 from deepNormalize.config.types import ModelType
 from deepNormalize.models.resnet3d import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
 from deepNormalize.models.unet import Unet
+from deepNormalize.models.dcgan import DCGAN
 
 
 class CustomModelFactory(ModelFactory):
@@ -28,6 +29,8 @@ class CustomModelFactory(ModelFactory):
     def create(self, model_type, params):
         if model_type == ModelType.UNET3D:
             return Unet(**params)
+        elif model_type == ModelType.DCGAN:
+            return DCGAN(**params)
         elif model_type == ModelType.RESNET_18:
             return ResNet18(params)
         elif model_type == ModelType.RESNET_34:
