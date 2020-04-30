@@ -151,7 +151,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  architecture: "WGAN"
+  trainer: "WGAN"
   n_critics: 3
   batch_size: 22
   nb_epochs: 150

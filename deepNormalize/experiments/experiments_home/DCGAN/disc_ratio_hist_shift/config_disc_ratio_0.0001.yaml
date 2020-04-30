@@ -165,7 +165,7 @@ dataset:
     reconstruction_size: [224, 224, 192]
 
 training:
-  architecture: "DCGAN"
+  trainer: "DCGAN"
   n_critics: 3
   batch_size: 24
   nb_epochs: 150

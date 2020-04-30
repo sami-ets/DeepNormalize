@@ -123,7 +123,7 @@ dataset:
     reconstruction_size: [224, 224, 192]
 
 training:
-  architecture: "UNet"
+  trainer: "UNet"
   batch_size: 24
   n_critics: 3
   nb_epochs: 150

@@ -281,7 +281,7 @@ if __name__ == '__main__':
      for model in
      ["Discriminator", "Generator", "Segmenter"]]
 
-    trainer = TrainerFactory(training_config.architecture).create(training_config, model_trainers, dataloaders,
+    trainer = TrainerFactory(training_config.trainer).create(training_config, model_trainers, dataloaders,
                                                                   reconstruction_datasets, normalized_reconstructors,
                                                                   input_reconstructors, segmentation_reconstructors,
                                                                   augmented_input_reconstructors, gt_reconstructors,

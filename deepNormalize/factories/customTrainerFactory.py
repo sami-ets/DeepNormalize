@@ -32,13 +32,13 @@ class TrainerType(Enum):
 class TrainerFactory(object):
 
     def __init__(self, architecture):
-        self._architecture = architecture
+        self._trainer = architecture
 
     def create(self, training_config, model_trainers, dataloaders, reconstruction_datasets,
                normalized_reconstructors, input_reconstructors, segmentation_reconstructors,
                augmented_input_reconstructors, gt_reconstructors, run_config, dataset_configs, save_folder,
                visdom_logger):
-        if self._architecture == TrainerType.WGAN:
+        if self._trainer == TrainerType.WGAN:
             trainer = WGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                   dataloaders[2],
                                   reconstruction_datasets, normalized_reconstructors, input_reconstructors,
@@ -441,7 +441,7 @@ class TrainerFactory(object):
 
             return trainer
 
-        elif self._architecture == TrainerType.DCGAN:
+        elif self._trainer == TrainerType.DCGAN:
             trainer = DCGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                    dataloaders[2],
                                    reconstruction_datasets, normalized_reconstructors, input_reconstructors,
@@ -844,7 +844,7 @@ class TrainerFactory(object):
 
             return trainer
 
-        elif self._architecture == TrainerType.DUALUNET:
+        elif self._trainer == TrainerType.DUALUNET:
             trainer = DualUNetTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                       reconstruction_datasets, normalized_reconstructors, input_reconstructors,
                                       segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
@@ -1195,7 +1195,7 @@ class TrainerFactory(object):
                 .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END)
             return trainer
 
-        elif self._architecture == TrainerType.UNET:
+        elif self._trainer == TrainerType.UNET:
             trainer = UNetTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
                                   reconstruction_datasets, input_reconstructors,
                                   segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,

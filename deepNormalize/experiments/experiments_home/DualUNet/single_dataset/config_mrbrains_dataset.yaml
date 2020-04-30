@@ -96,7 +96,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  architecture: "DualUNet"
+  trainer: "DualUNet"
   batch_size: 24
   n_critics: 3
   nb_epochs: 150
