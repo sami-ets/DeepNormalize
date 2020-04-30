@@ -91,7 +91,7 @@ class WGANTrainer(Trainer):
         self._MRBrainS_hausdorff_gauge = AverageGauge()
         self._ABIDE_hausdorff_gauge = AverageGauge()
         self._valid_dice_gauge = AverageGauge()
-        self._class_dice_gauge = AverageGauge()
+        self._class_dice_gauge_on_patches = AverageGauge()
         self._class_dice_gauge_on_reconstructed_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_iseg_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_mrbrains_images = AverageGauge()
@@ -279,7 +279,7 @@ class WGANTrainer(Trainer):
 
         return seg_pred, loss_S
 
-    def _test_s(self, S: ModelTrainer, inputs, target):
+    def _test_s(self, S: ModelTrainer, inputs, target, metric_gauge: AverageGauge):
         target_ohe = to_onehot(torch.squeeze(target, dim=1).long(), num_classes=4)
         target = torch.squeeze(target, dim=1).long()
 
@@ -289,6 +289,7 @@ class WGANTrainer(Trainer):
         S.update_test_loss("DiceLoss", loss_S.mean())
 
         metrics = S.compute_metrics(seg_pred, target)
+        metric_gauge.update(np.array(metrics["Dice"]))
         metrics["Dice"] = metrics["Dice"].mean()
         metrics["IoU"] = metrics["IoU"].mean()
         S.update_test_metrics(metrics)
@@ -384,11 +385,11 @@ class WGANTrainer(Trainer):
 
     def validate_step(self, inputs, target):
         if self._should_activate_autoencoder():
-            gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs)
+            gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
             self._valid_d(
                 self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
-                target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_train_gauge)
+                target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_valid_gauge)
 
             seg_pred, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
                                         target[IMAGE_TARGET])
@@ -397,7 +398,7 @@ class WGANTrainer(Trainer):
             gen_pred = self._valid_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
             self._valid_d(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred,
-                          target[DATASET_ID], self._wasserstein_distance_train_gauge)
+                          target[DATASET_ID], self._wasserstein_distance_valid_gauge)
 
             seg_pred, loss_S = self._valid_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
 
@@ -420,22 +421,21 @@ class WGANTrainer(Trainer):
         if self._should_activate_autoencoder():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
-            _, _, _ = self._test_d(
+            _, disc_pred, disc_target = self._test_d(
                 self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred, target[DATASET_ID],
-                self._wasserstein_distance_train_gauge)
+                self._wasserstein_distance_test_gauge)
 
             seg_pred, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
-                                       target[IMAGE_TARGET])
+                                       target[IMAGE_TARGET], self._class_dice_gauge_on_patches)
 
         if self._should_activate_segmentation():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS])
 
             _, disc_pred, disc_target = self._test_d(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS],
-                                                     gen_pred.detach(),
-                                                     target[DATASET_ID],
-                                                     self._wasserstein_distance_train_gauge)
+                                                     gen_pred.detach(), target[DATASET_ID],
+                                                     self._wasserstein_distance_test_gauge)
 
-            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
+            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET], self._class_dice_gauge_on_patches)
 
             pred_fake, _, _, _, _ = self._model_trainers[DISCRIMINATOR].forward(gen_pred)
             disc_loss_as_X = -1.0 * self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake", pred_fake, None)
@@ -534,11 +534,6 @@ class WGANTrainer(Trainer):
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
-            self._discriminator_confusion_matrix_gauge.update((
-                to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
-                          num_classes=self._num_datasets + 1),
-                disc_target))
-
             inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[AUGMENTED_INPUTS].shape[0],
                                                                inputs[AUGMENTED_INPUTS].shape[1] *
                                                                inputs[AUGMENTED_INPUTS].shape[2] *
@@ -557,6 +552,11 @@ class WGANTrainer(Trainer):
 
             self._js_div_inputs_gauge.update(js_div(inputs_).item())
             self._js_div_gen_gauge.update(js_div(gen_pred_).item())
+
+        self._discriminator_confusion_matrix_gauge.update((
+            to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
+                      num_classes=self._num_datasets + 1),
+            disc_target))
 
         if self.current_test_step % 100 == 0:
             self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
@@ -587,7 +587,7 @@ class WGANTrainer(Trainer):
         self._iSEG_hausdorff_gauge.reset()
         self._MRBrainS_hausdorff_gauge.reset()
         self._ABIDE_hausdorff_gauge.reset()
-        self._class_dice_gauge.reset()
+        self._class_dice_gauge_on_patches.reset()
         self._js_div_inputs_gauge.reset()
         self._js_div_gen_gauge.reset()
         self._general_confusion_matrix_gauge.reset()
@@ -612,18 +612,17 @@ class WGANTrainer(Trainer):
         self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
         self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_train_gauge.compute()]
 
-    def on_valid_epoch_end(self):
-        self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]
-        self.custom_variables["Total Loss"] = [self._total_loss_valid_gauge.compute()]
-        self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_valid_gauge.compute()]
-
-    def on_training_end(self):
         if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
                 np.fliplr(self._discriminator_confusion_matrix_gauge_training.compute().cpu().detach().numpy()))
         else:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.zeros(
                 (self._num_datasets + 1, self._num_datasets + 1))
+
+    def on_valid_epoch_end(self):
+        self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]
+        self.custom_variables["Total Loss"] = [self._total_loss_valid_gauge.compute()]
+        self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_valid_gauge.compute()]
 
     def on_test_epoch_end(self):
         if self.epoch % 20 == 0:
@@ -787,14 +786,14 @@ class WGANTrainer(Trainer):
         self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
                                                         ["DSC", "HD"],
                                                         [
-                                                            self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+                                                            self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
                                                                 [0.0, 0.0, 0.0]),
                                                             self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                                                                 [0.0, 0.0, 0.0])
                                                         ])
 
         self.custom_variables[
-            "Dice score per class per epoch"] = self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+            "Dice score per class per epoch"] = self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
             [0.0, 0.0, 0.0])
         self.custom_variables[
             "Dice score per class per epoch on reconstructed image"] = self._class_dice_gauge_on_reconstructed_images.compute() if self._class_dice_gauge_on_reconstructed_images.has_been_updated() else np.array(

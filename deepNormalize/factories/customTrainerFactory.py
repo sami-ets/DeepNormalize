@@ -291,7 +291,7 @@ class TrainerFactory(object):
                                         "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
                                         "rownames": list(dataset_configs.keys()) + ["Generated"],
                                         "title": "Discriminator Confusion Matrix Training"}},
-                                    every=1), Event.ON_TEST_EPOCH_END) \
+                                    every=1), Event.ON_TRAIN_EPOCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
@@ -305,7 +305,7 @@ class TrainerFactory(object):
                                                      "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
-                                             params={"title": "Dice score per class per epoch",
+                                             params={"title": "Dice score on test patches per class per epoch",
                                                      "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -694,7 +694,7 @@ class TrainerFactory(object):
                                         "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
                                         "rownames": list(dataset_configs.keys()) + ["Generated"],
                                         "title": "Discriminator Confusion Matrix Training"}},
-                                    every=1), Event.ON_TEST_EPOCH_END) \
+                                    every=1), Event.ON_TRAIN_EPOCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
@@ -708,7 +708,7 @@ class TrainerFactory(object):
                                                      "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
-                                             params={"title": "Dice score per class per epoch",
+                                             params={"title": "Dice score on test patches per class per epoch",
                                                      "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -1080,7 +1080,7 @@ class TrainerFactory(object):
                                                      "legend": ["Inputs", "Normalized"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
-                                             params={"title": "Dice score per class per epoch",
+                                             params={"title": "Dice score on test patches per class per epoch",
                                                      "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -1373,7 +1373,7 @@ class TrainerFactory(object):
                                                         every=1), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
-                                             params={"title": "Dice score per class per epoch",
+                                             params={"title": "Dice score on test patches per class per epoch",
                                                      "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,

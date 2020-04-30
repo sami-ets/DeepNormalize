@@ -110,7 +110,7 @@ dataset:
 
 training:
   architecture: "DualUNet"
-  batch_size: 24
+  batch_size: 22
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3

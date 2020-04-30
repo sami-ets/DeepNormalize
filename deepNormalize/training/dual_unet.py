@@ -79,7 +79,7 @@ class DualUNetTrainer(Trainer):
         self._MRBrainS_hausdorff_gauge = AverageGauge()
         self._ABIDE_hausdorff_gauge = AverageGauge()
         self._valid_dice_gauge = AverageGauge()
-        self._class_dice_gauge = AverageGauge()
+        self._class_dice_gauge_on_patches = AverageGauge()
         self._class_dice_gauge_on_reconstructed_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_iseg_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_mrbrains_images = AverageGauge()
@@ -175,7 +175,7 @@ class DualUNetTrainer(Trainer):
 
         return seg_pred, loss_S
 
-    def _test_s(self, S: ModelTrainer, inputs, target):
+    def _test_s(self, S: ModelTrainer, inputs, target, metric_gauge: AverageGauge):
         target_ohe = to_onehot(torch.squeeze(target, dim=1).long(), num_classes=4)
         target = torch.squeeze(target, dim=1).long()
 
@@ -185,6 +185,7 @@ class DualUNetTrainer(Trainer):
         S.update_test_loss("DiceLoss", loss_S.mean())
 
         metrics = S.compute_metrics(seg_pred, target)
+        metric_gauge.update(np.array(metrics["Dice"]))
         metrics["Dice"] = metrics["Dice"].mean()
         metrics["IoU"] = metrics["IoU"].mean()
         S.update_test_metrics(metrics)
@@ -249,12 +250,13 @@ class DualUNetTrainer(Trainer):
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[NON_AUGMENTED_INPUTS])
 
             seg_pred, _ = self._test_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
-                                       target[IMAGE_TARGET])
+                                       target[IMAGE_TARGET], self._class_dice_gauge_on_patches)
 
         if self._should_activate_segmentation():
             gen_pred = self._test_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS])
 
-            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
+            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET],
+                                            self._class_dice_gauge_on_patches)
 
             if seg_pred[torch.where(target[DATASET_ID] == ISEG_ID)].shape[0] != 0:
                 self._iSEG_dice_gauge.update(np.array(self._model_trainers[SEGMENTER].compute_metrics(
@@ -383,7 +385,7 @@ class DualUNetTrainer(Trainer):
         self._iSEG_hausdorff_gauge.reset()
         self._MRBrainS_hausdorff_gauge.reset()
         self._ABIDE_hausdorff_gauge.reset()
-        self._class_dice_gauge.reset()
+        self._class_dice_gauge_on_patches.reset()
         self._js_div_inputs_gauge.reset()
         self._js_div_gen_gauge.reset()
         self._general_confusion_matrix_gauge.reset()
@@ -548,14 +550,14 @@ class DualUNetTrainer(Trainer):
             self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
                                                             ["DSC", "HD"],
                                                             [
-                                                                self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+                                                                self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
                                                                     [0.0, 0.0, 0.0]),
                                                                 self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                                                                     [0.0, 0.0, 0.0])
                                                             ])
 
             self.custom_variables[
-                "Dice score per class per epoch"] = self._class_dice_gauge.compute() if self._class_dice_gauge.has_been_updated() else np.array(
+                "Dice score per class per epoch"] = self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
                 [0.0, 0.0, 0.0])
             self.custom_variables[
                 "Dice score per class per epoch on reconstructed image"] = self._class_dice_gauge_on_reconstructed_images.compute() if self._class_dice_gauge_on_reconstructed_images.has_been_updated() else np.array(
