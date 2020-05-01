@@ -167,7 +167,7 @@ dataset:
 training:
   trainer: "WGAN"
   n_critics: 3
-  batch_size: 24
+  batch_size: 22
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False
@@ -179,6 +179,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "WGAN_compute_canada_disc_ratio_0_001"
+  env: "WGAN_school_disc_ratio_0_001"
   offline: True
-  filename: "WGAN_compute_canada_disc_ratio_0_001.json"
+  filename: "WGAN_school_disc_ratio_0_001.json"

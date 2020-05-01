@@ -228,6 +228,10 @@ class UNetTrainer(Trainer):
                     num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)].long(), dim=1)))
 
+        else:
+            self._MRBrainS_dice_gauge.update(np.zeros((3,)))
+            self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
+
         if seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)].shape[0] != 0:
             self._ABIDE_dice_gauge.update(np.array(self._model_trainers[0].compute_metrics(
                 torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)], dim=1),

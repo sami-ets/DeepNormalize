@@ -110,7 +110,7 @@ dataset:
 
 training:
   trainer: "UNet"
-  batch_size: 24
+  batch_size: 22
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3
@@ -125,6 +125,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "UNet_compute_canada_disc_ratio_1_00"
+  env: "UNet_school_disc_ratio_1_00"
   offline: True
-  filename: "UNet_compute_canada_disc_ratio_1_00.json"
+  filename: "UNet_school_disc_ratio_1_00.json"

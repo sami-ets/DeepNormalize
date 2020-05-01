@@ -18,8 +18,8 @@ from kerosene.models.models import ModelFactory
 
 from deepNormalize.config.types import ModelType
 from deepNormalize.models.resnet3d import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
-from deepNormalize.models.unet import Unet
-from deepNormalize.models.dcgan import DCGAN
+from deepNormalize.models.unet3d import Unet
+from deepNormalize.models.dcgan3d import DCGAN
 
 
 class CustomModelFactory(ModelFactory):

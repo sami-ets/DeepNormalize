@@ -68,7 +68,6 @@ class DualUNetTrainer(Trainer):
         self._gt_reconstructors = gt_reconstructors
         self._segmentation_reconstructors = segmentation_reconstructors
         self._augmented_reconstructors = augmented_reconstructors
-        self._num_datasets = len(input_reconstructors)
         self._class_hausdorff_distance_gauge = AverageGauge()
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._per_dataset_hausdorff_distance_gauge = AverageGauge()
@@ -310,6 +309,9 @@ class DualUNetTrainer(Trainer):
                             dim=1, keepdim=False),
                         num_classes=4),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)].long(), dim=1)))
+            else:
+                self._MRBrainS_dice_gauge.update(np.zeros((3,)))
+                self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
 
             if seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)].shape[0] != 0:
                 self._ABIDE_dice_gauge.update(np.array(self._model_trainers[SEGMENTER].compute_metrics(

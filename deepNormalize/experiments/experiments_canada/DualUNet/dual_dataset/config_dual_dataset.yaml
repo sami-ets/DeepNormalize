@@ -110,7 +110,7 @@ dataset:
 
 training:
   trainer: "DualUNet"
-  batch_size: 24
+  batch_size: 15
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3
@@ -123,6 +123,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DualUNet_compute_canada_disc_ratio_1_00"
+  env: "DualUNet_home_disc_ratio_1_00"
   offline: True
-  filename: "DualUNet_compute_canada_disc_ratio_1_00.json"
+  filename: "DualUNet_home_disc_ratio_1_00.json"

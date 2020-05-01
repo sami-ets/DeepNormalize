@@ -82,7 +82,7 @@ models:
 
   Discriminator:
     name: "DCGAN3D"
-    type: "DCGAN18"
+    type: "DCGAN"
     params:
       in_channels: 2
       out_channels: 4
@@ -166,7 +166,7 @@ dataset:
 
 training:
   trainer: "DCGAN"
-  batch_size: 22
+  batch_size: 16
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3

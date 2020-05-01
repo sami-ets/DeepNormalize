@@ -74,7 +74,9 @@ class WGANTrainer(Trainer):
         self._gt_reconstructors = gt_reconstructors
         self._segmentation_reconstructors = segmentation_reconstructors
         self._augmented_reconstructors = augmented_reconstructors
-        self._num_datasets = len(input_reconstructors)
+        self._num_real_datasets = len(input_reconstructors)
+        self._num_datasets = self._num_real_datasets + 1
+        self._fake_class_id = self._num_datasets - 1
         self._D_G_X_as_X_train_gauge = AverageGauge()
         self._D_G_X_as_X_valid_gauge = AverageGauge()
         self._D_G_X_as_X_test_gauge = AverageGauge()
@@ -102,8 +104,8 @@ class WGANTrainer(Trainer):
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
-        self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets + 1)
-        self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets + 1)
+        self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets)
+        self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets)
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
@@ -140,7 +142,7 @@ class WGANTrainer(Trainer):
         loss_gauge.update(-loss_D.item())
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
@@ -170,7 +172,7 @@ class WGANTrainer(Trainer):
         loss_gauge.update(-loss_D.item())
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
@@ -194,7 +196,7 @@ class WGANTrainer(Trainer):
         loss_gauge.update(-loss_D.item())
 
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._num_datasets,
+        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
@@ -324,8 +326,7 @@ class WGANTrainer(Trainer):
                                          target[NON_AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
                                          target[NON_AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
-                self._make_disc_pie_plots(disc_pred, inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS],
-                                          self._num_datasets)
+                self._make_disc_pie_plots(disc_pred, disc_target)
 
         if self._should_activate_segmentation():
             gen_pred = self._train_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS], backward=False)
@@ -362,12 +363,11 @@ class WGANTrainer(Trainer):
                                          target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
                                          target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
-                self._make_disc_pie_plots(disc_pred, inputs[AUGMENTED_INPUTS], target[AUGMENTED_INPUTS],
-                                          self._num_datasets)
+                self._make_disc_pie_plots(disc_pred, disc_target)
 
         self._discriminator_confusion_matrix_gauge_training.update((
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
-                      num_classes=self._num_datasets + 1), disc_target))
+                      num_classes=self._num_datasets), disc_target))
 
         if self.current_train_step % 500 == 0:
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
@@ -435,7 +435,8 @@ class WGANTrainer(Trainer):
                                                      gen_pred.detach(), target[DATASET_ID],
                                                      self._wasserstein_distance_test_gauge)
 
-            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET], self._class_dice_gauge_on_patches)
+            seg_pred, loss_S = self._test_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET],
+                                            self._class_dice_gauge_on_patches)
 
             pred_fake, _, _, _, _ = self._model_trainers[DISCRIMINATOR].forward(gen_pred)
             disc_loss_as_X = -1.0 * self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake", pred_fake, None)
@@ -498,6 +499,10 @@ class WGANTrainer(Trainer):
                         num_classes=4),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)].long(), dim=1)))
 
+            else:
+                self._MRBrainS_dice_gauge.update(np.zeros((3,)))
+                self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
+
             if seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)].shape[0] != 0:
                 self._ABIDE_dice_gauge.update(np.array(self._model_trainers[SEGMENTER].compute_metrics(
                     torch.nn.functional.softmax(seg_pred[torch.where(target[DATASET_ID] == ABIDE_ID)], dim=1),
@@ -555,7 +560,7 @@ class WGANTrainer(Trainer):
 
         self._discriminator_confusion_matrix_gauge.update((
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
-                      num_classes=self._num_datasets + 1),
+                      num_classes=self._num_datasets),
             disc_target))
 
         if self.current_test_step % 100 == 0:
@@ -617,7 +622,7 @@ class WGANTrainer(Trainer):
                 np.fliplr(self._discriminator_confusion_matrix_gauge_training.compute().cpu().detach().numpy()))
         else:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.zeros(
-                (self._num_datasets + 1, self._num_datasets + 1))
+                (self._num_datasets, self._num_datasets))
 
     def on_valid_epoch_end(self):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]
@@ -781,7 +786,7 @@ class WGANTrainer(Trainer):
                 np.fliplr(self._discriminator_confusion_matrix_gauge.compute().cpu().detach().numpy()))
         else:
             self.custom_variables["Discriminator Confusion Matrix"] = np.zeros(
-                (self._num_datasets + 1, self._num_datasets + 1))
+                (self._num_datasets, self._num_datasets))
 
         self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
                                                         ["DSC", "HD"],
@@ -884,14 +889,9 @@ class WGANTrainer(Trainer):
                                                    self._run_config.local_rank)] = self._label_mapper.get_label_map(
             dataset_ids)
 
-    def _make_disc_pie_plots(self, disc_pred, inputs, target, fill_value):
-        count_ = count(torch.argmax(disc_pred.cpu().detach(), dim=1), fill_value + 1)
-        real_count = count(torch.cat((target[DATASET_ID].cpu().detach(), torch.Tensor().new_full(
-            size=(inputs[NON_AUGMENTED_INPUTS].size(0) // 2,),
-            fill_value=fill_value,
-            dtype=torch.long,
-            device="cpu",
-            requires_grad=False)), dim=0), fill_value + 1)
+    def _make_disc_pie_plots(self, disc_pred, target):
+        count_ = count(torch.argmax(disc_pred.cpu().detach(), dim=1), self._num_datasets)
+        real_count = count(target, self._num_datasets)
         self.custom_variables["Pie Plot"] = count_
         self.custom_variables["Pie Plot True"] = real_count
 

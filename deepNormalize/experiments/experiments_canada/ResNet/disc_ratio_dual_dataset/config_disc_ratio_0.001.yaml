@@ -153,18 +153,18 @@ dataset:
 training:
   trainer: "ResNet"
   n_critics: 3
-  batch_size: 24
+  batch_size: 22
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio_dual_dataset: 0.001
+    disc_ratio: 0.001
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_compute_canada_iseg_mrbrain_disc_ratio_dual_dataset_0_001"
+  env: "ResNet_school_iseg_mrbrain_disc_ratio_0_001"
   offline: True
-  filename: "ResNet_compute_canada_iseg_mrbrain_disc_ratio_dual_dataset_0_001.json"
+  filename: "ResNet_school_iseg_mrbrain_disc_ratio_0_001.json"

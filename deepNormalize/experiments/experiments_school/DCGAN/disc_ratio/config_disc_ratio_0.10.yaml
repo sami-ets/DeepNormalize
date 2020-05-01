@@ -82,18 +82,10 @@ models:
 
   Discriminator:
     name: "DCGAN3D"
-    type: "DCGAN18"
+    type: "DCGAN"
     params:
       in_channels: 1
       out_channels: 4
-      num_groups: !!null
-      conv_groups: 1
-      width_per_group: 64
-      padding: [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
-      zero_init_residual: False
-      replace_stride_with_dilation: !!null
-      gaussian_filter: False
     optimizer:
       type: "SGD"
       params:
@@ -166,7 +158,7 @@ dataset:
 
 training:
   trainer: "DCGAN"
-  batch_size: 22
+  batch_size: 16
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3
