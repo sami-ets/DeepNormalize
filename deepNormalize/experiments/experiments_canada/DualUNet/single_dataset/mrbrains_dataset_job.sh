@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:1              # Number of GPUs (per node)
 #SBATCH --cpus-per-task=4         # CPU cores/threads
 #SBATCH --mem=64G                 # memory (per node)
-#SBATCH --time=04-00:00            # time (DD-HH:MM)
+#SBATCH --time=03-00:00            # time (DD-HH:MM)
 #SBATCH --mail-user=pierre-luc.delisle@live.com
 #SBATCH --mail-type=BEGIN
 #SBATCH --mail-type=END
