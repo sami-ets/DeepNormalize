@@ -83,7 +83,7 @@ class UNetTrainer(Trainer):
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
-        self._sampler = Sampler(0.3)
+        self._sampler = Sampler(1.0)
         self._save_folder = save_folder
         self._is_sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
         print("Total number of parameters: {}".format(sum(p.numel() for p in self._model_trainers[0].parameters())))
@@ -159,7 +159,7 @@ class UNetTrainer(Trainer):
         seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
 
         if self.current_valid_step % 100 == 0:
-            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(),
                                      target[DATASET_ID].cpu().detach())

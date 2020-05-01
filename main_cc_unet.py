@@ -39,7 +39,8 @@ from torchvision.transforms import Compose
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.factories.customTrainerFactory import TrainerFactory
-from deepNormalize.inputs.datasets import iSEGSliceDatasetFactory, MRBrainSSliceDatasetFactory, ABIDESliceDatasetFactory
+from deepNormalize.inputs.datasets import ABIDESliceUNetDatasetFactory, MRBrainSSliceUNetDatasetFactory, \
+    iSEGSliceUNetDatasetFactory
 from deepNormalize.nn.criterions import CustomCriterionFactory
 from deepNormalize.utils.constants import *
 from deepNormalize.utils.image_slicer import ImageReconstructor
@@ -101,7 +102,7 @@ if __name__ == '__main__':
             iSEG_augmentation_strategy = AugmentInput(
                 Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceUNetDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
@@ -148,7 +149,7 @@ if __name__ == '__main__':
             MRBrainS_augmentation_strategy = AugmentInput(
                 Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceUNetDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
@@ -195,7 +196,7 @@ if __name__ == '__main__':
             ABIDE_augmentation_strategy = AugmentInput(
                 Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
 
-        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
+        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceUNetDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
             dataset_id=ABIDE_ID,
@@ -280,10 +281,10 @@ if __name__ == '__main__':
      ["Discriminator", "Generator", "Segmenter"]]
 
     trainer = TrainerFactory(training_config.trainer).create(training_config, model_trainers, dataloaders,
-                                                                  reconstruction_datasets, normalized_reconstructors,
-                                                                  input_reconstructors, segmentation_reconstructors,
-                                                                  augmented_input_reconstructors, gt_reconstructors,
-                                                                  run_config, dataset_configs, save_folder,
-                                                                  visdom_logger)
+                                                             reconstruction_datasets, normalized_reconstructors,
+                                                             input_reconstructors, segmentation_reconstructors,
+                                                             augmented_input_reconstructors, gt_reconstructors,
+                                                             run_config, dataset_configs, save_folder,
+                                                             visdom_logger)
 
     trainer.train(training_config.nb_epochs)

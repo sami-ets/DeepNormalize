@@ -379,7 +379,7 @@ class LSGANTrainer(Trainer):
             self._model_trainers[GENERATOR].step()
 
             if self.current_train_step % 500 == 0:
-                self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
+                self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                          gen_pred.cpu().detach(),
                                          seg_pred.cpu().detach(),
                                          target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),

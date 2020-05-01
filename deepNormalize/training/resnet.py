@@ -428,7 +428,7 @@ class DCGANTrainer(Trainer):
             self._total_loss_valid_gauge.update(total_loss.item())
 
         if self.current_valid_step % 100 == 0:
-            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
+            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                      gen_pred.cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(),
