@@ -32,7 +32,7 @@ class CustomCriterionFactory(CriterionFactory):
 
     def create(self, criterion_type: Union[str, CriterionType], params):
         if criterion_type == CriterionType.DiceLoss or criterion_type == "DiceLoss" or criterion_type == CriterionType.TverskyLoss or criterion_type == "TverskyLoss":
-            if params["weight"] is not None:
+            if params.get("weight", None) is not None:
                 params["weight"] = torch.Tensor().new_tensor(np.array(params["weight"]),
                                                              dtype=torch.float,
                                                              device=self._run_config.device,

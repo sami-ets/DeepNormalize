@@ -231,7 +231,7 @@ class ResNet3D(torch.nn.Module):
 
     def __init__(self, block: torch.nn.Module, n_blocks_per_layer: list, in_channels: int, out_channels: int,
                  num_groups: int, conv_groups: int, width_per_group: int, padding: tuple, activation: ActivationLayers,
-                 zero_init_residual: bool, replace_stride_with_dilation: bool):
+                 zero_init_residual: bool, replace_stride_with_dilation: bool, gaussian_filter: bool):
         """
         ResNet 3D model initializer.
         Args:
@@ -255,6 +255,7 @@ class ResNet3D(torch.nn.Module):
         self._replace_stride_with_dilation = replace_stride_with_dilation
         self._inplanes = 64
         self._dilation = 1
+        self._has_gaussian_filter = gaussian_filter
 
         if self._replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
@@ -267,12 +268,21 @@ class ResNet3D(torch.nn.Module):
             raise ValueError("replace_stride_with_dilation should be None "
                              "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
 
+        gaussian_weights = torch.distributions.normal.Normal(1, 1).sample((1, 1, 3, 3, 3))
+        gaussian_weights = gaussian_weights / torch.sum(gaussian_weights)
+
         if padding is not None:
             self._padding = self._padding_factory.create(PaddingLayers.ReplicationPad3d, padding)
+            self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=0,
+                                                    bias=False)
+            self._gaussian_filter.weight.data = gaussian_weights
             self._conv1 = torch.nn.Conv3d(in_channels, self._inplanes, kernel_size=7, stride=2, padding=0,
                                           bias=False)
         else:
             self._padding = None
+            self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=1,
+                                                    bias=False)
+            self._gaussian_filter.weight.data = gaussian_weights
             self._conv1 = torch.nn.Conv3d(in_channels, self._inplanes, kernel_size=7, stride=2, padding=3,
                                           bias=False)
 
@@ -349,20 +359,23 @@ class ResNet3D(torch.nn.Module):
         if self._padding is not None:
             x = self._padding(x)
 
-        x = self._conv1(x)
-        x = self._norm1(x)
-        x = self._activation(x)
-        x = self._maxpool(x)
+        if self._has_gaussian_filter:
+            with torch.no_grad():
+                x = self._gaussian_filter(x)
+        x_conv1 = self._conv1(x)
+        x_norm1 = self._norm1(x_conv1)
+        x_activation = self._activation(x_norm1)
+        x_max_pool = self._maxpool(x_activation)
 
-        x = self._layer1(x)
-        x = self._layer2(x)
-        x = self._layer3(x)
+        x_layer1 = self._layer1(x_max_pool)
+        x_layer2 = self._layer2(x_layer1)
+        x_layer3 = self._layer3(x_layer2)
 
-        x = self._avgpool(x)
-        x = x.reshape(x.size(0), -1)
-        x = self._fc(x)
+        x_avg = self._avgpool(x_layer3)
+        x_reshaped = x_avg.reshape(x_avg.size(0), -1)
+        x = self._fc(x_reshaped)
 
-        return x
+        return x, x_conv1, x_layer1, x_layer2, x_layer3
 
 
 def _ResNet(block, layers, params):

@@ -13,10 +13,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #  ==============================================================================
+import uuid
 
+import matplotlib.pyplot as plt
 import numpy as np
-
+import os
 import re
+import torch
+from samitorch.inputs.transformers import ToNifti1Image, NiftiToDisk
+from torchvision.transforms import Compose
+
+from deepNormalize.utils.constants import DATASET_ID, ABIDE_ID, ISEG_ID, MRBRAINS_ID, IMAGE_TARGET
 
 
 def natural_sort(l):
@@ -70,11 +77,11 @@ def to_html(classe_names, metric_names, metric_values):
 
 
 def to_html_per_dataset(classe_names, metric_names, metric_values, datasets):
-    arr_tuple_1 = tuple(([metric_values[0][i] for i in range(len(metric_values)-1)]))
+    arr_tuple_1 = tuple(([metric_values[0][i] for i in range(len(metric_values) - 1)]))
     interleaved = np.vstack(arr_tuple_1).reshape((-1,), order='F')
-    arr_tuple_2 = tuple(([metric_values[1][i] for i in range(len(metric_values)-1)]))
+    arr_tuple_2 = tuple(([metric_values[1][i] for i in range(len(metric_values) - 1)]))
     interleaved_2 = np.vstack(arr_tuple_2).reshape((-1,), order='F')
-    arr_tuple_3 = tuple(([metric_values[2][i] for i in range(len(metric_values)-1)]))
+    arr_tuple_3 = tuple(([metric_values[2][i] for i in range(len(metric_values) - 1)]))
     interleaved_3 = np.vstack(arr_tuple_3).reshape((-1,), order='F')
 
     class_row = "".join(["<th colspan='{}'> {} </th>".format(str(len(metric_names)),
@@ -232,3 +239,364 @@ def to_html_time(time):
                 </html>".format(days, time[0], time[1], time[2])
 
     return header + body
+
+
+def construct_triple_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, input_mrbrains, gen_pred_abide,
+                                input_abide):
+    fig1, ((ax1, ax4), (ax2, ax5), (ax3, ax6)) = plt.subplots(nrows=3, ncols=2,
+                                                              figsize=(12, 10))
+
+    _, bins, _ = ax1.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=128,
+                          density=False, label="iSEG")
+    ax1.set_xlabel("Intensity")
+    ax1.set_ylabel("Frequency")
+    ax1.set_title("Generated iSEG Histogram")
+    ax1.legend()
+
+    _ = ax2.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=bins,
+                 density=False, label="MRBrainS")
+    ax2.set_xlabel("Intensity")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Generated MRBrainS Histogram")
+    ax2.legend()
+
+    _ = ax3.hist(gen_pred_abide[gen_pred_abide > 0].flatten(), bins=bins,
+                 density=False, label="ABIDE")
+    ax3.set_xlabel("Intensity")
+    ax3.set_ylabel("Frequency")
+    ax3.set_title("Generated ABIDE Histogram")
+    ax3.legend()
+
+    _, bins, _ = ax4.hist(input_iseg[input_iseg > 0].flatten(), bins=128,
+                          density=False, label="iSEG")
+    ax4.set_xlabel("Intensity")
+    ax4.set_ylabel("Frequency")
+    ax4.set_title("Input iSEG Histogram")
+    ax4.legend()
+    _ = ax5.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=bins,
+                 density=False, label="MRBrainS")
+    ax5.set_xlabel("Intensity")
+    ax5.set_ylabel("Frequency")
+    ax5.set_title("Input MRBrainS Histogram")
+    ax5.legend()
+
+    _ = ax6.hist(input_abide[input_abide > 0].flatten(), bins=bins,
+                 density=False, label="ABIDE")
+    ax6.set_xlabel("Intensity")
+    ax6.set_ylabel("Frequency")
+    ax6.set_title("Input ABIDE Histogram")
+    ax6.legend()
+
+    fig1.tight_layout()
+    id = str(uuid.uuid4())
+    fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+    fig1.clf()
+    plt.close(fig1)
+
+    return "/tmp/histograms-{}.png".format(str(id))
+
+
+def construct_double_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, input_mrbrains):
+    fig1, ((ax1, ax3), (ax2, ax4)) = plt.subplots(nrows=2, ncols=2,
+                                                  figsize=(12, 10))
+
+    _, bins, _ = ax1.hist(input_iseg[input_iseg > 0].flatten(), bins=128,
+                          density=False, label="iSEG")
+    ax1.set_xlabel("Intensity")
+    ax1.set_ylabel("Frequency")
+    ax1.set_title("Input iSEG Histogram")
+    ax1.legend()
+
+    _ = ax3.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=bins,
+                 density=False, label="iSEG")
+    ax3.set_xlabel("Intensity")
+    ax3.set_ylabel("Frequency")
+    ax3.set_title("Generated iSEG Histogram")
+    ax3.legend()
+
+    _, bins, _ = ax2.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=128,
+                          density=False, label="MRBrainS")
+    ax2.set_xlabel("Intensity")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Input MRBrainS Histogram")
+    ax2.legend()
+
+    _ = ax4.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=bins,
+                 density=False, label="MRBrainS")
+    ax4.set_xlabel("Intensity")
+    ax4.set_ylabel("Frequency")
+    ax4.set_title("Generated MRBrainS Histogram")
+    ax4.legend()
+
+    fig1.tight_layout()
+    id = str(uuid.uuid4())
+    fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+    fig1.clf()
+    plt.close(fig1)
+
+    return "/tmp/histograms-{}.png".format(str(id))
+
+
+def construct_single_histogram(gen_pred, input):
+    fig1, (ax1, ax2) = plt.subplots(nrows=1, ncols=2,
+                                    figsize=(12, 10))
+
+    _, bins, _ = ax1.hist(input[input > 0].flatten(), bins=128,
+                          density=False, label="Input")
+    ax1.set_xlabel("Intensity")
+    ax1.set_ylabel("Frequency")
+    ax1.set_title("Input Histogram")
+    ax1.legend()
+
+    _ = ax2.hist(gen_pred[gen_pred > 0].flatten(), bins=bins,
+                 density=False, label="iSEG")
+    ax2.set_xlabel("Intensity")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Generated Histogram")
+    ax2.legend()
+
+    fig1.tight_layout()
+    id = str(uuid.uuid4())
+    fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+    fig1.clf()
+    plt.close(fig1)
+
+    return "/tmp/histograms-{}.png".format(str(id))
+
+
+def construct_class_histogram(inputs, target, gen_pred):
+    iseg_inputs = inputs[torch.where(target[DATASET_ID] == ISEG_ID)]
+    iseg_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ISEG_ID)]
+    iseg_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ISEG_ID)]
+    mrbrains_inputs = inputs[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+    mrbrains_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+    mrbrains_gen_pred = gen_pred[torch.where(target[DATASET_ID] == MRBRAINS_ID)]
+    abide_inputs = inputs[torch.where(target[DATASET_ID] == ABIDE_ID)]
+    abide_targets = target[IMAGE_TARGET][torch.where(target[DATASET_ID] == ABIDE_ID)]
+    abide_gen_pred = gen_pred[torch.where(target[DATASET_ID] == ABIDE_ID)]
+
+    fig1, ((ax1, ax5), (ax2, ax6), (ax3, ax7), (ax4, ax8)) = plt.subplots(nrows=4, ncols=2,
+                                                                          figsize=(12, 10))
+
+    _, bins, _ = ax1.hist(iseg_gen_pred[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax1.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax1.hist(abide_gen_pred[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax1.set_xlabel("Intensity")
+    ax1.set_ylabel("Frequency")
+    ax1.set_title("Generated Background Histogram")
+    ax1.legend()
+
+    _, bins, _ = ax2.hist(iseg_gen_pred[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax2.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax2.hist(abide_gen_pred[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax2.set_xlabel("Intensity")
+    ax2.set_ylabel("Frequency")
+    ax2.set_title("Generated CSF Histogram")
+    ax2.legend()
+
+    _, bins, _ = ax3.hist(iseg_gen_pred[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax3.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax3.hist(abide_gen_pred[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax3.set_xlabel("Intensity")
+    ax3.set_ylabel("Frequency")
+    ax3.set_title("Generated Gray Matter Histogram")
+    ax3.legend()
+
+    _, bins, _ = ax4.hist(iseg_gen_pred[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax4.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax4.hist(abide_gen_pred[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax4.set_xlabel("Intensity")
+    ax4.set_ylabel("Frequency")
+    ax4.set_title("Generated White Matter Histogram")
+    ax4.legend()
+
+    _, bins, _ = ax5.hist(iseg_inputs[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax5.hist(mrbrains_inputs[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax5.hist(abide_inputs[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax5.set_xlabel("Intensity")
+    ax5.set_ylabel("Frequency")
+    ax5.set_title("Input Background Histogram")
+    ax5.legend()
+
+    _, bins, _ = ax6.hist(iseg_inputs[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax6.hist(mrbrains_inputs[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax6.hist(abide_inputs[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax6.set_xlabel("Intensity")
+    ax6.set_ylabel("Frequency")
+    ax6.set_title("Input CSF Histogram")
+    ax6.legend()
+
+    _, bins, _ = ax7.hist(iseg_inputs[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax7.hist(mrbrains_inputs[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax7.hist(abide_inputs[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax7.set_xlabel("Intensity")
+    ax7.set_ylabel("Frequency")
+    ax7.set_title("Input Gray Matter Histogram")
+    ax7.legend()
+
+    _, bins, _ = ax8.hist(iseg_inputs[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
+                          density=False, label="iSEG")
+    _ = ax8.hist(mrbrains_inputs[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="MRBrainS")
+    _ = ax8.hist(abide_inputs[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
+                 alpha=0.75, density=False, label="ABIDE")
+    ax8.set_xlabel("Intensity")
+    ax8.set_ylabel("Frequency")
+    ax8.set_title("Input White Matter Histogram")
+    ax8.legend()
+    fig1.tight_layout()
+    id = str(uuid.uuid4())
+    fig1.savefig("/tmp/histograms-{}.png".format(str(id)))
+
+    fig1.clf()
+    plt.close(fig1)
+    return "/tmp/histograms-{}.png".format(str(id))
+
+
+def count(tensor, n_classes):
+    count = torch.Tensor().new_zeros(size=(n_classes,), device="cpu")
+    for i in range(n_classes):
+        count[i] = torch.sum(tensor == i).int()
+    return count
+
+
+def get_all_patches(reconstruction_datasets, is_sliced=False):
+    if not is_sliced:
+        all_patches = list(
+            map(lambda dataset: natural_sort([sample.x for sample in dataset._samples]), reconstruction_datasets))
+        ground_truth_patches = list(
+            map(lambda dataset: natural_sort([sample.y for sample in dataset._samples]), reconstruction_datasets))
+    else:
+        all_patches = list(
+            map(lambda dataset: [patch.slice for patch in dataset._patches], reconstruction_datasets))
+        ground_truth_patches = list(
+            map(lambda dataset: [patch.slice for patch in dataset._patches], reconstruction_datasets))
+
+    return all_patches, ground_truth_patches
+
+
+def rebuild_images(datasets, all_patches, ground_truth_patches, input_reconstructors, gt_reconstructors,
+                   normalize_reconstructors, segmentation_reconstructors):
+    img_input = {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+            input_reconstructors)))}
+    img_gt = {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), ground_truth_patches,
+            gt_reconstructors)))}
+    img_norm = {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+            normalize_reconstructors)))}
+    img_seg = {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+            segmentation_reconstructors)))}
+
+    return img_input, img_gt, img_norm, img_seg
+
+
+def rebuild_image(datasets, all_patches, reconstructor):
+    return {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches), all_patches,
+            reconstructor)))}
+
+
+def rebuild_augmented_images(datasets, all_patches, img_input, img_norm, augmented_reconstructors):
+    img_augmented = {k: v for (k, v) in zip(datasets, list(
+        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
+            all_patches, augmented_reconstructors)))}
+
+    augmented_minus_inputs = {k: v for (k, v) in zip(datasets, list(
+        map(lambda augmented, input: augmented - input, img_augmented.values(), img_input.values())))}
+
+    norm_minus_augmented = {k: v for (k, v) in zip(datasets, list(
+        map(lambda augmented, input: augmented - input, img_norm.values(), img_augmented.values())))}
+
+    return img_augmented, augmented_minus_inputs, norm_minus_augmented
+
+
+def save_rebuilt_image(current_epoch, save_folder, datasets, image, image_type):
+    if not os.path.exists(os.path.join(save_folder, "reconstructed_images")):
+        os.makedirs(os.path.join(save_folder, "reconstructed_images"))
+
+    for dataset in datasets:
+        transform_img = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_{}_{}_Image_{}.nii.gz".format(image_type, dataset,
+                                                                                                    str(
+                                                                                                        current_epoch))))])
+        transform_img(image[dataset])
+
+
+def save_rebuilt_images(current_epoch, save_folder, datasets, img_input, img_norm, img_seg, img_gt):
+    if not os.path.exists(os.path.join(save_folder, "reconstructed_images")):
+        os.makedirs(os.path.join(save_folder, "reconstructed_images"))
+
+    for dataset in datasets:
+        transform_img_norm = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Normalized_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+        transform_img_seg = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Segmented_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+        transform_img_gt = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Ground_Truth_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+        transform_img_input = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Input_{}_Image.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+
+        transform_img_norm(img_norm[dataset])
+        transform_img_seg(img_seg[dataset])
+        transform_img_gt(img_gt[dataset])
+        transform_img_input(img_input[dataset])
+
+
+def save_augmented_rebuilt_images(current_epoch, save_folder, datasets, img_augmented, augmented_minus_inputs,
+                                  norm_minus_augmented):
+    if not os.path.exists(os.path.join(save_folder, "reconstructed_images")):
+        os.makedirs(os.path.join(save_folder, "reconstructed_images"))
+
+    for dataset in datasets:
+        transform_img_augmented = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Augmented_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+        transform_img_augmented_minus_inputs = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Augmented_minus_Inputs_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+        transform_img_normalized_minus_augmented = Compose(
+            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                       "Reconstructed_Normalized_minus_Augmented_{}_Image_{}.nii.gz".format(
+                                                           dataset, str(current_epoch))))])
+
+        transform_img_augmented(img_augmented[dataset])
+        transform_img_augmented_minus_inputs(augmented_minus_inputs[dataset])
+        transform_img_normalized_minus_augmented(norm_minus_augmented[dataset])

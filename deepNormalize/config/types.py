@@ -24,8 +24,9 @@ class ModelType(Enum):
     RESNET_101 = "ResNet101"
     RESNET_152 = "ResNet152"
     UNET3D = "UNet3D"
+    DCGAN = "DCGAN"
 
-    ALL = [RESNET_18, RESNET_34, RESNET_50, RESNET_101, RESNET_152, UNET3D]
+    ALL = [RESNET_18, RESNET_34, RESNET_50, RESNET_101, RESNET_152, UNET3D, DCGAN]
 
     def __str__(self):
         return self.value
