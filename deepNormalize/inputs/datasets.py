@@ -1649,17 +1649,17 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
                           step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
         if isinstance(modalities, list) and len(modalities) > 1:
-            return iSEGSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
-                                                                         dataset_id, test_size, max_subject,
-                                                                         max_num_patches,
-                                                                         augmentation_strategy, patch_size, step,
-                                                                         augmented_path)
+            return iSEGSliceUNetDatasetFactory._create_multimodal_train_test(source_dir, modalities,
+                                                                             dataset_id, test_size, max_subject,
+                                                                             max_num_patches,
+                                                                             augmentation_strategy, patch_size, step,
+                                                                             augmented_path)
         else:
-            return iSEGSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
-                                                                              dataset_id, test_size, max_subject,
-                                                                              max_num_patches,
-                                                                              augmentation_strategy, patch_size,
-                                                                              step, augmented_path)
+            return iSEGSliceUNetDatasetFactory._create_single_modality_train_test(source_dir, modalities,
+                                                                                  dataset_id, test_size, max_subject,
+                                                                                  max_num_patches,
+                                                                                  augmentation_strategy, patch_size,
+                                                                                  step, augmented_path)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
@@ -1671,20 +1671,22 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
                                 test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
 
         if isinstance(modalities, list):
-            return iSEGSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
-                                                                               dataset_id, test_size,
-                                                                               max_subjects,
-                                                                               max_num_patches,
-                                                                               augmentation_strategy,
-                                                                               patch_size, step, augmented_path)
+            return iSEGSliceUNetDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
+                                                                                   dataset_id, test_size,
+                                                                                   max_subjects,
+                                                                                   max_num_patches,
+                                                                                   augmentation_strategy,
+                                                                                   patch_size, step, augmented_path)
         else:
-            return iSEGSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
-                                                                                    dataset_id, test_size,
-                                                                                    max_subjects,
-                                                                                    max_num_patches,
-                                                                                    augmentation_strategy, patch_size,
-                                                                                    step, test_patch_size, test_step,
-                                                                                    augmented_path)
+            return iSEGSliceUNetDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
+                                                                                        dataset_id, test_size,
+                                                                                        max_subjects,
+                                                                                        max_num_patches,
+                                                                                        augmentation_strategy,
+                                                                                        patch_size,
+                                                                                        step, test_patch_size,
+                                                                                        test_step,
+                                                                                        augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -1703,7 +1705,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = iSEGSliceDatasetFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -1763,19 +1765,19 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             for reconstruction_augmented_path in reconstruction_augmented_paths:
                 reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
-        train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           patch_size,
-                                                           step,
-                                                           keep_centered_on_foreground=True)
-        reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                     reconstruction_targets,
-                                                                     patch_size,
-                                                                     step,
-                                                                     keep_centered_on_foreground=False)
+        train_patches = iSEGSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        test_patches = iSEGSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                               patch_size,
+                                                               step,
+                                                               keep_centered_on_foreground=True)
+        reconstruction_patches = iSEGSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                         reconstruction_targets,
+                                                                         patch_size,
+                                                                         step,
+                                                                         keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -1783,7 +1785,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = iSEGSliceDatasetFactory.create(
+        train_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             augmented_images=np.array(train_augmented_images),
@@ -1793,7 +1795,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSliceDatasetFactory.create(
+        test_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -1802,7 +1804,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = iSEGSliceDatasetFactory.create(
+        reconstruction_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             augmented_images=np.array(reconstruction_augmented_images),
@@ -1831,7 +1833,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = iSEGSliceDatasetFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -1877,19 +1879,19 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
                 np.stack([transform(path) for path in reconstruction_source_path], axis=0).squeeze(1))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           patch_size,
-                                                           step,
-                                                           keep_centered_on_foreground=True)
-        reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                     reconstruction_targets,
-                                                                     patch_size,
-                                                                     step,
-                                                                     keep_centered_on_foreground=False)
+        train_patches = iSEGSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        test_patches = iSEGSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                               patch_size,
+                                                               step,
+                                                               keep_centered_on_foreground=True)
+        reconstruction_patches = iSEGSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                         reconstruction_targets,
+                                                                         patch_size,
+                                                                         step,
+                                                                         keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -1897,7 +1899,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = iSEGSliceDatasetFactory.create(
+        train_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -1906,7 +1908,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSliceDatasetFactory.create(
+        test_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -1915,7 +1917,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = iSEGSliceDatasetFactory.create(
+        reconstruction_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -1946,8 +1948,8 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = iSEGSliceDatasetFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = iSEGSliceDatasetFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2016,23 +2018,23 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             for reconstruction_augmented_path in reconstruction_augmented_paths:
                 reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
-        train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        valid_patches = iSEGSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           patch_size,
-                                                           step,
-                                                           keep_centered_on_foreground=True)
-        reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                     reconstruction_targets,
-                                                                     test_patch_size,
-                                                                     test_step,
-                                                                     keep_centered_on_foreground=False)
+        train_patches = iSEGSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        valid_patches = iSEGSliceUNetDatasetFactory.get_patches(valid_images, valid_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        test_patches = iSEGSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                               patch_size,
+                                                               step,
+                                                               keep_centered_on_foreground=True)
+        reconstruction_patches = iSEGSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                         reconstruction_targets,
+                                                                         test_patch_size,
+                                                                         test_step,
+                                                                         keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2043,7 +2045,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = iSEGSliceDatasetFactory.create(
+        train_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
@@ -2053,7 +2055,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = iSEGSliceDatasetFactory.create(
+        valid_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(valid_images),
             target_images=np.array(valid_targets),
             patches=valid_patches,
@@ -2062,7 +2064,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSliceDatasetFactory.create(
+        test_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2071,7 +2073,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = iSEGSliceDatasetFactory.create(
+        reconstruction_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             augmented_images=np.array(reconstruction_augmented_images) if len(
@@ -2101,8 +2103,8 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = iSEGSliceDatasetFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = iSEGSliceDatasetFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = iSEGSliceUNetDatasetFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2158,23 +2160,23 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
                 np.stack([transform(path) for path in reconstruction_source_path], axis=0).squeeze(1))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        valid_patches = iSEGSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        test_patches = iSEGSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                           patch_size,
-                                                           step,
-                                                           keep_centered_on_foreground=True)
-        reconstruction_patches = iSEGSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                     reconstruction_targets,
-                                                                     patch_size,
-                                                                     step,
-                                                                     keep_centered_on_foreground=False)
+        train_patches = iSEGSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        valid_patches = iSEGSliceUNetDatasetFactory.get_patches(valid_images, valid_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        test_patches = iSEGSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                               patch_size,
+                                                               step,
+                                                               keep_centered_on_foreground=True)
+        reconstruction_patches = iSEGSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                         reconstruction_targets,
+                                                                         patch_size,
+                                                                         step,
+                                                                         keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2185,7 +2187,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = iSEGSliceDatasetFactory.create(
+        train_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -2194,7 +2196,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = iSEGSliceDatasetFactory.create(
+        valid_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(valid_images),
             target_images=np.array(valid_targets),
             patches=valid_patches,
@@ -2203,7 +2205,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = iSEGSliceDatasetFactory.create(
+        test_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2212,7 +2214,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = iSEGSliceDatasetFactory.create(
+        reconstruction_dataset = iSEGSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -2271,16 +2273,18 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list) and len(modalities) > 1:
-            return MRBrainSSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
-                                                                             dataset_id, test_size, max_subject,
-                                                                             max_num_patches,
-                                                                             augmentation_strategy, patch_size, step)
+            return MRBrainSSliceUNetDatasetFactory._create_multimodal_train_test(source_dir, modalities,
+                                                                                 dataset_id, test_size, max_subject,
+                                                                                 max_num_patches,
+                                                                                 augmentation_strategy, patch_size,
+                                                                                 step)
         else:
-            return MRBrainSSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
-                                                                                  dataset_id, test_size, max_subject,
-                                                                                  max_num_patches,
-                                                                                  augmentation_strategy, patch_size,
-                                                                                  step)
+            return MRBrainSSliceUNetDatasetFactory._create_single_modality_train_test(source_dir, modalities,
+                                                                                      dataset_id, test_size,
+                                                                                      max_subject,
+                                                                                      max_num_patches,
+                                                                                      augmentation_strategy, patch_size,
+                                                                                      step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
@@ -2292,22 +2296,23 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
                                 test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
 
         if isinstance(modalities, list):
-            return MRBrainSSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
-                                                                                   dataset_id, test_size,
-                                                                                   max_subjects,
-                                                                                   max_num_patches,
-                                                                                   augmentation_strategy, patch_size,
-                                                                                   test_patch_size, test_step,
-                                                                                   step)
+            return MRBrainSSliceUNetDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
+                                                                                       dataset_id, test_size,
+                                                                                       max_subjects,
+                                                                                       max_num_patches,
+                                                                                       augmentation_strategy,
+                                                                                       patch_size,
+                                                                                       test_patch_size, test_step,
+                                                                                       step)
         else:
-            return MRBrainSSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
-                                                                                        dataset_id, test_size,
-                                                                                        max_subjects,
-                                                                                        max_num_patches,
-                                                                                        augmentation_strategy,
-                                                                                        patch_size, step,
-                                                                                        test_patch_size, test_step,
-                                                                                        augmented_path)
+            return MRBrainSSliceUNetDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
+                                                                                            dataset_id, test_size,
+                                                                                            max_subjects,
+                                                                                            max_num_patches,
+                                                                                            augmentation_strategy,
+                                                                                            patch_size, step,
+                                                                                            test_patch_size, test_step,
+                                                                                            augmented_path)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -2328,7 +2333,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = MRBrainSSliceDatasetFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2367,19 +2372,19 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               patch_size,
-                                                               step,
-                                                               keep_centered_on_foreground=True)
-        reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                         reconstruction_targets,
-                                                                         test_patch_size,
-                                                                         test_step,
-                                                                         keep_centered_on_foreground=False)
+        train_patches = MRBrainSSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        test_patches = MRBrainSSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                   patch_size,
+                                                                   step,
+                                                                   keep_centered_on_foreground=True)
+        reconstruction_patches = MRBrainSSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                             reconstruction_targets,
+                                                                             test_patch_size,
+                                                                             test_step,
+                                                                             keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2387,7 +2392,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = MRBrainSSliceDatasetFactory.create(
+        train_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -2396,7 +2401,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = MRBrainSSliceDatasetFactory.create(
+        test_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2405,7 +2410,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
+        reconstruction_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -2435,7 +2440,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = MRBrainSSliceDatasetFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2477,19 +2482,19 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
                 np.stack([transform(path) for path in reconstruction_source_path], axis=0).squeeze(1))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               patch_size,
-                                                               step,
-                                                               keep_centered_on_foreground=True)
-        reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                         reconstruction_targets,
-                                                                         test_patch_size,
-                                                                         test_step,
-                                                                         keep_centered_on_foreground=False)
+        train_patches = MRBrainSSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        test_patches = MRBrainSSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                   patch_size,
+                                                                   step,
+                                                                   keep_centered_on_foreground=True)
+        reconstruction_patches = MRBrainSSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                             reconstruction_targets,
+                                                                             test_patch_size,
+                                                                             test_step,
+                                                                             keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2497,7 +2502,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = MRBrainSSliceDatasetFactory.create(
+        train_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -2506,7 +2511,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = MRBrainSSliceDatasetFactory.create(
+        test_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2515,7 +2520,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
+        reconstruction_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -2546,8 +2551,8 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = MRBrainSSliceDatasetFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = MRBrainSSliceDatasetFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2616,23 +2621,23 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             for reconstruction_augmented_path in reconstruction_augmented_paths:
                 reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
-        train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        valid_patches = MRBrainSSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               patch_size,
-                                                               step,
-                                                               keep_centered_on_foreground=True)
-        reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                         reconstruction_targets,
-                                                                         test_patch_size,
-                                                                         test_step,
-                                                                         keep_centered_on_foreground=False)
+        train_patches = MRBrainSSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        valid_patches = MRBrainSSliceUNetDatasetFactory.get_patches(valid_images, valid_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        test_patches = MRBrainSSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                   patch_size,
+                                                                   step,
+                                                                   keep_centered_on_foreground=True)
+        reconstruction_patches = MRBrainSSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                             reconstruction_targets,
+                                                                             test_patch_size,
+                                                                             test_step,
+                                                                             keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2643,7 +2648,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = MRBrainSSliceDatasetFactory.create(
+        train_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
@@ -2653,7 +2658,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = MRBrainSSliceDatasetFactory.create(
+        valid_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(valid_images),
             target_images=np.array(valid_targets),
             patches=valid_patches,
@@ -2662,7 +2667,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = MRBrainSSliceDatasetFactory.create(
+        test_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2671,7 +2676,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
+        reconstruction_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             augmented_images=np.array(reconstruction_augmented_images) if len(
@@ -2703,8 +2708,8 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = MRBrainSSliceDatasetFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = MRBrainSSliceDatasetFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = MRBrainSSliceUNetDatasetFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
@@ -2756,23 +2761,23 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
                 np.stack([transform(path) for path in reconstruction_source_path], axis=0).squeeze(1))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        valid_patches = MRBrainSSliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                                patch_size,
-                                                                step,
-                                                                keep_centered_on_foreground=True)
-        test_patches = MRBrainSSliceDatasetFactory.get_patches(test_images, test_targets,
-                                                               patch_size,
-                                                               step,
-                                                               keep_centered_on_foreground=True)
-        reconstruction_patches = MRBrainSSliceDatasetFactory.get_patches(reconstruction_images,
-                                                                         reconstruction_targets,
-                                                                         test_patch_size,
-                                                                         test_step,
-                                                                         keep_centered_on_foreground=False)
+        train_patches = MRBrainSSliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        valid_patches = MRBrainSSliceUNetDatasetFactory.get_patches(valid_images, valid_targets,
+                                                                    patch_size,
+                                                                    step,
+                                                                    keep_centered_on_foreground=True)
+        test_patches = MRBrainSSliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                   patch_size,
+                                                                   step,
+                                                                   keep_centered_on_foreground=True)
+        reconstruction_patches = MRBrainSSliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                             reconstruction_targets,
+                                                                             test_patch_size,
+                                                                             test_step,
+                                                                             keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2783,7 +2788,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = MRBrainSSliceDatasetFactory.create(
+        train_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -2792,7 +2797,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = MRBrainSSliceDatasetFactory.create(
+        valid_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(valid_images),
             target_images=np.array(valid_targets),
             patches=valid_patches,
@@ -2801,7 +2806,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = MRBrainSSliceDatasetFactory.create(
+        test_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -2810,7 +2815,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
+        reconstruction_dataset = MRBrainSSliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -2874,11 +2879,12 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
         else:
-            return ABIDESliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
-                                                                               dataset_id, test_size, sites,
-                                                                               max_subjects, max_num_patches,
-                                                                               augmentation_strategy, patch_size, step,
-                                                                               test_patch_size, test_step)
+            return ABIDESliceUNetDatasetFactory._create_single_modality_train_test(source_dir, modalities,
+                                                                                   dataset_id, test_size, sites,
+                                                                                   max_subjects, max_num_patches,
+                                                                                   augmentation_strategy, patch_size,
+                                                                                   step,
+                                                                                   test_patch_size, test_step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
@@ -2892,11 +2898,13 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
         else:
-            return ABIDESliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
-                                                                                     dataset_id, test_size, sites,
-                                                                                     max_subjects, max_num_patches,
-                                                                                     augmentation_strategy, patch_size,
-                                                                                     step, test_patch_size, test_step)
+            return ABIDESliceUNetDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
+                                                                                         dataset_id, test_size, sites,
+                                                                                         max_subjects, max_num_patches,
+                                                                                         augmentation_strategy,
+                                                                                         patch_size,
+                                                                                         step, test_patch_size,
+                                                                                         test_step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -2923,7 +2931,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, test_subjects = ABIDESliceDatasetFactory.shuffle_split(subjects, test_size)
+        train_subjects, test_subjects = ABIDESliceUNetDatasetFactory.shuffle_split(subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
@@ -2962,20 +2970,20 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = ABIDESliceDatasetFactory.get_patches(train_images, train_targets,
-                                                             patch_size,
-                                                             step,
-                                                             keep_centered_on_foreground=True)
+        train_patches = ABIDESliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                 patch_size,
+                                                                 step,
+                                                                 keep_centered_on_foreground=True)
 
-        test_patches = ABIDESliceDatasetFactory.get_patches(test_images, test_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
-                                                                      reconstruction_targets,
-                                                                      test_patch_size,
-                                                                      test_step,
-                                                                      keep_centered_on_foreground=False)
+        test_patches = ABIDESliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        reconstruction_patches = ABIDESliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                          reconstruction_targets,
+                                                                          test_patch_size,
+                                                                          test_step,
+                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -2983,7 +2991,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = ABIDESliceDatasetFactory.create(
+        train_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -2992,7 +3000,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = ABIDESliceDatasetFactory.create(
+        test_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -3001,7 +3009,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = ABIDESliceDatasetFactory.create(
+        reconstruction_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
@@ -3038,8 +3046,8 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(subject_dirs)), len(subject_dirs), replace=False)
 
         subjects = np.array(subject_dirs)[choices]
-        train_subjects, valid_subjects = ABIDESliceDatasetFactory.shuffle_split(subjects, test_size)
-        valid_subjects, test_subjects = ABIDESliceDatasetFactory.shuffle_split(valid_subjects, test_size)
+        train_subjects, valid_subjects = ABIDESliceUNetDatasetFactory.shuffle_split(subjects, test_size)
+        valid_subjects, test_subjects = ABIDESliceUNetDatasetFactory.shuffle_split(valid_subjects, test_size)
 
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
@@ -3087,25 +3095,25 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
 
-        train_patches = ABIDESliceDatasetFactory.get_patches(train_images, train_targets,
-                                                             patch_size,
-                                                             step,
-                                                             keep_centered_on_foreground=True)
+        train_patches = ABIDESliceUNetDatasetFactory.get_patches(train_images, train_targets,
+                                                                 patch_size,
+                                                                 step,
+                                                                 keep_centered_on_foreground=True)
 
-        valid_patches = ABIDESliceDatasetFactory.get_patches(valid_images, valid_targets,
-                                                             patch_size,
-                                                             step,
-                                                             keep_centered_on_foreground=True)
+        valid_patches = ABIDESliceUNetDatasetFactory.get_patches(valid_images, valid_targets,
+                                                                 patch_size,
+                                                                 step,
+                                                                 keep_centered_on_foreground=True)
 
-        test_patches = ABIDESliceDatasetFactory.get_patches(test_images, test_targets,
-                                                            patch_size,
-                                                            step,
-                                                            keep_centered_on_foreground=True)
-        reconstruction_patches = ABIDESliceDatasetFactory.get_patches(reconstruction_images,
-                                                                      reconstruction_targets,
-                                                                      test_patch_size,
-                                                                      test_step,
-                                                                      keep_centered_on_foreground=False)
+        test_patches = ABIDESliceUNetDatasetFactory.get_patches(test_images, test_targets,
+                                                                patch_size,
+                                                                step,
+                                                                keep_centered_on_foreground=True)
+        reconstruction_patches = ABIDESliceUNetDatasetFactory.get_patches(reconstruction_images,
+                                                                          reconstruction_targets,
+                                                                          test_patch_size,
+                                                                          test_step,
+                                                                          keep_centered_on_foreground=False)
 
         if max_num_patches is not None:
             choices = np.random.choice(np.arange(0, len(train_patches)), max_num_patches, replace=False)
@@ -3116,7 +3124,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             choices = np.random.choice(np.arange(0, len(test_patches)), int(max_num_patches * test_size), replace=False)
             test_patches = test_patches[choices]
 
-        train_dataset = ABIDESliceDatasetFactory.create(
+        train_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
             patches=train_patches,
@@ -3125,7 +3133,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        valid_dataset = ABIDESliceDatasetFactory.create(
+        valid_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(valid_images),
             target_images=np.array(valid_targets),
             patches=valid_patches,
@@ -3134,7 +3142,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        test_dataset = ABIDESliceDatasetFactory.create(
+        test_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(test_images),
             target_images=np.array(test_targets),
             patches=test_patches,
@@ -3143,7 +3151,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
             transforms=[ToNDTensor()],
             augmentation_strategy=augmentation_strategy)
 
-        reconstruction_dataset = ABIDESliceDatasetFactory.create(
+        reconstruction_dataset = ABIDESliceUNetDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
             patches=reconstruction_patches,
