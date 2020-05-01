@@ -172,5 +172,5 @@ visdom:
   server: "10.180.113.44"
   port: "8097"
   env: "DCGAN_home_disc_ratio_0_05"
-  offline: False
+  offline: True
   filename: "DCGAN_home_disc_ratio_0_05.json"

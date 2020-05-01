@@ -166,5 +166,5 @@ visdom:
   server: "10.180.113.44"
   port: "8097"
   env: "LSGAN_home_iseg_mrbrain_disc_ratio_0_05"
-  offline: False
+  offline: True
   filename: "LSGAN_home_iseg_mrbrain_disc_ratio_0_05.json"
