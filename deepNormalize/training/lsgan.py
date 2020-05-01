@@ -107,7 +107,7 @@ class LSGANTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
-        self._sampler = Sampler(1.0)
+        self._sampler = Sampler(0.33)
         self._discriminator_loss_train_gauge = AverageGauge()
         self._discriminator_loss_valid_gauge = AverageGauge()
         self._discriminator_loss_test_gauge = AverageGauge()

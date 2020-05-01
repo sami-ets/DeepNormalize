@@ -110,7 +110,7 @@ class WGANTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
-        self._sampler = Sampler(1.0)
+        self._sampler = Sampler(0.33)
         self._wasserstein_distance_train_gauge = AverageGauge()
         self._wasserstein_distance_valid_gauge = AverageGauge()
         self._wasserstein_distance_test_gauge = AverageGauge()

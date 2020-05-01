@@ -93,7 +93,7 @@ class DualUNetTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
-        self._sampler = Sampler(0.3)
+        self._sampler = Sampler(0.33)
         self._is_sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
         print("Total number of parameters: {}".format(
             sum(p.numel() for p in self._model_trainers[GENERATOR].parameters()) +
