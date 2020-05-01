@@ -137,7 +137,8 @@ class LSGANTrainer(Trainer):
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         y_bad_ohe = to_onehot(y_bad, num_classes=self._num_datasets)
-        loss_D_fake = D.compute_and_update_train_loss("Pred Fake", pred_D_G_X, y_bad_ohe.float())
+        loss_D_fake = D.compute_and_update_train_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
+                                                      y_bad_ohe.float())
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
@@ -169,7 +170,8 @@ class LSGANTrainer(Trainer):
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         y_bad_ohe = to_onehot(y_bad, num_classes=self._num_datasets)
-        loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", pred_D_G_X, y_bad_ohe.float())
+        loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
+                                                      y_bad_ohe.float())
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
@@ -195,7 +197,8 @@ class LSGANTrainer(Trainer):
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         y_bad_ohe = to_onehot(y_bad, num_classes=self._num_datasets)
-        loss_D_fake = D.compute_and_update_test_loss("Pred Fake", pred_D_G_X, y_bad_ohe.float())
+        loss_D_fake = D.compute_and_update_test_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
+                                                     y_bad_ohe.float())
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
