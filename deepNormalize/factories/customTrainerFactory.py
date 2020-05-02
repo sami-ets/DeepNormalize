@@ -7,7 +7,6 @@ from kerosene.loggers.visdom import PlotType
 from kerosene.training.events import Event
 
 from deepNormalize.events.handlers.handlers import PlotCustomLinePlotWithLegend, PlotCustomLoss
-from deepNormalize.models.dcgan3d import DCGAN
 from deepNormalize.training.dcgan import DCGANTrainer
 from deepNormalize.training.dual_unet import DualUNetTrainer
 from deepNormalize.training.lsgan import LSGANTrainer
@@ -855,11 +854,11 @@ class TrainerFactory(object):
 
         elif self._trainer == TrainerType.DCGAN:
             trainer = DCGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
-                                    dataloaders[2],
-                                    reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                    segmentation_reconstructors, augmented_input_reconstructors,
-                                    gt_reconstructors,
-                                    run_config, dataset_configs, save_folder) \
+                                   dataloaders[2],
+                                   reconstruction_datasets, normalized_reconstructors, input_reconstructors,
+                                   segmentation_reconstructors, augmented_input_reconstructors,
+                                   gt_reconstructors,
+                                   run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
@@ -1126,6 +1125,26 @@ class TrainerFactory(object):
                 PlotCustomLinePlotWithLegend(visdom_logger, "Dice score per class per epoch", every=1,
                                              params={"title": "Dice score on test patches per class per epoch",
                                                      "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomLinePlotWithLegend(visdom_logger,
+                                             "Hausdorff Distance per class per epoch on reconstructed iSEG image",
+                                             every=1,
+                                             params={
+                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomLinePlotWithLegend(visdom_logger,
+                                             "Hausdorff Distance per class per epoch on reconstructed MRBrainS image", every=1,
+                                             params={
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed MRBrainS image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomLinePlotWithLegend(visdom_logger,
+                                             "Hausdorff Distance per class per epoch on reconstructed ABIDE image",
+                                             every=1,
+                                             params={
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed ABIDE image",
+                                                 "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
                                              "Dice score per class per epoch on reconstructed iSEG image",

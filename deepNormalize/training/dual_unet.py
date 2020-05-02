@@ -83,6 +83,9 @@ class DualUNetTrainer(Trainer):
         self._class_dice_gauge_on_reconstructed_iseg_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_mrbrains_images = AverageGauge()
         self._class_dice_gauge_on_reconstructed_abide_images = AverageGauge()
+        self._hausdorff_distance_gauge_on_reconstructed_iseg_images = AverageGauge()
+        self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images = AverageGauge()
+        self._hausdorff_distance_gauge_on_reconstructed_abide_images = AverageGauge()
         self._js_div_inputs_gauge = AverageGauge()
         self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
@@ -400,6 +403,12 @@ class DualUNetTrainer(Trainer):
     def on_test_epoch_end(self):
         if self.epoch % 20 == 0:
             self._per_dataset_hausdorff_distance_gauge.reset()
+            self._class_dice_gauge_on_reconstructed_iseg_images.reset()
+            self._class_dice_gauge_on_reconstructed_mrbrains_images.reset()
+            self._class_dice_gauge_on_reconstructed_abide_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_iseg_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_abide_images.reset()
 
             all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)
 
@@ -415,6 +424,7 @@ class DualUNetTrainer(Trainer):
                                "Normalized")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_seg,
                                "Segmented")
+
             if self._training_config.build_augmented_images:
                 img_augmented, augmented_minus_inputs, norm_minus_augmented = rebuild_augmented_images(
                     self._dataset_configs.keys(), all_patches, img_input, img_norm, self._augmented_reconstructors)
@@ -422,7 +432,7 @@ class DualUNetTrainer(Trainer):
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
                                               img_augmented, augmented_minus_inputs, norm_minus_augmented)
 
-            mhd = []
+            mean_mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
                     "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
@@ -456,41 +466,51 @@ class DualUNetTrainer(Trainer):
                         "Reconstructed Noise {} After Normalization".format(
                             dataset)] = np.zeros((224, 192))
 
-                mhd.append(mean_hausdorff_distance(
+                mean_mhd.append(mean_hausdorff_distance(
                     to_onehot(torch.tensor(img_gt[dataset], dtype=torch.long), num_classes=4),
                     to_onehot(torch.tensor(img_seg[dataset], dtype=torch.long), num_classes=4))[-3:].mean())
 
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
                     to_onehot(torch.tensor(img_seg[dataset]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt[dataset]).unsqueeze(0).long())
+
                 self._class_dice_gauge_on_reconstructed_images.update(np.array(metric["Dice"]))
 
-            self._per_dataset_hausdorff_distance_gauge.update(np.array(mhd))
-
-            self.custom_variables["Per Dataset Mean Hausdorff Distance"] = [
-                self._per_dataset_hausdorff_distance_gauge.compute()]
+            self._per_dataset_hausdorff_distance_gauge.update(np.array(mean_mhd))
 
             if "iSEG" in img_seg:
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
                     to_onehot(torch.tensor(img_seg["iSEG"]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt["iSEG"]).unsqueeze(0).long())
                 self._class_dice_gauge_on_reconstructed_iseg_images.update(np.array(metric["Dice"]))
+                self._hausdorff_distance_gauge_on_reconstructed_iseg_images.update(mean_hausdorff_distance(
+                    to_onehot(torch.tensor(img_gt["iSEG"], dtype=torch.long), num_classes=4),
+                    to_onehot(torch.tensor(img_seg["iSEG"], dtype=torch.long), num_classes=4))[-3:])
             else:
                 self._class_dice_gauge_on_reconstructed_iseg_images.update(np.array([0.0, 0.0, 0.0]))
+                self._hausdorff_distance_gauge_on_reconstructed_iseg_images.update(np.array([0.0, 0.0, 0.0]))
             if "MRBrainS" in img_seg:
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
                     to_onehot(torch.tensor(img_seg["MRBrainS"]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt["MRBrainS"]).unsqueeze(0).long())
                 self._class_dice_gauge_on_reconstructed_mrbrains_images.update(np.array(metric["Dice"]))
+                self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.update(mean_hausdorff_distance(
+                    to_onehot(torch.tensor(img_gt["MRBrainS"], dtype=torch.long), num_classes=4),
+                    to_onehot(torch.tensor(img_seg["MRBrainS"], dtype=torch.long), num_classes=4))[-3:])
             else:
                 self._class_dice_gauge_on_reconstructed_mrbrains_images.update(np.array([0.0, 0.0, 0.0]))
+                self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.update(np.array([0.0, 0.0, 0.0]))
             if "ABIDE" in img_seg:
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
                     to_onehot(torch.tensor(img_seg["ABIDE"]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt["ABIDE"]).unsqueeze(0).long())
                 self._class_dice_gauge_on_reconstructed_abide_images.update(np.array(metric["Dice"]))
+                self._hausdorff_distance_gauge_on_reconstructed_abide_images.update(mean_hausdorff_distance(
+                    to_onehot(torch.tensor(img_gt["ABIDE"], dtype=torch.long), num_classes=4),
+                    to_onehot(torch.tensor(img_seg["ABIDE"], dtype=torch.long), num_classes=4))[-3:])
             else:
                 self._class_dice_gauge_on_reconstructed_abide_images.update(np.array([0.0, 0.0, 0.0]))
+                self._hausdorff_distance_gauge_on_reconstructed_abide_images.update(np.array([0.0, 0.0, 0.0]))
 
             if len(img_input) == 3:
                 self.custom_variables["Reconstructed Images Histograms"] = cv2.imread(
@@ -583,6 +603,15 @@ class DualUNetTrainer(Trainer):
                 [0.0, 0.0, 0.0])
             self.custom_variables[
                 "Dice score per class per epoch on reconstructed ABIDE image"] = self._class_dice_gauge_on_reconstructed_abide_images.compute() if self._class_dice_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Hausdorff Distance per class per epoch on reconstructed iSEG image"] = self._hausdorff_distance_gauge_on_reconstructed_iseg_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Hausdorff Distance per class per epoch on reconstructed MRBrainS image"] = self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
+                [0.0, 0.0, 0.0])
+            self.custom_variables[
+                "Hausdorff Distance per class per epoch on reconstructed ABIDE image"] = self._hausdorff_distance_gauge_on_reconstructed_abide_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
                 [0.0, 0.0, 0.0])
 
             if self._valid_dice_gauge.compute() > self._previous_mean_dice:
