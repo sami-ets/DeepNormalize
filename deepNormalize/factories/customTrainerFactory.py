@@ -316,7 +316,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -744,7 +744,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -1172,7 +1172,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -1600,7 +1600,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -1989,7 +1989,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
@@ -2311,7 +2311,7 @@ class TrainerFactory(object):
                                              "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                              every=1,
                                              params={
-                                                 "title": "Hausdorff Distance score per class per epoch on reconstructed iSEG image",
+                                                 "title": "Hausdorff Distance per class per epoch on reconstructed iSEG image",
                                                  "legend": ["CSF", "GM", "WM"]}), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger,
