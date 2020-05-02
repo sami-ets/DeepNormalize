@@ -46,7 +46,7 @@ from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, 
     rebuild_image, save_rebuilt_image
 
 
-class DCGANTrainer(Trainer):
+class ResNetTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
@@ -54,8 +54,8 @@ class DCGANTrainer(Trainer):
                  normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
                  augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
                  dataset_config: dict, save_folder: str):
-        super(DCGANTrainer, self).__init__("DCGANTrainer", train_data_loader, valid_data_loader,
-                                           test_data_loader, model_trainers, run_config)
+        super(ResNetTrainer, self).__init__("ResNetTrainer", train_data_loader, valid_data_loader,
+                                            test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
         self._run_config = run_config
@@ -517,7 +517,6 @@ class DCGANTrainer(Trainer):
                             dim=1, keepdim=False),
                         num_classes=4),
                     torch.squeeze(target[IMAGE_TARGET][torch.where(target[DATASET_ID] == MRBRAINS_ID)].long(), dim=1)))
-
             else:
                 self._MRBrainS_dice_gauge.update(np.zeros((3,)))
                 self._MRBrainS_hausdorff_gauge.update(np.zeros((3,)))
@@ -604,7 +603,6 @@ class DCGANTrainer(Trainer):
         self._total_loss_test_gauge.reset()
         self._class_hausdorff_distance_gauge.reset()
         self._mean_hausdorff_distance_gauge.reset()
-        self._per_dataset_hausdorff_distance_gauge.reset()
         self._iSEG_dice_gauge.reset()
         self._MRBrainS_dice_gauge.reset()
         self._ABIDE_dice_gauge.reset()
@@ -646,6 +644,8 @@ class DCGANTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self.epoch % 20 == 0:
+            self._per_dataset_hausdorff_distance_gauge.reset()
+
             all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)
 
             img_input = rebuild_image(self._dataset_configs.keys(), all_patches, self._input_reconstructors)
@@ -668,6 +668,7 @@ class DCGANTrainer(Trainer):
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
                                               img_augmented, augmented_minus_inputs, norm_minus_augmented)
 
+            mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
                     "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
@@ -701,10 +702,17 @@ class DCGANTrainer(Trainer):
                         "Reconstructed Noise {} After Normalization".format(
                             dataset)] = np.zeros((224, 192))
 
+                mhd.append(mean_hausdorff_distance(
+                    to_onehot(torch.tensor(img_gt[dataset], dtype=torch.long), num_classes=4),
+                    to_onehot(torch.tensor(img_seg[dataset], dtype=torch.long), num_classes=4))[-3:].mean())
+
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
                     to_onehot(torch.tensor(img_seg[dataset]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt[dataset]).unsqueeze(0).long())
+
                 self._class_dice_gauge_on_reconstructed_images.update(np.array(metric["Dice"]))
+
+            self._per_dataset_hausdorff_distance_gauge.update(np.array(mhd))
 
             if "iSEG" in img_seg:
                 metric = self._model_trainers[SEGMENTER].compute_metrics(
@@ -873,6 +881,8 @@ class DCGANTrainer(Trainer):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
         self.custom_variables["Discriminator Loss"] = [self._discriminator_loss_test_gauge.compute()]
         self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
+        self.custom_variables[
+            "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
 
     def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",

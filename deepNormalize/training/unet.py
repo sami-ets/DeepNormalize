@@ -271,7 +271,6 @@ class UNetTrainer(Trainer):
     def on_epoch_begin(self):
         self._class_hausdorff_distance_gauge.reset()
         self._mean_hausdorff_distance_gauge.reset()
-        self._per_dataset_hausdorff_distance_gauge.reset()
         self._iSEG_dice_gauge.reset()
         self._MRBrainS_dice_gauge.reset()
         self._ABIDE_dice_gauge.reset()
@@ -286,6 +285,8 @@ class UNetTrainer(Trainer):
 
     def on_test_epoch_end(self):
         if self.epoch % 20 == 0:
+            self._per_dataset_hausdorff_distance_gauge.reset()
+
             all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)
 
             img_input = rebuild_image(self._dataset_configs.keys(), all_patches, self._input_reconstructors)
@@ -298,6 +299,7 @@ class UNetTrainer(Trainer):
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_seg,
                                "Segmented")
 
+            mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
                     "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
@@ -316,10 +318,16 @@ class UNetTrainer(Trainer):
                     "Reconstructed Noise {} After Normalization".format(
                         dataset)] = np.zeros((224, 192))
 
+                mhd.append(mean_hausdorff_distance(
+                    to_onehot(torch.tensor(img_gt[dataset], dtype=torch.long), num_classes=4),
+                    to_onehot(torch.tensor(img_seg[dataset], dtype=torch.long), num_classes=4))[-3:].mean())
+
                 metric = self._model_trainers[0].compute_metrics(
                     to_onehot(torch.tensor(img_seg[dataset]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt[dataset]).unsqueeze(0).long())
                 self._class_dice_gauge_on_reconstructed_images.update(np.array(metric["Dice"]))
+
+            self._per_dataset_hausdorff_distance_gauge.update(np.array(mhd))
 
             if "iSEG" in img_seg:
                 metric = self._model_trainers[0].compute_metrics(
@@ -439,6 +447,9 @@ class UNetTrainer(Trainer):
         self.custom_variables["Mean Hausdorff Distance"] = [
             self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                 [0.0])]
+
+        self.custom_variables[
+            "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
 
     def _update_image_plots(self, phase, inputs, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
