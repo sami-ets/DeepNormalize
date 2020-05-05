@@ -84,6 +84,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "UNet_home_mrbrains"
+  env: "UNet_home_mrbrains_dataset"
   offline: True
-  filename: "UNet_home_mrbrains.json"
+  filename: "UNet_home_mrbrains_dataset.json"
