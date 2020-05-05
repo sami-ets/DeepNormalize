@@ -123,6 +123,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DualUNet_home_disc_ratio_1_00"
+  env: "DualUNet_canada_dual_dataset"
   offline: True
-  filename: "DualUNet_home_disc_ratio_1_00.json"
+  filename: "DualUNet_canada_dual_dataset.json"

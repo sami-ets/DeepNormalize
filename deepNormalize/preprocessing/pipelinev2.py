@@ -66,7 +66,7 @@ class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
     def _dispatch_jobs(self, files, job_number):
         total = len(files)
         chunk_size = int(total / job_number)
-        slices = iSEGPipeline.chunks(files, chunk_size)
+        slices = self.chunks(files, chunk_size)
         jobs = []
 
         for slice in slices:

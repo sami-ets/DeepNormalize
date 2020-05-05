@@ -214,7 +214,7 @@ class DualUNetTrainer(Trainer):
             gen_pred = self._train_g(self._model_trainers[GENERATOR], inputs[AUGMENTED_INPUTS], backward=False)
 
             seg_pred, loss_S = self._train_s(self._model_trainers[SEGMENTER], gen_pred,
-                                             target[NON_AUGMENTED_TARGETS][IMAGE_TARGET], backward=False)
+                                             target[AUGMENTED_TARGETS][IMAGE_TARGET], backward=False)
 
             loss_S.mean().backward()
 

@@ -137,6 +137,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DualUNet_school_disc_ratio_1_00"
-  offline: True
-  filename: "DualUNet_school_disc_ratio_1_00.json"
+  env: "DualUNet_school_triple_dataset"
+  offline: False
+  filename: "DualUNet_school_triple_dataset.json"
