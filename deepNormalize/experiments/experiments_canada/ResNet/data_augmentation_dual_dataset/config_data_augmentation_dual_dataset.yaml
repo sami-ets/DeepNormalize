@@ -154,7 +154,7 @@ dataset:
 training:
   trainer: "ResNet"
   n_critics: 3
-  batch_size: 32
+  batch_size: 72
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: True
