@@ -145,7 +145,7 @@ dataset:
 training:
   trainer: "LSGAN"
   n_critics: 3
-  batch_size: 16
+  batch_size: 32
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=def-lombaert
-#SBATCH --gres=gpu:1              # Number of GPUs (per node)
+#SBATCH --gres=gpu:v100l:1              # Number of GPUs (per node)
 #SBATCH --cpus-per-task=8         # CPU cores/threads
 #SBATCH --mem=32G                 # memory (per node)
 #SBATCH --time=03-00:00            # time (DD-HH:MM)
