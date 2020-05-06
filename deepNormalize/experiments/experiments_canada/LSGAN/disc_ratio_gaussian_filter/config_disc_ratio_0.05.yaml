@@ -179,6 +179,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "LSGAN_school_disc_ratio_0_05"
+  env: "LSGAN_canada_gaussian_filter_disc_ratio_0_05"
   offline: True
-  filename: "LSGAN_school_disc_ratio_0_05.json"
+  filename: "LSGAN_canada_gaussian_filter_disc_ratio_0_05.json"

@@ -165,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_school_disc_ratio_0_01"
+  env: "ResNet_canada_gaussian_filter_disc_ratio_0_01"
   offline: True
-  filename: "ResNet_school_disc_ratio_0_01.json"
+  filename: "ResNet_canada_gaussian_filter_disc_ratio_0_01.json"

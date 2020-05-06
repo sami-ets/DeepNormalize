@@ -158,6 +158,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_school_data_augmentation_iseg_mrbrains_disc_ratio_0_05"
+  env: "DCGAN_canada_data_augmentation_dual_datasetdisc_ratio_0_05"
   offline: True
-  filename: "DCGAN_school_data_augmentation_iseg_mrbrains_disc_ratio_0_05.json"
+  filename: "DCGAN_canada_data_augmentation_dual_datasetdisc_ratio_0_05.json"

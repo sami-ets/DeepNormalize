@@ -172,6 +172,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_school_disc_ratio_0_75"
+  env: "DCGAN_canada_gaussian_filter_disc_ratio_0_75"
   offline: True
-  filename: "DCGAN_school_disc_ratio_0_75.json"
+  filename: "DCGAN_canada_gaussian_filter_disc_ratio_0_75.json"

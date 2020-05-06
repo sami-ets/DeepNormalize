@@ -159,21 +159,26 @@ class UNetTrainer(Trainer):
                                      target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
     def validate_step(self, inputs, target):
-        seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET])
+        inputs, target = self._sampler(inputs, target)
+
+        seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS][IMAGE_TARGET])
 
         if self.current_valid_step % 100 == 0:
-            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
-                                     target[IMAGE_TARGET].cpu().detach(),
-                                     target[DATASET_ID].cpu().detach())
+                                     target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
+                                     target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
 
     def test_step(self, inputs, target):
-        seg_pred, _ = self._test_s(self._model_trainers[0], inputs[NON_AUGMENTED_INPUTS], target[IMAGE_TARGET],
+        inputs, target = self._sampler(inputs, target)
+        target = target[AUGMENTED_TARGETS]
+
+        seg_pred, _ = self._test_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS], target[IMAGE_TARGET],
                                    self._class_dice_gauge_on_patches)
 
         if self.current_test_step % 100 == 0:
             self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target)
-            self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
+            self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(),
                                      target[DATASET_ID].cpu().detach())

@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=WGAN_canada_disc_ratio_hist_shift_0_05.out
-#SBATCH --job-name=WGAN_canada_disc_ratio_hist_shift_0_05
+#SBATCH --output=WGAN_canada_hist_shift_disc_ratio_0_05.out
+#SBATCH --job-name=WGAN_canada_hist_shift_disc_ratio_0_05
 nvidia-smi
 source /home/pld2602/venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/WGAN/disc_ratio_hist_shift/config_disc_ratio_0.05.yaml

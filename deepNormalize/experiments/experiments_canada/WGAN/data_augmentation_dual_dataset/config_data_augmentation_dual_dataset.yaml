@@ -166,6 +166,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "WGAN_canada_data_augmentation_iseg_mrbrains_disc_ratio_0_05"
+  env: "WGAN_canada_data_augmentation_dual_dataset_disc_ratio_0_05"
   offline: True
-  filename: "WGAN_canada_data_augmentation_iseg_mrbrains_disc_ratio_0_05.json"
+  filename: "WGAN_canada_data_augmentation_dual_dataset_disc_ratio_0_05.json"

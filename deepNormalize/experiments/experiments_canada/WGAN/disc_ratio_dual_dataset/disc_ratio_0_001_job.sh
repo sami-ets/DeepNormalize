@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=WGAN_canada_disc_ratio_dual_dataset_0_001.out
-#SBATCH --job-name=WGAN_canada_disc_ratio_dual_dataset_0_001
+#SBATCH --output=WGAN_canada_dual_dataset_disc_ratio_0_001.out
+#SBATCH --job-name=WGAN_canada_dual_dataset_disc_ratio_0_001
 nvidia-smi
 source /home/pld2602/venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/WGAN/disc_ratio_dual_dataset/config_disc_ratio_0.001.yaml
