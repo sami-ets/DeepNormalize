@@ -671,7 +671,8 @@ class ResNetTrainer(Trainer):
 
             if self._training_config.build_augmented_images:
                 img_augmented, augmented_minus_inputs, norm_minus_augmented = rebuild_augmented_images(
-                    self._dataset_configs.keys(), all_patches, img_input, img_norm, self._augmented_reconstructors)
+                    self._dataset_configs.keys(), all_patches, img_input, img_norm, img_seg,
+                    self._augmented_reconstructors)
 
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
                                               img_augmented, augmented_minus_inputs, norm_minus_augmented)

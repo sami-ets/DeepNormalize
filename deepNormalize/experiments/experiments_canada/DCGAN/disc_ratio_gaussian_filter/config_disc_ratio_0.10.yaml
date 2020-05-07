@@ -160,7 +160,7 @@ dataset:
 training:
   trainer: "DCGAN"
   n_critics: 3
-  batch_size: 80
+  batch_size: 72
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False

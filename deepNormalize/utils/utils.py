@@ -523,10 +523,16 @@ def rebuild_image(datasets, all_patches, reconstructor):
             reconstructor)))}
 
 
-def rebuild_augmented_images(datasets, all_patches, img_input, img_norm, augmented_reconstructors):
+def rebuild_augmented_images(datasets, all_patches, img_input, img_norm, img_seg, augmented_reconstructors):
     img_augmented = {k: v for (k, v) in zip(datasets, list(
         map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
             all_patches, augmented_reconstructors)))}
+
+    for (k, v) in zip(datasets, img_seg):
+        img_seg[k][img_seg[k] >= 1] = 1
+
+    img_augmented = {k: v for (k, v) in zip(datasets, list(
+        map(lambda image, gt: image * gt, img_augmented.values(), img_seg.values())))}
 
     augmented_minus_inputs = {k: v for (k, v) in zip(datasets, list(
         map(lambda augmented, input: augmented - input, img_augmented.values(), img_input.values())))}

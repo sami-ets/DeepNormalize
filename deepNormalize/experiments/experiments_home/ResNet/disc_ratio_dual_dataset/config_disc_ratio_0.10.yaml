@@ -128,7 +128,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 100
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -141,7 +141,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 100
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -151,7 +151,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  trainer: "ResNet"
+  trainer: "DCGAN"
   n_critics: 3
   batch_size: 15
   nb_epochs: 150

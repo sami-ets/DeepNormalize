@@ -124,7 +124,9 @@ if __name__ == '__main__':
                                                             [model_trainers[GENERATOR]],
                                                             iSEG_reconstruction,
                                                             normalize=True,
-                                                            test_image=iSEG_reconstruction._source_images[0]))
+                                                            test_image=iSEG_reconstruction._augmented_images[
+                                                                0] if iSEG_reconstruction._augmented_images is not None else
+                                                            iSEG_reconstruction._source_images[0]))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                dataset_configs['iSEG'].test_patch_size,
@@ -132,7 +134,9 @@ if __name__ == '__main__':
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]],
                                normalize_and_segment=True,
-                               test_image=iSEG_reconstruction._source_images[0]))
+                               test_image=iSEG_reconstruction._augmented_images[
+                                   0] if iSEG_reconstruction._augmented_images is not None else
+                               iSEG_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                                        dataset_configs['iSEG'].test_patch_size,
                                                        dataset_configs["iSEG"].test_step,
@@ -177,7 +181,9 @@ if __name__ == '__main__':
                                                             dataset_configs["MRBrainS"].test_step,
                                                             [model_trainers[GENERATOR]],
                                                             normalize=True,
-                                                            test_image=MRBrainS_reconstruction._source_images[0]))
+                                                            test_image=MRBrainS_reconstruction._augmented_images[
+                                                                0] if MRBrainS_reconstruction._augmented_images is not None else
+                                                            MRBrainS_reconstruction._source_images[0]))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                dataset_configs['MRBrainS'].test_patch_size,
@@ -185,7 +191,9 @@ if __name__ == '__main__':
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]],
                                normalize_and_segment=True,
-                               test_image=MRBrainS_reconstruction._source_images[0]))
+                               test_image=MRBrainS_reconstruction._augmented_images[
+                                   0] if MRBrainS_reconstruction._augmented_images is not None else
+                               MRBrainS_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                        dataset_configs['MRBrainS'].test_patch_size,
                                                        dataset_configs["MRBrainS"].test_step,
@@ -230,7 +238,9 @@ if __name__ == '__main__':
                                                             dataset_configs["ABIDE"].test_step,
                                                             [model_trainers[GENERATOR]],
                                                             normalize=True,
-                                                            test_image=ABIDE_reconstruction._source_images[0]))
+                                                            test_image=ABIDE_reconstruction._augmented_images[
+                                                                0] if ABIDE_reconstruction._augmented_images is not None else
+                                                            ABIDE_reconstruction._source_images[0]))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
                                dataset_configs['ABIDE'].test_patch_size,
@@ -238,7 +248,9 @@ if __name__ == '__main__':
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]],
                                normalize_and_segment=True,
-                               test_image=ABIDE_reconstruction._source_images[0]))
+                               test_image=ABIDE_reconstruction._augmented_images[
+                                   0] if ABIDE_reconstruction._augmented_images is not None else
+                               ABIDE_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
                                                        dataset_configs['ABIDE'].test_patch_size,
                                                        dataset_configs["ABIDE"].test_step,
