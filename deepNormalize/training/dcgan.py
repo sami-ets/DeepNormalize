@@ -383,8 +383,7 @@ class DCGANTrainer(Trainer):
 
         self._discriminator_confusion_matrix_gauge_training.update((
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
-                      num_classes=self._num_datasets),
-            disc_target))
+                      num_classes=self._num_datasets), disc_target))
 
         if self.current_train_step % 500 == 0:
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
@@ -417,8 +416,7 @@ class DCGANTrainer(Trainer):
             self._valid_d(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred,
                           target[DATASET_ID], self._discriminator_loss_valid_gauge)
 
-            seg_pred, loss_S = self._valid_s(self._model_trainers[SEGMENTER], gen_pred,
-                                             target[IMAGE_TARGET])
+            seg_pred, loss_S = self._valid_s(self._model_trainers[SEGMENTER], gen_pred, target[IMAGE_TARGET])
 
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
@@ -670,11 +668,12 @@ class DCGANTrainer(Trainer):
                                "Segmented")
 
             if self._training_config.build_augmented_images:
-                img_augmented, augmented_minus_inputs, norm_minus_augmented = rebuild_augmented_images(
-                    self._dataset_configs.keys(), all_patches, img_input, img_norm, self._augmented_reconstructors)
+                img_augmented = rebuild_image(self._dataset_configs.keys(), all_patches, self._augmented_reconstructors)
+                augmented_minus_inputs, normalized_minus_inputs = rebuild_augmented_images(img_augmented, img_input,
+                                                                                           img_gt, img_norm, img_seg)
 
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
-                                              img_augmented, augmented_minus_inputs, norm_minus_augmented)
+                                              img_augmented, augmented_minus_inputs, normalized_minus_inputs)
 
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
@@ -693,6 +692,9 @@ class DCGANTrainer(Trainer):
 
                 if self._training_config.build_augmented_images:
                     self.custom_variables[
+                        "Reconstructed Augmented Input {} Image".format(dataset)] = self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented[dataset], 0), 0), 160)
+                    self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
@@ -701,8 +703,10 @@ class DCGANTrainer(Trainer):
                         "Reconstructed Noise {} After Normalization".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(norm_minus_augmented[dataset], 0), 0), 160).squeeze(0)
+                        np.expand_dims(np.expand_dims(normalized_minus_inputs[dataset], 0), 0), 160).squeeze(0)
                 else:
+                    self.custom_variables["Reconstructed Augmented Input {} Image".format(
+                        dataset)] = np.zeros((224, 192))
                     self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = np.zeros((224, 192))

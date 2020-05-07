@@ -43,8 +43,6 @@ from deepNormalize.utils.utils import construct_double_histrogram, construct_sin
     save_augmented_rebuilt_images, rebuild_image, save_rebuilt_image
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time
 
-pynvml.nvmlInit()
-
 
 class DualUNetTrainer(Trainer):
 
@@ -426,11 +424,12 @@ class DualUNetTrainer(Trainer):
                                "Segmented")
 
             if self._training_config.build_augmented_images:
-                img_augmented, augmented_minus_inputs, norm_minus_augmented = rebuild_augmented_images(
-                    self._dataset_configs.keys(), all_patches, img_input, img_norm, self._augmented_reconstructors)
+                img_augmented = rebuild_image(self._dataset_configs.keys(), all_patches, self._augmented_reconstructors)
+                augmented_minus_inputs, normalized_minus_inputs = rebuild_augmented_images(img_augmented, img_input,
+                                                                                           img_gt, img_norm, img_seg)
 
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
-                                              img_augmented, augmented_minus_inputs, norm_minus_augmented)
+                                              img_augmented, augmented_minus_inputs, normalized_minus_inputs)
 
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
@@ -447,18 +446,23 @@ class DualUNetTrainer(Trainer):
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
 
-                if self._training_config.data_augmentation:
+                if self._training_config.build_augmented_images:
+                    self.custom_variables[
+                        "Reconstructed Augmented Input {} Image".format(dataset)] = self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented[dataset], 0), 0), 160)
                     self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(augmented_minus_inputs[dataset], 0), 0)).squeeze(0)
+                        np.expand_dims(np.expand_dims(augmented_minus_inputs[dataset], 0), 0), 160).squeeze(0)
                     self.custom_variables[
                         "Reconstructed Noise {} After Normalization".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(norm_minus_augmented[dataset], 0), 0)).squeeze(0)
+                        np.expand_dims(np.expand_dims(normalized_minus_inputs[dataset], 0), 0), 160).squeeze(0)
                 else:
+                    self.custom_variables["Reconstructed Augmented Input {} Image".format(
+                        dataset)] = np.zeros((224, 192))
                     self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = np.zeros((224, 192))
@@ -532,132 +536,132 @@ class DualUNetTrainer(Trainer):
                                                img_input[list(self._dataset_configs.keys())[0]],
                                                )).transpose((2, 0, 1))
 
-            if "ABIDE" not in self._dataset_configs.keys():
-                self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Segmented ABIDE Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground Truth ABIDE Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Input ABIDE Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Initial Noise ABIDE Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Noise ABIDE After Normalization"] = np.zeros((224, 192))
-            if "iSEG" not in self._dataset_configs.keys():
-                self.custom_variables["Reconstructed Normalized iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Segmented iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground Truth iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Input iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Initial Noise iSEG Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Noise iSEG After Normalization"] = np.zeros((224, 192))
-            if "MRBrainS" not in self._dataset_configs.keys():
-                self.custom_variables["Reconstructed Normalized MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Segmented MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Ground Truth MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Input MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Initial Noise MRBrainS Image"] = np.zeros((224, 192))
-                self.custom_variables["Reconstructed Noise MRBrainS After Normalization"] = np.zeros((224, 192))
+        if "ABIDE" not in self._dataset_configs.keys():
+            self.custom_variables["Reconstructed Normalized ABIDE Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Segmented ABIDE Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Ground Truth ABIDE Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Input ABIDE Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Initial Noise ABIDE Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Noise ABIDE After Normalization"] = np.zeros((224, 192))
+        if "iSEG" not in self._dataset_configs.keys():
+            self.custom_variables["Reconstructed Normalized iSEG Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Segmented iSEG Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Ground Truth iSEG Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Input iSEG Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Initial Noise iSEG Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Noise iSEG After Normalization"] = np.zeros((224, 192))
+        if "MRBrainS" not in self._dataset_configs.keys():
+            self.custom_variables["Reconstructed Normalized MRBrainS Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Segmented MRBrainS Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Ground Truth MRBrainS Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Input MRBrainS Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Initial Noise MRBrainS Image"] = np.zeros((224, 192))
+            self.custom_variables["Reconstructed Noise MRBrainS After Normalization"] = np.zeros((224, 192))
 
-            self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
+        self.custom_variables["Runtime"] = to_html_time(timedelta(seconds=time.time() - self._start_time))
 
-            if self._general_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["Confusion Matrix"] = np.array(
-                    np.fliplr(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
-                self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
+        if self._general_confusion_matrix_gauge._num_examples != 0:
+            self.custom_variables["Confusion Matrix"] = np.array(
+                np.fliplr(self._general_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+        else:
+            self.custom_variables["Confusion Matrix"] = np.zeros((4, 4))
 
-            if self._iSEG_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["iSEG Confusion Matrix"] = np.array(
-                    np.fliplr(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
-                self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
+        if self._iSEG_confusion_matrix_gauge._num_examples != 0:
+            self.custom_variables["iSEG Confusion Matrix"] = np.array(
+                np.fliplr(self._iSEG_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+        else:
+            self.custom_variables["iSEG Confusion Matrix"] = np.zeros((4, 4))
 
-            if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
-                    np.fliplr(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
-                self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
+        if self._MRBrainS_confusion_matrix_gauge._num_examples != 0:
+            self.custom_variables["MRBrainS Confusion Matrix"] = np.array(
+                np.fliplr(self._MRBrainS_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+        else:
+            self.custom_variables["MRBrainS Confusion Matrix"] = np.zeros((4, 4))
 
-            if self._ABIDE_confusion_matrix_gauge._num_examples != 0:
-                self.custom_variables["ABIDE Confusion Matrix"] = np.array(
-                    np.fliplr(self._ABIDE_confusion_matrix_gauge.compute().cpu().detach().numpy()))
-            else:
-                self.custom_variables["ABIDE Confusion Matrix"] = np.zeros((4, 4))
+        if self._ABIDE_confusion_matrix_gauge._num_examples != 0:
+            self.custom_variables["ABIDE Confusion Matrix"] = np.array(
+                np.fliplr(self._ABIDE_confusion_matrix_gauge.compute().cpu().detach().numpy()))
+        else:
+            self.custom_variables["ABIDE Confusion Matrix"] = np.zeros((4, 4))
 
-            self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
-                                                            ["DSC", "HD"],
-                                                            [
-                                                                self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
-                                                                    [0.0, 0.0, 0.0]),
-                                                                self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
-                                                                    [0.0, 0.0, 0.0])
-                                                            ])
+        self.custom_variables["Metric Table"] = to_html(["CSF", "Grey Matter", "White Matter"],
+                                                        ["DSC", "HD"],
+                                                        [
+                                                            self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
+                                                                [0.0, 0.0, 0.0]),
+                                                            self._class_hausdorff_distance_gauge.compute() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
+                                                                [0.0, 0.0, 0.0])
+                                                        ])
 
-            self.custom_variables[
-                "Dice score per class per epoch"] = self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Dice score per class per epoch on reconstructed image"] = self._class_dice_gauge_on_reconstructed_images.compute() if self._class_dice_gauge_on_reconstructed_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Dice score per class per epoch on reconstructed iSEG image"] = self._class_dice_gauge_on_reconstructed_iseg_images.compute() if self._class_dice_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Dice score per class per epoch on reconstructed MRBrainS image"] = self._class_dice_gauge_on_reconstructed_mrbrains_images.compute() if self._class_dice_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Dice score per class per epoch on reconstructed ABIDE image"] = self._class_dice_gauge_on_reconstructed_abide_images.compute() if self._class_dice_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Hausdorff Distance per class per epoch on reconstructed iSEG image"] = self._hausdorff_distance_gauge_on_reconstructed_iseg_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Hausdorff Distance per class per epoch on reconstructed MRBrainS image"] = self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
-            self.custom_variables[
-                "Hausdorff Distance per class per epoch on reconstructed ABIDE image"] = self._hausdorff_distance_gauge_on_reconstructed_abide_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
-                [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Dice score per class per epoch"] = self._class_dice_gauge_on_patches.compute() if self._class_dice_gauge_on_patches.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Dice score per class per epoch on reconstructed image"] = self._class_dice_gauge_on_reconstructed_images.compute() if self._class_dice_gauge_on_reconstructed_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Dice score per class per epoch on reconstructed iSEG image"] = self._class_dice_gauge_on_reconstructed_iseg_images.compute() if self._class_dice_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Dice score per class per epoch on reconstructed MRBrainS image"] = self._class_dice_gauge_on_reconstructed_mrbrains_images.compute() if self._class_dice_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Dice score per class per epoch on reconstructed ABIDE image"] = self._class_dice_gauge_on_reconstructed_abide_images.compute() if self._class_dice_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Hausdorff Distance per class per epoch on reconstructed iSEG image"] = self._hausdorff_distance_gauge_on_reconstructed_iseg_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_iseg_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Hausdorff Distance per class per epoch on reconstructed MRBrainS image"] = self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
+        self.custom_variables[
+            "Hausdorff Distance per class per epoch on reconstructed ABIDE image"] = self._hausdorff_distance_gauge_on_reconstructed_abide_images.compute() if self._hausdorff_distance_gauge_on_reconstructed_abide_images.has_been_updated() else np.array(
+            [0.0, 0.0, 0.0])
 
-            if self._valid_dice_gauge.compute() > self._previous_mean_dice:
-                new_table = to_html_per_dataset(
-                    ["CSF", "Grey Matter", "White Matter"],
-                    ["DSC", "HD"],
+        if self._valid_dice_gauge.compute() > self._previous_mean_dice:
+            new_table = to_html_per_dataset(
+                ["CSF", "Grey Matter", "White Matter"],
+                ["DSC", "HD"],
+                [
                     [
-                        [
-                            self._iSEG_dice_gauge.compute() if self._iSEG_dice_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0]),
-                            self._iSEG_hausdorff_gauge.compute() if self._iSEG_hausdorff_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0])],
-                        [
-                            self._MRBrainS_dice_gauge.compute() if self._MRBrainS_dice_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0]),
-                            self._MRBrainS_hausdorff_gauge.compute() if self._MRBrainS_hausdorff_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0])],
-                        [
-                            self._ABIDE_dice_gauge.compute() if self._ABIDE_dice_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0]),
-                            self._ABIDE_hausdorff_gauge.compute() if self._ABIDE_hausdorff_gauge.has_been_updated() else np.array(
-                                [0.0, 0.0, 0.0])]],
-                    ["iSEG", "MRBrainS", "ABIDE"])
+                        self._iSEG_dice_gauge.compute() if self._iSEG_dice_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0]),
+                        self._iSEG_hausdorff_gauge.compute() if self._iSEG_hausdorff_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0])],
+                    [
+                        self._MRBrainS_dice_gauge.compute() if self._MRBrainS_dice_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0]),
+                        self._MRBrainS_hausdorff_gauge.compute() if self._MRBrainS_hausdorff_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0])],
+                    [
+                        self._ABIDE_dice_gauge.compute() if self._ABIDE_dice_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0]),
+                        self._ABIDE_hausdorff_gauge.compute() if self._ABIDE_hausdorff_gauge.has_been_updated() else np.array(
+                            [0.0, 0.0, 0.0])]],
+                ["iSEG", "MRBrainS", "ABIDE"])
 
-                self.custom_variables["Per-Dataset Metric Table"] = new_table
-                self._previous_mean_dice = self._valid_dice_gauge.compute()
-                self._previous_per_dataset_table = new_table
-            else:
-                self.custom_variables["Per-Dataset Metric Table"] = self._previous_per_dataset_table
-            self._valid_dice_gauge.reset()
+            self.custom_variables["Per-Dataset Metric Table"] = new_table
+            self._previous_mean_dice = self._valid_dice_gauge.compute()
+            self._previous_per_dataset_table = new_table
+        else:
+            self.custom_variables["Per-Dataset Metric Table"] = self._previous_per_dataset_table
+        self._valid_dice_gauge.reset()
 
-            self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
-                                                                       ["JS Divergence"],
-                                                                       [
-                                                                           self._js_div_inputs_gauge.compute() if self._js_div_gen_gauge.has_been_updated() else np.array(
-                                                                               [0.0]),
-                                                                           self._js_div_gen_gauge.compute() if self._js_div_gen_gauge.has_been_updated() else np.array(
-                                                                               [0.0])])
-            self.custom_variables["Jensen-Shannon Divergence"] = [
-                self._js_div_inputs_gauge.compute(),
-                self._js_div_gen_gauge.compute()]
-            self.custom_variables["Mean Hausdorff Distance"] = [
-                self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
-                    [0.0])]
-            self.custom_variables[
-                "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
+        self.custom_variables["Jensen-Shannon Table"] = to_html_JS(["Input data", "Generated Data"],
+                                                                   ["JS Divergence"],
+                                                                   [
+                                                                       self._js_div_inputs_gauge.compute() if self._js_div_gen_gauge.has_been_updated() else np.array(
+                                                                           [0.0]),
+                                                                       self._js_div_gen_gauge.compute() if self._js_div_gen_gauge.has_been_updated() else np.array(
+                                                                           [0.0])])
+        self.custom_variables["Jensen-Shannon Divergence"] = [
+            self._js_div_inputs_gauge.compute(),
+            self._js_div_gen_gauge.compute()]
+        self.custom_variables["Mean Hausdorff Distance"] = [
+            self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
+                [0.0])]
+        self.custom_variables[
+            "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
 
     def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",

@@ -128,7 +128,7 @@ dataset:
     path_augmented: "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 1000
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -141,7 +141,7 @@ dataset:
     path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 1000
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]

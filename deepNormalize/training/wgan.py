@@ -21,7 +21,6 @@ import cv2
 import numpy as np
 import pynvml
 import torch
-from fastai.utils.mem import gpu_mem_get
 from ignite.metrics.confusion_matrix import ConfusionMatrix
 from kerosene.configs.configs import RunConfiguration
 from kerosene.metrics.gauges import AverageGauge
@@ -607,14 +606,10 @@ class WGANTrainer(Trainer):
         if self._current_epoch == self._training_config.patience_segmentation:
             self._model_trainers[GENERATOR].optimizer_lr = 0.001
 
-    def on_train_batch_end(self):
-        self.custom_variables["GPU {} Memory".format(self._run_config.local_rank)] = [
-            np.array(gpu_mem_get(self._run_config.local_rank))]
-
     def on_train_epoch_end(self):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_train_gauge.compute()]
-        self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
         self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_train_gauge.compute()]
+        self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
 
         if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
@@ -625,8 +620,8 @@ class WGANTrainer(Trainer):
 
     def on_valid_epoch_end(self):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]
-        self.custom_variables["Total Loss"] = [self._total_loss_valid_gauge.compute()]
         self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_valid_gauge.compute()]
+        self.custom_variables["Total Loss"] = [self._total_loss_valid_gauge.compute()]
 
     def on_test_epoch_end(self):
         if self.epoch % 20 == 0:
@@ -654,11 +649,12 @@ class WGANTrainer(Trainer):
                                "Segmented")
 
             if self._training_config.build_augmented_images:
-                img_augmented, augmented_minus_inputs, norm_minus_augmented = rebuild_augmented_images(
-                    self._dataset_configs.keys(), all_patches, img_input, img_norm, self._augmented_reconstructors)
+                img_augmented = rebuild_image(self._dataset_configs.keys(), all_patches, self._augmented_reconstructors)
+                augmented_minus_inputs, normalized_minus_inputs = rebuild_augmented_images(img_augmented, img_input,
+                                                                                           img_gt, img_norm, img_seg)
 
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
-                                              img_augmented, augmented_minus_inputs, norm_minus_augmented)
+                                              img_augmented, augmented_minus_inputs, normalized_minus_inputs)
 
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
@@ -677,6 +673,9 @@ class WGANTrainer(Trainer):
 
                 if self._training_config.build_augmented_images:
                     self.custom_variables[
+                        "Reconstructed Augmented Input {} Image".format(dataset)] = self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented[dataset], 0), 0), 160)
+                    self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
@@ -685,8 +684,10 @@ class WGANTrainer(Trainer):
                         "Reconstructed Noise {} After Normalization".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(norm_minus_augmented[dataset], 0), 0), 160).squeeze(0)
+                        np.expand_dims(np.expand_dims(normalized_minus_inputs[dataset], 0), 0), 160).squeeze(0)
                 else:
+                    self.custom_variables["Reconstructed Augmented Input {} Image".format(
+                        dataset)] = np.zeros((224, 192))
                     self.custom_variables[
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = np.zeros((224, 192))
@@ -892,8 +893,8 @@ class WGANTrainer(Trainer):
             self._class_hausdorff_distance_gauge.compute().mean() if self._class_hausdorff_distance_gauge.has_been_updated() else np.array(
                 [0.0])]
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_test_gauge.compute()]
-        self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
         self.custom_variables["Wasserstein Distance"] = [self._wasserstein_distance_test_gauge.compute()]
+        self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
         self.custom_variables[
             "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
 

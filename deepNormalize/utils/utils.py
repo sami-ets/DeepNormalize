@@ -523,24 +523,33 @@ def rebuild_image(datasets, all_patches, reconstructor):
             reconstructor)))}
 
 
-def rebuild_augmented_images(datasets, all_patches, img_input, img_norm, img_seg, augmented_reconstructors):
-    img_augmented = {k: v for (k, v) in zip(datasets, list(
-        map(lambda patches, reconstructor: reconstructor.reconstruct_from_patches_3d(patches),
-            all_patches, augmented_reconstructors)))}
+def rebuild_augmented_images(img_augmented, img_input, img_gt, img_norm, img_seg):
+    mask_gt = {}
+    mask_seg = {}
 
-    for (k, v) in zip(datasets, img_seg):
-        img_seg[k][img_seg[k] >= 1] = 1
+    for dataset in img_input.keys():
+        mask_gt[dataset] = np.zeros(img_gt[dataset].shape)
+        mask_seg[dataset] = np.zeros(img_seg[dataset].shape)
 
-    img_augmented = {k: v for (k, v) in zip(datasets, list(
-        map(lambda image, gt: image * gt, img_augmented.values(), img_seg.values())))}
+    for dataset in img_gt.keys():
+        mask_gt[dataset][img_gt[dataset] >= 1] = 1
 
-    augmented_minus_inputs = {k: v for (k, v) in zip(datasets, list(
+    for dataset in img_seg.keys():
+        mask_seg[dataset][img_seg[dataset] >= 1] = 1
+
+    img_augmented = {k: v for (k, v) in zip(img_augmented.keys(), list(
+        map(lambda image, mask: image * mask, img_augmented.values(), mask_seg.values())))}
+
+    img_input = {k: v for (k, v) in zip(img_input.keys(), list(
+        map(lambda image, mask: image * mask, img_input.values(), mask_gt.values())))}
+
+    augmented_minus_inputs = {k: v for (k, v) in zip(img_augmented.keys(), list(
         map(lambda augmented, input: augmented - input, img_augmented.values(), img_input.values())))}
 
-    norm_minus_augmented = {k: v for (k, v) in zip(datasets, list(
-        map(lambda augmented, input: augmented - input, img_norm.values(), img_augmented.values())))}
+    normalized_minus_inputs = {k: v for (k, v) in zip(img_augmented.keys(), list(
+        map(lambda normalized, input: normalized - input, img_norm.values(), img_input.values())))}
 
-    return img_augmented, augmented_minus_inputs, norm_minus_augmented
+    return augmented_minus_inputs, normalized_minus_inputs
 
 
 def save_rebuilt_image(current_epoch, save_folder, datasets, image, image_type):
