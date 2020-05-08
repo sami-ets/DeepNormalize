@@ -100,7 +100,6 @@ if __name__ == '__main__':
         if dataset_configs["iSEG"].hist_shift_augmentation:
             iSEG_augmentation_strategy = AugmentInput(
                 Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
@@ -122,7 +121,6 @@ if __name__ == '__main__':
                                                             dataset_configs['iSEG'].test_patch_size,
                                                             dataset_configs["iSEG"].test_step,
                                                             [model_trainers[GENERATOR]],
-                                                            iSEG_reconstruction,
                                                             normalize=True,
                                                             test_image=iSEG_reconstruction._augmented_images[
                                                                 0] if iSEG_reconstruction._augmented_images is not None else

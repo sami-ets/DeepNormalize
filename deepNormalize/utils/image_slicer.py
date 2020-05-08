@@ -129,7 +129,7 @@ class ImageSlicer(object):
 class ImageReconstructor(object):
 
     def __init__(self, image_size: List[int], patch_size: List[int], step: List[int],
-                 models: List[torch.nn.Module] = None, dataset: Dataset = None, normalize: bool = False,
+                 models: List[torch.nn.Module] = None, normalize: bool = False,
                  segment: bool = False, normalize_and_segment: bool = False, test_image: np.ndarray = None):
         self._patch_size = patch_size
         self._image_size = image_size
@@ -140,10 +140,6 @@ class ImageReconstructor(object):
         self._do_normalize_and_segment = normalize_and_segment
         self._transform = Compose([ToNumpyArray()])
         self._test_image = test_image
-        self._dataset = dataset
-
-        self._dataloader = DataLoader(dataset, 64, shuffle=False, num_workers=0, collate_fn=augmented_sample_collate,
-                                      drop_last=False, pin_memory=True)
 
     @staticmethod
     def _normalize(img):
