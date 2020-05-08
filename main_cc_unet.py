@@ -126,11 +126,11 @@ if __name__ == '__main__':
                                dataset_configs["iSEG"].test_step,
                                [model_trainers[0]],
                                segment=True,
-                               test_image=iSEG_reconstruction._source_images[0]))
+                               test_image=iSEG_augmentation_strategy(iSEG_reconstruction._source_images[0])))
         input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                                        dataset_configs['iSEG'].test_patch_size,
                                                        dataset_configs["iSEG"].test_step,
-                                                       test_image=iSEG_reconstruction._source_images[0]))
+                                                       test_image=iSEG_augmentation_strategy(iSEG_reconstruction._source_images[0])))
 
         gt_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
                                                     dataset_configs['iSEG'].test_patch_size,
@@ -173,11 +173,11 @@ if __name__ == '__main__':
                                dataset_configs["MRBrainS"].test_step,
                                [model_trainers[0]],
                                segment=True,
-                               test_image=MRBrainS_reconstruction._source_images[0]))
+                               test_image=MRBrainS_augmentation_strategy(MRBrainS_reconstruction._source_images[0])))
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                        dataset_configs['MRBrainS'].test_patch_size,
                                                        dataset_configs["MRBrainS"].test_step,
-                                                       test_image=MRBrainS_reconstruction._source_images[0]))
+                                                       test_image=MRBrainS_augmentation_strategy(MRBrainS_reconstruction._source_images[0])))
 
         gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                     dataset_configs['MRBrainS'].test_patch_size,
@@ -219,11 +219,11 @@ if __name__ == '__main__':
                                dataset_configs["ABIDE"].test_step,
                                [model_trainers[0]],
                                segment=True,
-                               test_image=ABIDE_reconstruction._source_images[0]))
+                               test_image=ABIDE_augmentation_strategy(ABIDE_reconstruction._source_images[0])))
         input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
                                                        dataset_configs['ABIDE'].test_patch_size,
                                                        dataset_configs["ABIDE"].test_step,
-                                                       test_image=ABIDE_reconstruction._source_images[0]))
+                                                       test_image=ABIDE_augmentation_strategy(ABIDE_reconstruction._source_images[0])))
 
         gt_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
                                                     dataset_configs['ABIDE'].test_patch_size,

@@ -177,7 +177,7 @@ class UNetTrainer(Trainer):
                                    self._class_dice_gauge_on_patches)
 
         if self.current_test_step % 100 == 0:
-            self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target)
+            self._update_histograms(inputs[AUGMENTED_INPUTS], target)
             self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
                                      target[IMAGE_TARGET].cpu().detach(),
