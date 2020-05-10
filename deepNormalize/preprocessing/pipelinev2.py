@@ -184,12 +184,10 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
 
         transform_(image)
 
-    def _min_max_scale(self, file, min=0, max=1):
+    def _min_max_scale(self, file):
         X = file[0, ...]
-        X_std = (X - X.min()) / (X.max() - X.min())
-        X_scaled = X_std * (max - min) + min
 
-        return np.expand_dims(X_scaled, 0)
+        return np.expand_dims(X / X.max(), 0)
 
     def _extract_patches(self, image, subject, modality, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
@@ -337,12 +335,10 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
 
         return transform_(file)
 
-    def _min_max_scale(self, file, min=0, max=1):
+    def _min_max_scale(self, file):
         X = file[0, ...]
-        X_std = (X - X.min()) / (X.max() - X.min())
-        X_scaled = X_std * (max - min) + min
 
-        return np.expand_dims(X_scaled, 0)
+        return np.expand_dims(X / X.max(), 0)
 
     def _extract_patches(self, image, subject, modality, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])

@@ -557,11 +557,11 @@ class ResNetMultimodalTrainer(Trainer):
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
-            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[AUGMENTED_INPUTS].shape[0],
-                                                               inputs[AUGMENTED_INPUTS].shape[1] *
-                                                               inputs[AUGMENTED_INPUTS].shape[2] *
-                                                               inputs[AUGMENTED_INPUTS].shape[3] *
-                                                               inputs[AUGMENTED_INPUTS].shape[4])
+            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[NON_AUGMENTED_INPUTS].shape[0],
+                                                               inputs[NON_AUGMENTED_INPUTS].shape[1] *
+                                                               inputs[NON_AUGMENTED_INPUTS].shape[2] *
+                                                               inputs[NON_AUGMENTED_INPUTS].shape[3] *
+                                                               inputs[NON_AUGMENTED_INPUTS].shape[4])
 
             gen_pred_reshaped = gen_pred.reshape(gen_pred.shape[0],
                                                  gen_pred.shape[1] * gen_pred.shape[2] * gen_pred.shape[3] *
@@ -582,7 +582,7 @@ class ResNetMultimodalTrainer(Trainer):
             disc_target))
 
         if self.current_test_step % 100 == 0:
-            self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
+            self._update_histograms(inputs[NON_AUGMENTED_INPUTS][:, 0, ...].unsqueeze(1), target, gen_pred[:, 0, ...].unsqueeze(1))
             self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
                                      gen_pred.cpu().detach(),
                                      seg_pred.cpu().detach(),
