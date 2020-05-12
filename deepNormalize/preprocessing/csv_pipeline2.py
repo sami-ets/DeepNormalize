@@ -1,9 +1,9 @@
 import csv
 import logging
-import re
 
 import numpy as np
 import os
+import re
 from samitorch.inputs.transformers import ToNumpyArray
 from samitorch.utils.files import extract_file_paths
 from torchvision.transforms import Compose
@@ -46,17 +46,26 @@ class ToCSViSEGPipeline(object):
 
         with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["T1", "T2", "labels", "subjects"])
+            writer.writerow(
+                ["T1", "T2", "labels", "subject", "T1_min", "T1_max", "T1_mean", "T1_std", "T2_min", "T2_max",
+                 "T2_mean", "T2_std"])
 
             for source_path, source_path_t2, target_path, subject in zip(source_paths_t1, source_paths_t2,
                                                                          target_paths, subjects):
                 self.LOGGER.info("Processing file {}".format(source_path))
 
-                csv_data = np.vstack((source_path, source_path_t2, target_path, subject))
+                t1 = ToNumpyArray()(source_path)
+                t2 = ToNumpyArray()(source_path_t2)
+
+                csv_data = np.vstack((source_path, source_path_t2, target_path, subject, str(t1.min()), str(t1.max()),
+                                      str(t1.mean()), str(t1.std()), str(t2.min()), str(t2.max()), str(t2.mean()),
+                                      str(t2.std())))
 
                 for item in range(csv_data.shape[1]):
                     writer.writerow(
-                        [csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item]])
+                        [csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item], csv_data[4][item],
+                         csv_data[5][item], csv_data[6][item], csv_data[7][item], csv_data[8][item], csv_data[9][item],
+                         csv_data[10][item], csv_data[11][item]])
             output_file.close()
 
 
@@ -90,21 +99,27 @@ class ToCSVMRBrainSPipeline(object):
         with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow(
-                ["T1_1mm", "T1", "T1_IR", "T2_FLAIR", "LabelsForTesting", "LabelsForTraining", "subjects"])
+                ["T1_1mm", "T1", "T1_IR", "T2_FLAIR", "LabelsForTesting", "LabelsForTraining", "subject", "T1_min",
+                 "T1_max", "T1_mean", "T1_std", "T2_min", "T2_max", "T2_mean", "T2_std"])
 
             for source_path_t2, source_path_t1_ir, source_path_t1_1mm, source_path_t1, target_path, target_path_training, subject in zip(
                     source_paths_t2, source_paths_t1_ir, source_paths_t1_1mm, source_paths_t1, target_paths,
                     target_paths_training, subjects):
                 self.LOGGER.info("Processing file {}".format(source_path_t1))
 
+                t1 = ToNumpyArray()(source_path_t1)
+                t2 = ToNumpyArray()(source_path_t2)
                 csv_data = np.vstack((
                     source_path_t1_1mm, source_path_t1, source_path_t1_ir, source_path_t2, target_path,
-                    target_path_training, subject))
+                    target_path_training, subject, str(t1.min()), str(t1.max()), str(t1.mean()), str(t1.std()),
+                    str(t2.min()), str(t2.max()), str(t2.mean()), str(t2.std())))
 
                 for item in range(csv_data.shape[1]):
                     writer.writerow(
                         [csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item], csv_data[4][item],
-                         csv_data[5][item], csv_data[6][item]])
+                         csv_data[5][item], csv_data[6][item], csv_data[7][item], csv_data[8][item], csv_data[9][item],
+                         csv_data[10][item], csv_data[11][item], csv_data[12][item], csv_data[13][item],
+                         csv_data[14][item]])
             output_file.close()
 
 
@@ -122,8 +137,8 @@ class ToCSVABIDEPipeline(object):
         subjects = list()
         sites = list()
         for dir in sorted(os.listdir(self._source_dir)):
-            source_paths_ = extract_file_paths(os.path.join(self._source_dir, dir, "mri/"), "real_brainmask.nii.gz")
-            target_paths_ = extract_file_paths(os.path.join(self._source_dir, dir, "mri/"), "aligned_labels.nii.gz")
+            source_paths_ = extract_file_paths(os.path.join(self._source_dir, dir, "mri", "T1"), "T1.nii.gz")
+            target_paths_ = extract_file_paths(os.path.join(self._source_dir, dir, "mri", "Labels"), "Labels.nii.gz")
             subject_ = dir
             source_paths.append(source_paths_)
             target_paths.append(target_paths_)
@@ -138,12 +153,14 @@ class ToCSVABIDEPipeline(object):
 
         with open(os.path.join(self._output_dir, output_filename), mode='a+') as output_file:
             writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["T1", "labels", "subjects", "site"])
+            writer.writerow(["T1", "labels", "subject", "site", "min", "max", "mean", "std"])
 
             for source_path, target_path, subject, site in zip(source_paths, target_paths, subjects, sites):
                 self.LOGGER.info("Processing file {}".format(source_path))
 
-                csv_data = np.vstack((source_path, target_path, subject, site))
+                image = ToNumpyArray()(source_path)
+                csv_data = np.vstack((source_path, target_path, subject, site, str(image.min()), str(image.max()),
+                                      str(image.mean(), image.std())))
 
                 for item in range(csv_data.shape[1]):
                     writer.writerow([csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item]])

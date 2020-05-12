@@ -138,7 +138,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -151,9 +151,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
                                                   np.array(natural_sort(list(train_csv["labels"]))))
@@ -266,7 +266,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -283,9 +283,9 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
             train_csv = csv_augmented["subjects"].isin(train_subjects)
         else:
-            train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+            train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -381,7 +381,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -395,10 +395,10 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
                                                   np.array(natural_sort(list(train_csv["labels"]))))
@@ -539,7 +539,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -553,10 +553,10 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -786,7 +786,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -799,9 +799,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["LabelsForTesting"]))))
@@ -893,7 +893,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -906,9 +906,9 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -1004,7 +1004,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -1018,10 +1018,10 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["LabelsForTesting"]))))
@@ -1163,7 +1163,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -1177,10 +1177,10 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -1407,7 +1407,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -1421,9 +1421,9 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["labels"]))))
@@ -1522,7 +1522,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -1537,10 +1537,10 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["labels"]))))
@@ -1748,7 +1748,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -1761,9 +1761,9 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
                                                   np.array(natural_sort(list(train_csv["labels"]))))
@@ -1876,7 +1876,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -1893,9 +1893,9 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
             train_csv = csv_augmented["subjects"].isin(train_subjects)
         else:
-            train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+            train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -1991,7 +1991,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2005,10 +2005,11 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject" \
+                                     ""].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = (np.array(natural_sort(list(train_csv[str(modality)]))),
                                                   np.array(natural_sort(list(train_csv["labels"]))))
@@ -2146,7 +2147,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
                                             step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2164,10 +2165,10 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
             train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
         else:
-            train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+            train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -2376,7 +2377,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2389,9 +2390,9 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["LabelsForTesting"]))))
@@ -2483,7 +2484,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2496,9 +2497,9 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -2594,7 +2595,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2608,10 +2609,10 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["LabelsForTesting"]))))
@@ -2751,7 +2752,7 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
                                             test_step: Union[List, Tuple] = (1, 16, 16, 16)):
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -2765,10 +2766,10 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        train_csv = csv[csv["subjects"].isin(train_subjects)]
-        valid_csv = csv[csv["subjects"].isin(valid_subjects)]
-        test_csv = csv[csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
+        valid_csv = csv[csv["subject"].isin(valid_subjects)]
+        test_csv = csv[csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(
             np.stack([natural_sort(list(train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -2973,7 +2974,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -2987,9 +2988,9 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["labels"]))))
@@ -3088,7 +3089,7 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -3103,10 +3104,10 @@ class ABIDESliceUNetDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), len(test_subjects), replace=False)]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = filtered_csv[filtered_csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = filtered_csv[filtered_csv["subject"].isin(reconstruction_subject)]
 
         train_source_paths, train_target_paths = shuffle(np.array(natural_sort(list(train_csv[str(modality)]))),
                                                          np.array(natural_sort(list(train_csv["labels"]))))
@@ -3306,7 +3307,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3321,9 +3322,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3369,7 +3370,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3385,10 +3386,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3445,7 +3446,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3461,9 +3462,9 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3512,7 +3513,7 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3528,10 +3529,10 @@ class iSEGSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3653,7 +3654,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3668,9 +3669,9 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3717,7 +3718,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3733,10 +3734,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3794,7 +3795,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3809,9 +3810,9 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3860,7 +3861,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
-        subject_dirs = np.array(csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             choices = np.random.choice(np.arange(0, len(subject_dirs)), max_subjects, replace=False)
@@ -3876,10 +3877,10 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = csv.loc[csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -3999,7 +4000,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -4015,9 +4016,9 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = filtered_csv.loc[filtered_csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
@@ -4068,7 +4069,7 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
         else:
             filtered_csv = csv
 
-        subject_dirs = np.array(filtered_csv["subjects"].drop_duplicates().tolist())
+        subject_dirs = np.array(filtered_csv["subject"].drop_duplicates().tolist())
 
         if max_subjects is not None:
             assert max_subjects <= len(subject_dirs), "Too many subjects for the selected site."
@@ -4085,10 +4086,10 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
         filtered_csv = filtered_csv.loc[filtered_csv["center_class"].isin([1, 2, 3])]
 
-        train_csv = filtered_csv[filtered_csv["subjects"].isin(train_subjects)]
-        valid_csv = filtered_csv[filtered_csv["subjects"].isin(valid_subjects)]
-        test_csv = filtered_csv[filtered_csv["subjects"].isin(test_subjects)]
-        reconstruction_csv = csv[csv["subjects"].isin(reconstruction_subject)]
+        train_csv = filtered_csv[filtered_csv["subject"].isin(train_subjects)]
+        valid_csv = filtered_csv[filtered_csv["subject"].isin(valid_subjects)]
+        test_csv = filtered_csv[filtered_csv["subject"].isin(test_subjects)]
+        reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
         if max_num_patches is not None:
             train_csv = train_csv.sample(n=max_num_patches)
