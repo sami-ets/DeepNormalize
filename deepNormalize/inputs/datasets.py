@@ -190,8 +190,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
@@ -282,7 +282,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            train_csv = csv_augmented["subjects"].isin(train_subjects)
+            train_csv = csv_augmented["subject"].isin(train_subjects)
         else:
             train_csv = csv[csv["subject"].isin(train_subjects)]
         test_csv = csv[csv["subject"].isin(test_subjects)]
@@ -443,8 +443,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
@@ -605,8 +605,8 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.stack([natural_sort(list(augmented_train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -1066,8 +1066,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
@@ -1229,8 +1229,8 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = shuffle(
                 np.stack([natural_sort(list(augmented_train_csv[str(modality)])) for modality in modalities], axis=1),
@@ -1800,8 +1800,8 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
@@ -1892,7 +1892,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            train_csv = csv_augmented["subjects"].isin(train_subjects)
+            train_csv = csv_augmented["subject"].isin(train_subjects)
         else:
             train_csv = csv[csv["subject"].isin(train_subjects)]
         test_csv = csv[csv["subject"].isin(test_subjects)]
@@ -2054,8 +2054,8 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
@@ -2164,7 +2164,7 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
+            train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
         else:
             train_csv = csv[csv["subject"].isin(train_subjects)]
         valid_csv = csv[csv["subject"].isin(valid_subjects)]
@@ -2657,8 +2657,8 @@ class MRBrainSSliceUNetDatasetFactory(AbstractDatasetFactory):
 
         if augmented_path is not None:
             csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subjects"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subjects"].isin(reconstruction_subject)]
+            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
+            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
 
             train_augmented_paths, train_augmented_target_paths = (
                 np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
