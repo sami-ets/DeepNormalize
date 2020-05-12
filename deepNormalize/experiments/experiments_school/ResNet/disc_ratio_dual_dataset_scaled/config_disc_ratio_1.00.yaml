@@ -165,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_school_dual_dataset_scaled_disc_ratio_1_00"
-  offline: True
-  filename: "ResNet_school_dual_dataset_scaled_disc_ratio_1_00.json"
+  env: "ResNet_school_dual_dataset_scaled_disc_ratio_1_00_2"
+  offline: False
+  filename: "ResNet_school_dual_dataset_scaled_disc_ratio_1_00_2.json"

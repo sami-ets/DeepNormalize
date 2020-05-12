@@ -35,7 +35,7 @@ class LogParser(object):
     def run(self, **kwargs):
         paths = pandas.read_csv(self._file_path)["paths"]
 
-        self._dispatch_jobs(paths, 4)
+        self._dispatch_jobs(paths, 8)
 
 
 if __name__ == '__main__':

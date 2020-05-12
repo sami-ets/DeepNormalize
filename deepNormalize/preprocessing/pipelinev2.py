@@ -375,7 +375,7 @@ if __name__ == "__main__":
     #              step=None, do_extract_patches=False).run()
     # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData",
     #                  step=None, do_extract_patches=False).run()
-    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_scaled/iSEG/Training",
-                 step=None, do_extract_patches=False, augment=False, do_min_max_scaling=True).run()
-    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_scaled/MRBrainS/DataNii/TrainingData",
-                     step=None, do_extract_patches=False, augment=False, do_min_max_scaling=True).run()
+    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_scaled_augmented/iSEG/Training",
+                 step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()
+    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_scaled_augmented/MRBrainS/DataNii/TrainingData",
+                     step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()

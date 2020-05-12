@@ -170,7 +170,7 @@ class ImageReconstructor(object):
                 if self._do_normalize:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
-                    p = torch.nn.functional.relu(self._models[0].forward(p)).cpu().detach().numpy()
+                    p = torch.nn.functional.sigmoid(self._models[0].forward(p)).cpu().detach().numpy()
                 elif self._do_segment:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
@@ -179,7 +179,7 @@ class ImageReconstructor(object):
                 elif self._do_normalize_and_segment:
                     if len(p.size()) < 5:
                         p = torch.unsqueeze(p, 0)
-                    p = torch.nn.functional.relu(self._models[0].forward(p))
+                    p = torch.nn.functional.sigmoid(self._models[0].forward(p))
                     p = torch.argmax(torch.nn.functional.softmax(self._models[1].forward(p), dim=1), dim=1,
                                      keepdim=True).float().cpu().detach().numpy()
 
