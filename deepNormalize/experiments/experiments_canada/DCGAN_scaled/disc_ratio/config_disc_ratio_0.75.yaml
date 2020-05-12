@@ -11,7 +11,6 @@ models:
       type: "Adam"
       params:
         lr: 0.001
-        momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"
@@ -37,7 +36,6 @@ models:
       type: "Adam"
       params:
         lr: 0.001
-        momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
@@ -98,7 +96,6 @@ models:
       type: "Adam"
       params:
         lr: 0.0001
-        momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
@@ -151,7 +148,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/project/def-lombaert/pld2602/ABIDE/5.1"
+    path: "/project/def-lombaert/pld2602/ABIDE_scaled"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150

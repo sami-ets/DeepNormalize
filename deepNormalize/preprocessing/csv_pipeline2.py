@@ -158,12 +158,14 @@ class ToCSVABIDEPipeline(object):
             for source_path, target_path, subject, site in zip(source_paths, target_paths, subjects, sites):
                 self.LOGGER.info("Processing file {}".format(source_path))
 
-                image = ToNumpyArray()(source_path)
-                csv_data = np.vstack((source_path, target_path, subject, site, str(image.min()), str(image.max()),
-                                      str(image.mean(), image.std())))
+                image = ToNumpyArray()(source_path[0])
+                csv_data = np.vstack((source_path, target_path, subject, site, (image.min()), (image.max()),
+                                      (image.mean()), (image.std())))
 
                 for item in range(csv_data.shape[1]):
-                    writer.writerow([csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item]])
+                    writer.writerow(
+                        [csv_data[0][item], csv_data[1][item], csv_data[2][item], csv_data[3][item], csv_data[4][item],
+                         csv_data[5][item], csv_data[6][item], csv_data[7][item]])
             output_file.close()
 
 
@@ -181,9 +183,12 @@ if __name__ == "__main__":
     #                       output_dir="/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData").run(
     #     "output_mrbrains_augmented_images.csv")
 
-    ToCSViSEGPipeline("/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/",
-                      output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training").run(
-        "output_iseg_augmented_images.csv")
-    ToCSVMRBrainSPipeline("/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/",
-                          output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData").run(
-        "output_mrbrains_augmented_images.csv")
+    # ToCSViSEGPipeline("/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/",
+    #                   output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training").run(
+    #     "output_iseg_augmented_images.csv")
+    # ToCSVMRBrainSPipeline("/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/",
+    #                       output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData").run(
+    #     "output_mrbrains_augmented_images.csv")
+    ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE_scaled",
+                       output_dir="/home/pierre-luc-delisle/ABIDE_scaled").run(
+        "output_abide_scaled_images.csv")

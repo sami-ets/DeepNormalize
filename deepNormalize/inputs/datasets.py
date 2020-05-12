@@ -43,6 +43,7 @@ class SliceDataset(Dataset):
         image = self._source_images[image_id]
         target = self._target_images[image_id]
 
+
         slice = patch.slice
 
         slice_x, slice_y = image[tuple(slice)], target[tuple(slice)]
