@@ -157,12 +157,12 @@ training:
   build_augmented_images: True
   data_augmentation: False
   variables:
-    disc_ratio: 0.05
+    disc_ratio: 1.00
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_home_scaled_data_augmentation_dual_dataset_disc_ratio_0_05"
+  env: "ResNet_home_scaled_data_augmentation_dual_dataset_disc_ratio_1_00"
   offline: True
-  filename: "ResNet_home_scaled_data_augmentation_dual_dataset_disc_ratio_0_05.json"
+  filename: "ResNet_home_scaled_data_augmentation_dual_dataset_disc_ratio_1_00.json"

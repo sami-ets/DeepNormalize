@@ -105,8 +105,12 @@ models:
     criterion:
       Pred Real:
         type: "NLLLoss"
+        params:
+          weight: !torch/tensor [0.5, 1, 1]
       Pred Fake:
         type: "NLLLoss"
+        params:
+          weight: !torch/tensor [0.5, 1, 1]
     metrics:
       Accuracy:
         type: "Accuracy"
