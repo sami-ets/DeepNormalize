@@ -56,7 +56,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
+    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -69,7 +69,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null

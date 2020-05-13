@@ -56,7 +56,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
+    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null

@@ -176,6 +176,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_canada_disc_ratio_0_50"
+  env: "ResNet_canada_scaled_disc_ratio_0_50"
   offline: True
-  filename: "ResNet_canada_disc_ratio_0_50.json"
+  filename: "ResNet_canada_scaled_disc_ratio_0_50.json"

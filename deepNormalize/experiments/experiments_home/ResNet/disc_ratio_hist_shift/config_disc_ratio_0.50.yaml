@@ -150,7 +150,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150
@@ -179,6 +179,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_home_iseg_mrbrain_disc_ratio_0_50"
+  env: "ResNet_home_dual_dataset_hist_shift_disc_ratio_0_50"
   offline: True
-  filename: "ResNet_home_iseg_mrbrain_disc_ratio_0_50.json"
+  filename: "ResNet_home_dual_dataset_hist_shift_disc_ratio_0_50.json"

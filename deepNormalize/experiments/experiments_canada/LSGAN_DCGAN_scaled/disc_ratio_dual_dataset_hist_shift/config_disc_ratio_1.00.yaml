@@ -157,6 +157,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "LSGAN_DCGAN_canada_dual_dataset_shist_shift_disc_ratio_1_00"
+  env: "LSGAN_DCGAN_canada_scaled_dual_dataset_shist_shift_disc_ratio_1_00"
   offline: True
-  filename: "LSGAN_DCGAN_canada_dual_dataset_shist_shift_disc_ratio_1_00.json"
+  filename: "LSGAN_DCGAN_canada_scaled_dual_dataset_shist_shift_disc_ratio_1_00.json"

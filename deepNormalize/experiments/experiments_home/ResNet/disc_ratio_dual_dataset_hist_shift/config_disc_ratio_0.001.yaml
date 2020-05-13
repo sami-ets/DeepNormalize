@@ -165,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_home_iseg_mrbrain_disc_ratio_0_001"
+  env: "ResNet_home_dual_dataset_hist_shift_disc_ratio_0_001"
   offline: True
-  filename: "ResNet_home_iseg_mrbrain_disc_ratio_0_001.json"
+  filename: "ResNet_home_dual_dataset_hist_shift_disc_ratio_0_001.json"

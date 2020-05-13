@@ -8,10 +8,9 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "Adam"
       params:
         lr: 0.001
-        momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"
@@ -34,10 +33,9 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "Adam"
       params:
         lr: 0.001
-        momentum: 0.9
         weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
@@ -87,16 +85,15 @@ models:
       in_channels: 1
       out_channels: 4
     optimizer:
-      type: "SGD"
+      type: "Adam"
       params:
         lr: 0.0001
-        momentum: 0.9
-        weight_decay: 0.001
-    scheduler:
-      type: "MultiStepLR"
+        weight_decay: 0.001    scheduler:
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [100, 125]
-        gamma: 0.1
+        factor: 0.1
+        patience: 15
+        min_lr: 0.00000001
     criterion:
       Pred Real:
         type: "MSELoss"
@@ -142,7 +139,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE_scaled"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 10
@@ -171,6 +168,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_home_disc_ratio_0_05"
+  env: "DCGAN_home_scaled_disc_ratio_0_05"
   offline: True
-  filename: "DCGAN_home_disc_ratio_0_05.json"
+  filename: "DCGAN_home_scaled_disc_ratio_0_05.json"

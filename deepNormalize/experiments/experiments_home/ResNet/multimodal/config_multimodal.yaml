@@ -85,7 +85,7 @@ models:
     type: "ResNet18"
     params:
       in_channels: 2
-      out_channels: 3
+      out_channels: 4
       num_groups: !!null
       conv_groups: 1
       width_per_group: 64
@@ -126,7 +126,7 @@ dataset:
   iSEG:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
     path_augmented: !!null
-    modalities: ["T1", "T2"]
+    modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -139,7 +139,7 @@ dataset:
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
-    modalities: ["T1", "T2_FLAIR"]
+    modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -149,9 +149,23 @@ dataset:
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
+  ABIDE:
+    path: "/mnt/md0/Data/ABIDE/"
+    path_augmented: !!null
+    modalities: "T1"
+    max_subjects: 150
+    max_num_patches: 40000
+    validation_split: 0.3
+    hist_shift_augmentation: False
+    sites: !!null
+    patch_size: !python/tuple [1, 32, 32, 32]
+    step: [1, 4, 4, 4]
+    test_patch_size: !python/tuple [1, 64, 64, 64]
+    test_step: [1, 16, 16, 16]
+    reconstruction_size: [224, 224, 192]
 
 training:
-  trainer: "ResNet_Multimodal"
+  trainer: "ResNet"
   batch_size: 15
   n_critics: 3
   nb_epochs: 150
@@ -159,12 +173,12 @@ training:
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.05
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_home_multimodal_disc_ratio_1_00"
+  env: "ResNet_home_disc_ratio_multi_modal_0_05"
   offline: True
-  filename: "ResNet_home_multimodal_disc_ratio_1_00.json"
+  filename: "ResNet_home_disc_ratio_multi_modal_0_05.json"

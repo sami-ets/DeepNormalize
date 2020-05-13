@@ -165,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "WGAN_home_iseg_mrbrain_disc_ratio_0_25"
+  env: "WGAN_home_dual_dataset_disc_ratio_0_25"
   offline: True
-  filename: "WGAN_home_iseg_mrbrain_disc_ratio_0_25.json"
+  filename: "WGAN_home_dual_dataset_disc_ratio_0_25.json"

@@ -128,7 +128,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -141,7 +141,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -150,11 +150,11 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
-    max_subjects: 5
-    max_num_patches: 100
+    max_subjects: 150
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     sites: !!null

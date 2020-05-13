@@ -100,7 +100,7 @@ training:
   batch_size: 15
   n_critics: 3
   nb_epochs: 150
-  patience_segmentation: 3
+  patience_segmentation: 0
   build_augmented_images: False
   data_augmentation: False
   variables:
@@ -110,6 +110,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DualUNet_home_disc_ratio_1_00"
+  env: "DualUNet_home_mrbrains_dataset"
   offline: True
-  filename: "DualUNet_home_disc_ratio_1_00.json"
+  filename: "DualUNet_home_mrbrains_dataset.json"

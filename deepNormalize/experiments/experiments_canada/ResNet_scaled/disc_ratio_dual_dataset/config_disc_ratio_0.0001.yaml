@@ -163,6 +163,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_canada_dual_dataset_disc_ratio_0_0001"
+  env: "ResNet_canada_scaled_dual_dataset_disc_ratio_0_0001"
   offline: True
-  filename: "ResNet_canada_dual_dataset_disc_ratio_0_0001.json"
+  filename: "ResNet_canada_scaled_dual_dataset_disc_ratio_0_0001.json"

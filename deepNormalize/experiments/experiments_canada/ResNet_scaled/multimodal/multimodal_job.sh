@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=ResNet_canada_multimodal.out
-#SBATCH --job-name=ResNet_canada_multimodal
+#SBATCH --output=ResNet_canada_scaled_multimodal.out
+#SBATCH --job-name=ResNet_canada_scaled_multimodal
 nvidia-smi
 source /home/pld2602/venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/Resnet_scaled/multimodal/config_multimodal.yaml

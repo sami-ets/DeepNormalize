@@ -93,10 +93,11 @@ models:
         momentum: 0.9
         weight_decay: 0.001
     scheduler:
-      type: "MultiStepLR"
+      type: "ReduceLROnPlateau"
       params:
-        milestones: [100, 125]
-        gamma: 0.1
+        factor: 0.1
+        patience: 15
+        min_lr: 0.00000001
     criterion:
       Pred Real:
         type: "NLLLoss"
@@ -117,7 +118,7 @@ models:
 dataset:
   iSEG:
     path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
-    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_augmented/iSEG/Training/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -130,7 +131,7 @@ dataset:
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
-    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
+    path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -158,6 +159,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_home_data_augmentation_iseg_mrbrains_disc_ratio_0_05"
+  env: "DCGAN_home_data_augmentation_dual_datasetdisc_ratio_0_05"
   offline: True
-  filename: "DCGAN_home_data_augmentation_iseg_mrbrains_disc_ratio_0_05.json"
+  filename: "DCGAN_home_data_augmentation_dual_datasetdisc_ratio_0_05.json"

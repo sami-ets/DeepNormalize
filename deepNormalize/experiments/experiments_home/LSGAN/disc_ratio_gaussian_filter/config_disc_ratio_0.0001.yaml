@@ -150,7 +150,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150
@@ -179,6 +179,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "LSGAN_home_disc_ratio_0_0001"
+  env: "LSGAN_home_gaussian_filter_disc_ratio_0_0001"
   offline: True
-  filename: "LSGAN_home_disc_ratio_0_0001.json"
+  filename: "LSGAN_home_gaussian_filter_disc_ratio_0_0001.json"

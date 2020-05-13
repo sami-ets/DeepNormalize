@@ -56,7 +56,7 @@ models:
 
 dataset:
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null

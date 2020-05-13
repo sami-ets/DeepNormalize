@@ -82,7 +82,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150
@@ -98,10 +98,10 @@ dataset:
     
 training:
   trainer: "UNet"
-  batch_size: 15
+  batch_size: 32
   n_critics: 3
   nb_epochs: 150
-  patience_segmentation: 3
+  patience_segmentation: 0
   build_augmented_images: False
   data_augmentation: False
   variables:

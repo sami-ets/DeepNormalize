@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=ResNet_canada_dual_dataset_hist_shift_disc_ratio_1_00.out
-#SBATCH --job-name=ResNet_canada_dual_dataset_hist_shift_disc_ratio_1_00
+#SBATCH --output=ResNet_canada_scaled_dual_dataset_hist_shift_disc_ratio_1_00.out
+#SBATCH --job-name=ResNet_canada_scaled_dual_dataset_hist_shift_disc_ratio_1_00
 nvidia-smi
 source /home/pld2602/venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/Resnet_scaled/disc_ratio_dual_dataset_hist_shift/config_disc_ratio_1.00.yaml

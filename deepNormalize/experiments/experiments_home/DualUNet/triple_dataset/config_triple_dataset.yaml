@@ -108,7 +108,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/home/pierre-luc-delisle/ABIDE/5.1"
+    path: "/mnt/md0/Data/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150
@@ -127,7 +127,7 @@ training:
   batch_size: 15
   n_critics: 3
   nb_epochs: 150
-  patience_segmentation: 3
+  patience_segmentation: 0
   build_augmented_images: False
   data_augmentation: False
   variables:
@@ -137,6 +137,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DualUNet_home_disc_ratio_1_00"
+  env: "DualUNet_home_triple_dataset"
   offline: True
-  filename: "DualUNet_home_disc_ratio_1_00.json"
+  filename: "DualUNet_home_triple_dataset.json"

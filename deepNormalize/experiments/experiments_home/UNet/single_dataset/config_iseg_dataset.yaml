@@ -84,6 +84,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "UNet_home_iseg_dataset"
+  env: "UNet_home_iseg"
   offline: True
-  filename: "UNet_home_iseg_dataset.json"
+  filename: "UNet_home_iseg.json"
