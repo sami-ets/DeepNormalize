@@ -618,6 +618,5 @@ if __name__ == "__main__":
     #              step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()
     # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_scaled_augmented/MRBrainS/DataNii/TrainingData",
     #                  step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()
-    ABIDEPreprocessingPipeline(args.path_abide, "/home/pierre-luc-delisle/ABIDE_scaled", step=None,
-                               do_extract_patches=False,
-                               augment=False, do_min_max_scaling=True).run()
+    ABIDEPreprocessingPipeline(args.path_abide, "/home/pierre-luc-delisle/ABIDE_scaled_augmented", step=None,
+                               do_extract_patches=False, augment=True, do_min_max_scaling=True).run()

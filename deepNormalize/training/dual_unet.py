@@ -104,7 +104,7 @@ class DualUNetTrainer(Trainer):
     def _train_g(self, G: ModelTrainer, real, backward=True):
         G.zero_grad()
 
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         loss_G = G.compute_and_update_train_loss("MSELoss", gen_pred, real)
 
@@ -118,7 +118,7 @@ class DualUNetTrainer(Trainer):
         return gen_pred
 
     def _valid_g(self, G: ModelTrainer, real):
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         G.compute_and_update_valid_loss("MSELoss", gen_pred, real)
 
@@ -128,7 +128,7 @@ class DualUNetTrainer(Trainer):
         return gen_pred
 
     def _test_g(self, G: ModelTrainer, real):
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         G.compute_and_update_test_loss("MSELoss", gen_pred, real)
 

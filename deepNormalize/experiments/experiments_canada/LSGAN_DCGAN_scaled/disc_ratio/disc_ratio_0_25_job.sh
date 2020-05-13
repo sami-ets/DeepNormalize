@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=LSGAN_DCGAN_canada_scaled_disc_ratio_0_25.out
-#SBATCH --job-name=LSGAN_DCGAN_canada_scaled_disc_ratio_0_25
+#SBATCH --output=LSGAN_DCGAN_canada_disc_ratio_0_25.out
+#SBATCH --job-name=LSGAN_DCGAN_canada_disc_ratio_0_25
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/LSGAN_DCGAN_scaled/disc_ratio/config_disc_ratio_0.25.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/LSGAN_DCGAN/disc_ratio/config_disc_ratio_0.25.yaml

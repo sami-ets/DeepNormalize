@@ -79,19 +79,11 @@ models:
           average: True
 
   Discriminator:
-    name: "ResNet3D"
-    type: "ResNet18"
+    name: "DCGAN3D"
+    type: "DCGAN"
     params:
       in_channels: 1
-      out_channels: 3
-      num_groups: !!null
-      conv_groups: 1
-      width_per_group: 64
-      padding: [1, 1, 1, 1, 1, 1]
-      activation: "ReLU"
-      zero_init_residual: False
-      replace_stride_with_dilation: !!null
-      gaussian_filter: False
+      out_channels: 4
     optimizer:
       type: "Adam"
       params:
@@ -104,9 +96,9 @@ models:
         gamma: 0.1
     criterion:
       Pred Real:
-        type: "MSELoss"
+        type: "NLLLoss"
       Pred Fake:
-        type: "MSELoss"
+        type: "NLLLoss"
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -118,6 +110,7 @@ models:
         type: "Recall"
         params:
           average: True
+
 
 dataset:
   iSEG:
