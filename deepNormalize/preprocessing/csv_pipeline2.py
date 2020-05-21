@@ -107,8 +107,8 @@ class ToCSVMRBrainSPipeline(object):
                     target_paths_training, subjects):
                 self.LOGGER.info("Processing file {}".format(source_path_t1))
 
-                t1 = ToNumpyArray()(source_path_t1)
-                t2 = ToNumpyArray()(source_path_t2)
+                t1 = ToNumpyArray()(source_path_t1[0])
+                t2 = ToNumpyArray()(source_path_t2[0])
                 csv_data = np.vstack((
                     source_path_t1_1mm, source_path_t1, source_path_t1_ir, source_path_t2, target_path,
                     target_path_training, subject, str(t1.min()), str(t1.max()), str(t1.mean()), str(t1.std()),
@@ -170,25 +170,35 @@ class ToCSVABIDEPipeline(object):
 
 
 if __name__ == "__main__":
-    # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_4/iSEG/Training/",
-    #                   output_dir="/mnt/md0/Data/Preprocessed_4/iSEG/Training").run('output.csv')
-    # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData/",
-    #                       output_dir="/mnt/md0/Data/Preprocessed_4/MRBrainS/DataNii/TrainingData").run("output,csv")
-    # ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE/5.1/", output_dir="/mnt/md0/Data/").run(
-    #     'output_mrbrains_images.csv')
-    # ToCSViSEGPipeline("/mnt/md0/Data/Preprocessed_augmented/iSEG/Training/",
-    #                   output_dir="/mnt/md0/Data/Preprocessed_augmented/iSEG/Training").run(
-    #     "output_iseg_augmented_images.csv")
-    # ToCSVMRBrainSPipeline("/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/",
-    #                       output_dir="/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData").run(
-    #     "output_mrbrains_augmented_images.csv")
+    ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE/",
+                       output_dir="/mnt/md0/Data/ABIDE/").run('output_abide_images.csv')
+    ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE_scaled/",
+                       output_dir="/mnt/md0/Data/ABIDE_scaled/").run('output_abide_images.csv')
+    ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE_scaled_augmented/",
+                       output_dir="/mnt/md0/Data/ABIDE_scaled_augmented/").run('output_abide_augmented_images.csv')
+    ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE_augmented/",
+                       output_dir="/mnt/md0/Data/ABIDE_augmented/").run('output_abide_augmented_images.csv')
 
-    # ToCSViSEGPipeline("/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/",
-    #                   output_dir="/data/users/pldelisle/datasets/Preprocessed/iSEG/Training").run(
-    #     "output_iseg_augmented_images.csv")
-    # ToCSVMRBrainSPipeline("/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/",
-    #                       output_dir="/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData").run(
-    #     "output_mrbrains_augmented_images.csv")
-    ToCSVABIDEPipeline("/home/pierre-luc-delisle/ABIDE_scaled",
-                       output_dir="/home/pierre-luc-delisle/ABIDE_scaled").run(
-        "output_abide_scaled_images.csv")
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG/Training/",
+                      output_dir="/mnt/md0/Data/iSEG/Training").run("output_iseg_images.csv")
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG_scaled/Training/",
+                      output_dir="/mnt/md0/Data/iSEG_scaled/Training").run("output_iseg_images.csv")
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG_scaled_augmented/Training/",
+                      output_dir="/mnt/md0/Data/iSEG_scaled_augmented/Training/").run(
+        "output_iseg_augmented_images.csv")
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG_augmented/Training/",
+                      output_dir="/mnt/md0/Data/iSEG_augmented/Training/").run(
+        "output_iseg_augmented_images.csv")
+
+    ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS/DataNii/TrainingData").run(
+        "output_mrbrains_images.csv")
+    ToCSVMRBrainSPipeline("/mnt/md0/Data//MRBrainS_scaled/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData").run(
+        "output_mrbrains_images.csv")
+    ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData").run(
+        "output_mrbrains_augmented_images.csv")
+    ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData").run(
+        "output_mrbrains_augmented_images.csv")

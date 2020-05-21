@@ -105,9 +105,9 @@ models:
         min_lr: 0.00000001
     criterion:
       Pred Real:
-        type: "NLLLoss"
+        type: "MSELoss"
       Pred Fake:
-        type: "NLLLoss"
+        type: "MSELoss"
     metrics:
       Accuracy:
         type: "Accuracy"

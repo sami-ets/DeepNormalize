@@ -91,7 +91,7 @@ models:
       activation: "ReLU"
       zero_init_residual: False
       replace_stride_with_dilation: !!null
-      gaussian_filter: True
+      gaussian_filter: False
     optimizer:
       type: "Adam"
       params:
@@ -151,9 +151,9 @@ dataset:
 training:
   trainer: "LSGAN"
   n_critics: 3
-  batch_size: 15
+  batch_size: 14
   nb_epochs: 150
-  patience_segmentation: 3
+  patience_segmentation: 1
   build_augmented_images: True
   data_augmentation: False
   variables:

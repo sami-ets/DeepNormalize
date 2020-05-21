@@ -8,10 +8,9 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "Adam"
       params:
-        lr: 0.001
-        momentum: 0.9
+        lr: 0.0001
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"
@@ -34,10 +33,9 @@ models:
       interpolate: True
       leaky: True
     optimizer:
-      type: "SGD"
+      type: "Adam"
       params:
-        lr: 0.001
-        momentum: 0.9
+        lr: 0.0001
         weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"

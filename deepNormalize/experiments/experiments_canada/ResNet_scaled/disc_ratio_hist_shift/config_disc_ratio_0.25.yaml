@@ -10,7 +10,7 @@ models:
     optimizer:
       type: "Adam"
       params:
-        lr: 0.001
+        lr: 0.0001
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"
@@ -35,7 +35,7 @@ models:
     optimizer:
       type: "Adam"
       params:
-        lr: 0.001
+        lr: 0.0001
         weight_decay: 0.001
     scheduler:
       type: "ReduceLROnPlateau"
@@ -106,11 +106,11 @@ models:
       Pred Real:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [0.5, 1, 1, 1]
+          weight: !torch/tensor [1, 1, 1, 0.5]
       Pred Fake:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [0.5, 1, 1, 1]
+          weight: !torch/tensor [1, 1, 1, 0.5]
     metrics:
       Accuracy:
         type: "Accuracy"

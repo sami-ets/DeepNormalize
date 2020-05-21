@@ -15,4 +15,4 @@
 #SBATCH --job-name=ResNet_canada_scaled_disc_ratio_dual_dataset_scaled_0_001
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/Resnet_scaled/disc_ratio_dual_dataset_scaled/config_disc_ratio_0.001.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/ResNet_scaled/disc_ratio_dual_dataset_scaled/config_disc_ratio_0.001.yaml

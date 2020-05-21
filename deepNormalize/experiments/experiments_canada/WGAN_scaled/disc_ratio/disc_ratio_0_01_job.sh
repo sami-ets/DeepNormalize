@@ -15,4 +15,4 @@
 #SBATCH --job-name=WGAN_canada_scaled_disc_ratio_0_01
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/WGAN_scaleddisc_ratio/config_disc_ratio_0.01.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/WGAN_scaled/disc_ratio/config_disc_ratio_0.01.yaml

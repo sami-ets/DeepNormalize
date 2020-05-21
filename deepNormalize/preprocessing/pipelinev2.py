@@ -500,15 +500,15 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         gm_labels = self._remap_labels(os.path.join(output_dir, "gm_mask.mgz"), 1, 2)
         wm_labels = self._remap_labels(os.path.join(output_dir, "wm_mask.mgz"), 1, 3)
 
-        merged = self._merge_volumes(gm_labels, wm_labels, csf_labels)
-
-        brainmask = ToNumpyArray()(os.path.join(input_dir, "brainmask.mgz"))
-        T1 = ApplyMask(merged)(brainmask)
-
-        csf = brainmask - T1
-        csf[csf != 0] = 1
-
-        csf_labels = csf_labels + csf
+        # merged = self._merge_volumes(gm_labels, wm_labels, csf_labels)
+        #
+        # brainmask = ToNumpyArray()(os.path.join(input_dir, "brainmask.mgz"))
+        # T1 = ApplyMask(merged)(brainmask)
+        #
+        # csf = brainmask - T1
+        # csf[csf != 0] = 1
+        #
+        # csf_labels = csf_labels + csf
 
         merged = self._merge_volumes(gm_labels, wm_labels, csf_labels)
 
@@ -602,21 +602,63 @@ if __name__ == "__main__":
     parser.add_argument('--path-abide', type=str, help='Path to the ABIDE directory.', required=True)
     args = parser.parse_args()
 
-    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_4/iSEG/Training",
-    #              step=(1, 4, 4, 4)).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_4/MRBrainS/DataNii/TrainingData",
-    #                  step=(1, 4, 4, 4)).run()
-    # iSEGPipeline(args.path_iseg, "/data/users/pldelisle/datasets/Preprocessed_8/iSEG/Training",
-    #              step=(1, 8, 8, 8)).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/data/users/pldelisle/datasets/Preprocessed_8/MRBrainS/DataNii/TrainingData",
-    #                  step=(1, 8, 8, 8)).run()
-    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed/iSEG/Training",
-    #              step=None, do_extract_patches=False).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData",
-    #                  step=None, do_extract_patches=False).run()
-    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/Preprocessed_scaled_augmented/iSEG/Training",
-    #              step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/Preprocessed_scaled_augmented/MRBrainS/DataNii/TrainingData",
-    #                  step=None, do_extract_patches=False, augment=True, do_min_max_scaling=True).run()
-    ABIDEPreprocessingPipeline(args.path_abide, "/home/pierre-luc-delisle/ABIDE/", step=None,
-                               do_extract_patches=False, augment=False, do_min_max_scaling=False).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=False,
+    #              do_min_max_scaling=False).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=False,
+    #              do_min_max_scaling=True).run()
+    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_augmented/iSEG/Training",
+                 step=None,
+                 do_extract_patches=False,
+                 augment=True,
+                 do_min_max_scaling=False).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=True,
+    #              do_min_max_scaling=True).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=False,
+    #                  do_min_max_scaling=False).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=False,
+    #                  do_min_max_scaling=True).run()
+    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData",
+                     step=None,
+                     do_extract_patches=False,
+                     augment=True,
+                     do_min_max_scaling=False).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=True,
+    #                  do_min_max_scaling=True).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=False,
+    #                            do_min_max_scaling=False).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_scaled/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=False,
+    #                            do_min_max_scaling=True).run()
+    ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_augmented/",
+                               step=None,
+                               do_extract_patches=False,
+                               augment=True,
+                               do_min_max_scaling=False).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_scaled_augmented/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=True,
+    #                            do_min_max_scaling=True).run()
