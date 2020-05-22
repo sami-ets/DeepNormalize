@@ -17,7 +17,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -56,7 +56,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed/iSEG/Training/"
+    path: "/project/def-lombaert/pld2602/Data/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -69,7 +69,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Data/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null

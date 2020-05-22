@@ -15,7 +15,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       MSELoss:
@@ -41,7 +41,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -77,12 +77,12 @@ models:
         type: "Recall"
         params:
           average: True
-
+  Discriminator:
     name: "DCGAN3D"
     type: "DCGAN"
     params:
       in_channels: 1
-      out_channels: 4
+      out_channels: 3
     optimizer:
       type: "Adam"
       params:
@@ -91,17 +91,17 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       Pred Real:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [1, 1, 1, 0.5]
+          weight: !torch/tensor [1, 1, 0.5]
       Pred Fake:
         type: "NLLLoss"
         params:
-          weight: !torch/tensor [1, 1, 1, 0.5]
+          weight: !torch/tensor [1, 1, 0.5]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -116,9 +116,9 @@ models:
 
 dataset:
   iSEG:
-    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/iSEG/Training/"
+    path: "/project/def-lombaert/pld2602/Data/iSEG_scaled/Training/"
     path_augmented: !!null
-    modalities: "T1"
+    modalities: ["T1", "T2"]
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -129,9 +129,9 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/project/def-lombaert/pld2602/Preprocessed_scaled/MRBrainS/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Data/MRBrainS_scaled/DataNii/TrainingData/"
     path_augmented: !!null
-    modalities: "T1"
+    modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
     max_num_patches: 40000
     validation_split: 0.3
@@ -141,20 +141,6 @@ dataset:
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
-  ABIDE:
-    path: "/project/def-lombaert/pld2602/ABIDE_scaled"
-    path_augmented: !!null
-    modalities: "T1"
-    max_subjects: 150
-    max_num_patches: 40000
-    validation_split: 0.3
-    hist_shift_augmentation: False
-    sites: !!null
-    patch_size: !python/tuple [1, 32, 32, 32]
-    step: [1, 4, 4, 4]
-    test_patch_size: !python/tuple [1, 64, 64, 64]
-    test_step: [1, 16, 16, 16]
-    reconstruction_size: [224, 224, 192]
 
 training:
   trainer: "DCGAN"
