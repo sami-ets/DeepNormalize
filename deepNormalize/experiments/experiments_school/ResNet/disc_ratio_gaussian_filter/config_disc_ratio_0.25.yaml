@@ -16,7 +16,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       MSELoss:
@@ -43,7 +43,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -103,7 +103,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       Pred Real:
@@ -124,7 +124,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/"
+    path: "/data/users/pldelisle/datasets/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -137,7 +137,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/data/users/pldelisle/datasets/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -149,25 +149,11 @@ dataset:
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
-  ABIDE:
-    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
-    path_augmented: !!null
-    modalities: "T1"
-    max_subjects: 150
-    max_num_patches: 40000
-    validation_split: 0.3
-    hist_shift_augmentation: False
-    sites: !!null
-    patch_size: !python/tuple [1, 32, 32, 32]
-    step: [1, 4, 4, 4]
-    test_patch_size: !python/tuple [1, 64, 64, 64]
-    test_step: [1, 16, 16, 16]
-    reconstruction_size: [224, 224, 192]
 
 training:
   trainer: "ResNet"
   n_critics: 3
-  batch_size: 22
+  batch_size: 21
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False
@@ -179,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_school_disc_ratio_0_25"
+  env: "ResNet_school_gaussian_filter_disc_ratio_0_25"
   offline: True
-  filename: "ResNet_school_disc_ratio_0_25.json"
+  filename: "ResNet_school_gaussian_filter_disc_ratio_0_25.json"

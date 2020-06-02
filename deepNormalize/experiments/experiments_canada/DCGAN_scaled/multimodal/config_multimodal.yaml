@@ -81,7 +81,7 @@ models:
     name: "DCGAN3D"
     type: "DCGAN"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 3
     optimizer:
       type: "Adam"
@@ -143,7 +143,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  trainer: "DCGAN"
+  trainer: "DCGAN_Multimodal"
   batch_size: 72
   n_critics: 3
   nb_epochs: 150
@@ -151,7 +151,7 @@ training:
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio: 1.00
+    disc_ratio: 1.0
     seg_ratio: 1.0
 
 visdom:

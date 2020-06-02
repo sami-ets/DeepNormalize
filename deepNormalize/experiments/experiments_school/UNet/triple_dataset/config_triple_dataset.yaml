@@ -17,7 +17,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -56,7 +56,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/"
+    path: "/data/users/pldelisle/datasets/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -69,7 +69,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/data/users/pldelisle/datasets/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -82,7 +82,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
   ABIDE:
-    path: "/data/users/pldelisle/datasets/ABIDE/freesurfer"
+    path: "/data/users/pldelisle/datasets/ABIDE/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 150
@@ -101,7 +101,7 @@ training:
   batch_size: 32
   n_critics: 3
   nb_epochs: 150
-  patience_segmentation: 3
+  patience_segmentation: 0
   build_augmented_images: False
   data_augmentation: False
   variables:

@@ -29,7 +29,7 @@ models:
     name: "UNet3D"
     type: "UNet3D"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 4
       interpolate: True
       leaky: True
@@ -83,7 +83,7 @@ models:
     name: "DCGAN3D"
     type: "DCGAN"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 3
     optimizer:
       type: "Adam"
@@ -142,7 +142,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  trainer: "LSGAN"
+  trainer: "LSGAN_Multimodal"
   batch_size: 72
   n_critics: 3
   nb_epochs: 150

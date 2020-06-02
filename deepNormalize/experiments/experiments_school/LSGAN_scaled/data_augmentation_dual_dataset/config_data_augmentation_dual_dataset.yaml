@@ -15,7 +15,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       MSELoss:
@@ -41,7 +41,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -91,7 +91,7 @@ models:
       activation: "ReLU"
       zero_init_residual: False
       replace_stride_with_dilation: !!null
-      gaussian_filter: False
+      gaussian_filter: True
     optimizer:
       type: "Adam"
       params:
@@ -100,7 +100,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       Pred Real:
@@ -121,8 +121,8 @@ models:
 
 dataset:
   iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed_scaled/iSEG/Training/"
-    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_scaled_augmented/iSEG/Training/"
+    path: "/data/users/pldelisle/datasets/iSEG_scaled/Training"
+    path_augmented: "/data/users/pldelisle/datasets/iSEG_scaled_augmented/Training/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -134,8 +134,8 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed_scaled/MRBrainS/DataNii/TrainingData/"
-    path_augmented: "/data/users/pldelisle/datasets/Preprocessed_scaled_augmented/MRBrainS/DataNii/TrainingData/"
+    path: "/data/users/pldelisle/datasets/MRBrainS_scaled/DataNii/TrainingData"
+    path_augmented: "/data/users/pldelisle/datasets/MRBrainS_scaled_augmented/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null
     max_num_patches: 40000
@@ -151,18 +151,18 @@ dataset:
 training:
   trainer: "LSGAN"
   n_critics: 3
-  batch_size: 14
+  batch_size: 21
   nb_epochs: 150
-  patience_segmentation: 1
+  patience_segmentation: 3
   build_augmented_images: True
   data_augmentation: False
   variables:
-    disc_ratio: 1.00
+    disc_ratio: 1.0
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
   env: "LSGAN_school_data_augmentation_dual_dataset_disc_ratio_1_00"
-  offline: False
+  offline: True
   filename: "LSGAN_school_data_augmentation_dual_dataset_disc_ratio_1_00.json"

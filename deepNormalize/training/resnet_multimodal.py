@@ -210,7 +210,7 @@ class ResNetMultimodalTrainer(Trainer):
     def _train_g(self, G: ModelTrainer, real, backward=True):
         G.zero_grad()
 
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         loss_G = G.compute_and_update_train_loss("MSELoss", gen_pred, real)
 
@@ -224,7 +224,7 @@ class ResNetMultimodalTrainer(Trainer):
         return gen_pred
 
     def _valid_g(self, G: ModelTrainer, real):
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         G.compute_and_update_valid_loss("MSELoss", gen_pred, real)
 
@@ -234,7 +234,7 @@ class ResNetMultimodalTrainer(Trainer):
         return gen_pred
 
     def _test_g(self, G: ModelTrainer, real):
-        gen_pred = torch.nn.functional.relu(G.forward(real))
+        gen_pred = torch.nn.functional.sigmoid(G.forward(real))
 
         G.compute_and_update_test_loss("MSELoss", gen_pred, real)
 
@@ -557,11 +557,11 @@ class ResNetMultimodalTrainer(Trainer):
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
-            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[NON_AUGMENTED_INPUTS].shape[0],
-                                                               inputs[NON_AUGMENTED_INPUTS].shape[1] *
-                                                               inputs[NON_AUGMENTED_INPUTS].shape[2] *
-                                                               inputs[NON_AUGMENTED_INPUTS].shape[3] *
-                                                               inputs[NON_AUGMENTED_INPUTS].shape[4])
+            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[AUGMENTED_INPUTS].shape[0],
+                                                               inputs[AUGMENTED_INPUTS].shape[1] *
+                                                               inputs[AUGMENTED_INPUTS].shape[2] *
+                                                               inputs[AUGMENTED_INPUTS].shape[3] *
+                                                               inputs[AUGMENTED_INPUTS].shape[4])
 
             gen_pred_reshaped = gen_pred.reshape(gen_pred.shape[0],
                                                  gen_pred.shape[1] * gen_pred.shape[2] * gen_pred.shape[3] *

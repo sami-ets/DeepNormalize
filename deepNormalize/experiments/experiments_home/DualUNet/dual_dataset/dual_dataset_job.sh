@@ -15,4 +15,4 @@
 #SBATCH --job-name=DualUNet_home_dual_dataset
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /mnt/md0/Data/code/deepNormalizev5/main_cc.py --config=/mnt/md0/Research/code/deepNormalizev5/deepNormalize/experiments/experiments_home/DualUNet/dual_dataset/config_dual_dataset.yaml
+CUDA_VISIBLE_DEVICES=0 python /mnt/md0/Data/code/deepNormalizev5/main_cc.py --config=/mnt/md0/Research/code/deepNormalizev5/deepNormalize/experiments/experiments_home/DualUNet/dual_dataset/config_multimodal.yaml

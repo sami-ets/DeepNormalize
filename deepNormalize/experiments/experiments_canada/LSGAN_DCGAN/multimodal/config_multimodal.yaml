@@ -84,7 +84,7 @@ models:
     name: "DCGAN3D"
     type: "DCGAN"
     params:
-      in_channels: 1
+      in_channels: 2
       out_channels: 3
     optimizer:
       type: "SGD"
@@ -144,7 +144,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  trainer: "LSGAN"
+  trainer: "LSGAN_Multimodal"
   batch_size: 72
   n_critics: 3
   nb_epochs: 150

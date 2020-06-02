@@ -148,7 +148,7 @@ dataset:
     reconstruction_size: [256, 256, 192]
 
 training:
-  trainer: "LSGAN"
+  trainer: "LSGAN_Multimodal"
   batch_size: 72
   n_critics: 3
   nb_epochs: 150

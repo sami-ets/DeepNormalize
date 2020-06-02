@@ -16,7 +16,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       MSELoss:
@@ -43,7 +43,7 @@ models:
       type: "ReduceLROnPlateau"
       params:
         factor: 0.1
-        patience: 15
+        patience: 7
         min_lr: 0.00000001
     criterion:
       DiceLoss:
@@ -103,7 +103,7 @@ models:
     scheduler:
       type: "MultiStepLR"
       params:
-        milestones: [100, 125]
+        milestones: [50, 75]
         gamma: 0.1
     criterion:
       Pred Real:
@@ -124,7 +124,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/data/users/pldelisle/datasets/Preprocessed/iSEG/Training/"
+    path: "/data/users/pldelisle/datasets/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -137,7 +137,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/data/users/pldelisle/datasets/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/data/users/pldelisle/datasets/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -153,7 +153,7 @@ dataset:
 training:
   trainer: "WGAN"
   n_critics: 3
-  batch_size: 22
+  batch_size: 21
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False
@@ -165,6 +165,6 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "WGAN_school_iseg_mrbrain_disc_ratio_0_10"
+  env: "WGAN_school_dual_dataset_hist_shift_disc_ratio_0_10"
   offline: True
-  filename: "WGAN_school_iseg_mrbrain_disc_ratio_0_10.json"
+  filename: "WGAN_school_dual_dataset_hist_shift_disc_ratio_0_10.json"

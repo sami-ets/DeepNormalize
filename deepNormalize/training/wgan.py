@@ -389,7 +389,7 @@ class WGANTrainer(Trainer):
 
             self._valid_d(
                 self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS], gen_pred.detach(),
-                target[NON_AUGMENTED_TARGETS][DATASET_ID], self._wasserstein_distance_valid_gauge)
+                target[DATASET_ID], self._wasserstein_distance_valid_gauge)
 
             seg_pred, _ = self._valid_s(self._model_trainers[SEGMENTER], inputs[NON_AUGMENTED_INPUTS],
                                         target[IMAGE_TARGET])

@@ -14,5 +14,5 @@
 #SBATCH --output=LSGAN_school_scaled_dual_dataset_disc_ratio_1_00.out
 #SBATCH --job-name=LSGAN_school_scaled_dual_dataset_disc_ratio_1_00
 nvidia-smi
-source /school/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /mnt/md0/Data/code/deepNormalizev5/main_cc.py --config=/mnt/md0/Research/code/deepNormalizev5/deepNormalize/experiments/experiments_school/LSGAN_scaled/disc_ratio_dual_dataset/config_disc_ratio_1.00.yaml
+source /home/pld2602/venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_school/LSGAN_scaled/disc_ratio_dual_dataset/config_disc_ratio_1.00.yaml

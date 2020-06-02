@@ -14,12 +14,13 @@ class DCGAN(nn.Module):
                 block.append(nn.BatchNorm3d(out_filters, 0.8))
             return block
 
-        gaussian_weights = torch.distributions.normal.Normal(1, 1).sample((1, 1, 3, 3, 3))
+        gaussian_weights = torch.distributions.normal.Normal(1, 1).sample((1, 1, 5, 5, 5))
         gaussian_weights = gaussian_weights / torch.sum(gaussian_weights)
 
-        self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=3, stride=1, padding=0,
+        if self._has_gaussian_filter:
+            self._gaussian_filter = torch.nn.Conv3d(in_channels, in_channels, kernel_size=5, stride=1, padding=0,
                                                 bias=False)
-        self._gaussian_filter.weight.data = gaussian_weights
+            self._gaussian_filter.weight.data = gaussian_weights
 
         self._layer_1 = nn.Sequential(*discriminator_block(in_channels, 16, bn=False))
 
