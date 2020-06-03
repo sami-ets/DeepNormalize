@@ -82,7 +82,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
+    path: "/mnt/md0/Data/iSEG/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null

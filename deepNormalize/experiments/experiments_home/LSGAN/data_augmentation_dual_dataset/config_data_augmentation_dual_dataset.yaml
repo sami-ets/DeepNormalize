@@ -124,7 +124,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/Preprocessed/iSEG/Training/"
+    path: "/mnt/md0/Data/iSEG/Training/"
     path_augmented: "/mnt/md0/Data/Preprocessed_agumented/iSEG/Training/"
     modalities: "T1"
     max_subjects: !!null
@@ -137,7 +137,7 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/MRBrainS/DataNii/TrainingData/"
     path_augmented: "/mnt/md0/Data/Preprocessed_augmented/MRBrainS/DataNii/TrainingData/"
     modalities: "T1"
     max_subjects: !!null

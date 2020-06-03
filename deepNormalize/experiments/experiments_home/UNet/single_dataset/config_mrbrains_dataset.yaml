@@ -56,7 +56,7 @@ models:
 
 dataset:
   MRBrainS:
-    path: "/mnt/md0/Data/Preprocessed/MRBrainS/DataNii/TrainingData/"
+    path: "/mnt/md0/Data/MRBrainS/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
