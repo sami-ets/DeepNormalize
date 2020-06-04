@@ -247,41 +247,41 @@ def construct_triple_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, in
                                                               figsize=(12, 10))
 
     _, bins, _ = ax1.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=128,
-                          density=False, label="iSEG")
+                          density=True, label="iSEG")
     ax1.set_xlabel("Intensity")
     ax1.set_ylabel("Frequency")
     ax1.set_title("Generated iSEG Histogram")
     ax1.legend()
 
     _ = ax2.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=bins,
-                 density=False, label="MRBrainS")
+                 density=True, label="MRBrainS")
     ax2.set_xlabel("Intensity")
     ax2.set_ylabel("Frequency")
     ax2.set_title("Generated MRBrainS Histogram")
     ax2.legend()
 
     _ = ax3.hist(gen_pred_abide[gen_pred_abide > 0].flatten(), bins=bins,
-                 density=False, label="ABIDE")
+                 density=True, label="ABIDE")
     ax3.set_xlabel("Intensity")
     ax3.set_ylabel("Frequency")
     ax3.set_title("Generated ABIDE Histogram")
     ax3.legend()
 
     _, bins, _ = ax4.hist(input_iseg[input_iseg > 0].flatten(), bins=128,
-                          density=False, label="iSEG")
+                          density=True, label="iSEG")
     ax4.set_xlabel("Intensity")
     ax4.set_ylabel("Frequency")
     ax4.set_title("Input iSEG Histogram")
     ax4.legend()
     _ = ax5.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=bins,
-                 density=False, label="MRBrainS")
+                 density=True, label="MRBrainS")
     ax5.set_xlabel("Intensity")
     ax5.set_ylabel("Frequency")
     ax5.set_title("Input MRBrainS Histogram")
     ax5.legend()
 
     _ = ax6.hist(input_abide[input_abide > 0].flatten(), bins=bins,
-                 density=False, label="ABIDE")
+                 density=True, label="ABIDE")
     ax6.set_xlabel("Intensity")
     ax6.set_ylabel("Frequency")
     ax6.set_title("Input ABIDE Histogram")
@@ -302,28 +302,28 @@ def construct_double_histrogram(gen_pred_iseg, input_iseg, gen_pred_mrbrains, in
                                                   figsize=(12, 10))
 
     _, bins, _ = ax1.hist(input_iseg[input_iseg > 0].flatten(), bins=128,
-                          density=False, label="iSEG")
+                          density=True, label="iSEG")
     ax1.set_xlabel("Intensity")
     ax1.set_ylabel("Frequency")
     ax1.set_title("Input iSEG Histogram")
     ax1.legend()
 
     _ = ax3.hist(gen_pred_iseg[gen_pred_iseg > 0].flatten(), bins=bins,
-                 density=False, label="iSEG")
+                 density=True, label="iSEG")
     ax3.set_xlabel("Intensity")
     ax3.set_ylabel("Frequency")
     ax3.set_title("Generated iSEG Histogram")
     ax3.legend()
 
     _, bins, _ = ax2.hist(input_mrbrains[input_mrbrains > 0].flatten(), bins=128,
-                          density=False, label="MRBrainS")
+                          density=True, label="MRBrainS")
     ax2.set_xlabel("Intensity")
     ax2.set_ylabel("Frequency")
     ax2.set_title("Input MRBrainS Histogram")
     ax2.legend()
 
     _ = ax4.hist(gen_pred_mrbrains[gen_pred_mrbrains > 0].flatten(), bins=bins,
-                 density=False, label="MRBrainS")
+                 density=True, label="MRBrainS")
     ax4.set_xlabel("Intensity")
     ax4.set_ylabel("Frequency")
     ax4.set_title("Generated MRBrainS Histogram")
@@ -344,14 +344,14 @@ def construct_single_histogram(gen_pred, input):
                                     figsize=(12, 10))
 
     _, bins, _ = ax1.hist(input[input > 0].flatten(), bins=128,
-                          density=False, label="Input")
+                          density=True, label="Input")
     ax1.set_xlabel("Intensity")
     ax1.set_ylabel("Frequency")
     ax1.set_title("Input Histogram")
     ax1.legend()
 
     _ = ax2.hist(gen_pred[gen_pred > 0].flatten(), bins=bins,
-                 density=False, label="iSEG")
+                 density=True, label="iSEG")
     ax2.set_xlabel("Intensity")
     ax2.set_ylabel("Frequency")
     ax2.set_title("Generated Histogram")
@@ -382,90 +382,140 @@ def construct_class_histogram(inputs, target, gen_pred):
                                                                           figsize=(12, 10))
 
     _, bins, _ = ax1.hist(iseg_gen_pred[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_gen_pred[torch.where(iseg_targets == 0)].min().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 0)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_gen_pred[torch.where(iseg_targets == 0)].max().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 0)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax1.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax1.hist(abide_gen_pred[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax1.set_xlabel("Intensity")
-    ax1.set_ylabel("Frequency")
+    ax1.set_ylabel("Normalized voxel count")
     ax1.set_title("Generated Background Histogram")
     ax1.legend()
 
     _, bins, _ = ax2.hist(iseg_gen_pred[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_gen_pred[torch.where(iseg_targets == 1)].min().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 1)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_gen_pred[torch.where(iseg_targets == 1)].max().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 1)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax2.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax2.hist(abide_gen_pred[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax2.set_xlabel("Intensity")
-    ax2.set_ylabel("Frequency")
+    ax2.set_ylabel("Normalized voxel count")
     ax2.set_title("Generated CSF Histogram")
     ax2.legend()
 
     _, bins, _ = ax3.hist(iseg_gen_pred[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_gen_pred[torch.where(iseg_targets == 2)].min().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 2)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_gen_pred[torch.where(iseg_targets == 2)].max().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 2)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax3.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax3.hist(abide_gen_pred[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax3.set_xlabel("Intensity")
-    ax3.set_ylabel("Frequency")
+    ax3.set_ylabel("Normalized voxel count")
     ax3.set_title("Generated Gray Matter Histogram")
     ax3.legend()
 
     _, bins, _ = ax4.hist(iseg_gen_pred[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_gen_pred[torch.where(iseg_targets == 3)].min().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 3)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_gen_pred[torch.where(iseg_targets == 3)].max().cpu().detach().numpy(),
+                                            mrbrains_gen_pred[
+                                                torch.where(mrbrains_targets == 3)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax4.hist(mrbrains_gen_pred[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax4.hist(abide_gen_pred[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax4.set_xlabel("Intensity")
-    ax4.set_ylabel("Frequency")
+    ax4.set_ylabel("Normalized voxel count")
     ax4.set_title("Generated White Matter Histogram")
     ax4.legend()
 
-    _, bins, _ = ax5.hist(iseg_inputs[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+    ax5.legend()
+    _, bins, _ = ax5.hist(iseg_inputs[torch.where(iseg_targets == 0)].cpu().detach().numpy(), bins=128, range=(
+        (np.minimum(iseg_inputs[torch.where(iseg_targets == 0)].min().cpu().detach().numpy(),
+                    mrbrains_inputs[
+                        torch.where(mrbrains_targets == 0)].min().cpu().detach().numpy()),
+         np.maximum(iseg_inputs[torch.where(iseg_targets == 0)].max().cpu().detach().numpy(),
+                    mrbrains_inputs[
+                        torch.where(mrbrains_targets == 0)].max().cpu().detach().numpy()))),
+                          density=True, label="iSEG")
     _ = ax5.hist(mrbrains_inputs[torch.where(mrbrains_targets == 0)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax5.hist(abide_inputs[torch.where(abide_targets == 0)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax5.set_xlabel("Intensity")
-    ax5.set_ylabel("Frequency")
+    ax5.set_ylabel("Normalized voxel count")
     ax5.set_title("Input Background Histogram")
     ax5.legend()
 
     _, bins, _ = ax6.hist(iseg_inputs[torch.where(iseg_targets == 1)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=((np.minimum(iseg_inputs[torch.where(iseg_targets == 1)].min().cpu().detach().numpy(),
+                                             mrbrains_inputs[
+                                                 torch.where(mrbrains_targets == 1)].min().cpu().detach().numpy()),
+                                  np.maximum(iseg_inputs[torch.where(iseg_targets == 1)].max().cpu().detach().numpy(),
+                                             mrbrains_inputs[
+                                                 torch.where(mrbrains_targets == 1)].max().cpu().detach().numpy()))),
+                          density=True, label="iSEG")
     _ = ax6.hist(mrbrains_inputs[torch.where(mrbrains_targets == 1)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax6.hist(abide_inputs[torch.where(abide_targets == 1)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax6.set_xlabel("Intensity")
-    ax6.set_ylabel("Frequency")
+    ax6.set_ylabel("Normalized voxel count")
     ax6.set_title("Input CSF Histogram")
     ax6.legend()
 
     _, bins, _ = ax7.hist(iseg_inputs[torch.where(iseg_targets == 2)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_inputs[torch.where(iseg_targets == 2)].min().cpu().detach().numpy(),
+                                            mrbrains_inputs[
+                                                torch.where(mrbrains_targets == 2)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_inputs[torch.where(iseg_targets == 2)].max().cpu().detach().numpy(),
+                                            mrbrains_inputs[
+                                                torch.where(mrbrains_targets == 2)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax7.hist(mrbrains_inputs[torch.where(mrbrains_targets == 2)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax7.hist(abide_inputs[torch.where(abide_targets == 2)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
+
     ax7.set_xlabel("Intensity")
-    ax7.set_ylabel("Frequency")
+    ax7.set_ylabel("Normalized voxel count")
     ax7.set_title("Input Gray Matter Histogram")
     ax7.legend()
 
     _, bins, _ = ax8.hist(iseg_inputs[torch.where(iseg_targets == 3)].cpu().detach().numpy(), bins=128,
-                          density=False, label="iSEG")
+                          range=(np.minimum(iseg_inputs[torch.where(iseg_targets == 3)].min().cpu().detach().numpy(),
+                                            mrbrains_inputs[
+                                                torch.where(mrbrains_targets == 3)].min().cpu().detach().numpy()),
+                                 np.maximum(iseg_inputs[torch.where(iseg_targets == 3)].max().cpu().detach().numpy(),
+                                            mrbrains_inputs[
+                                                torch.where(mrbrains_targets == 3)].max().cpu().detach().numpy())),
+                          density=True, label="iSEG")
     _ = ax8.hist(mrbrains_inputs[torch.where(mrbrains_targets == 3)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="MRBrainS")
+                 alpha=0.75, density=True, label="MRBrainS")
     _ = ax8.hist(abide_inputs[torch.where(abide_targets == 3)].cpu().detach().numpy(), bins=bins,
-                 alpha=0.75, density=False, label="ABIDE")
+                 alpha=0.75, density=True, label="ABIDE")
     ax8.set_xlabel("Intensity")
-    ax8.set_ylabel("Frequency")
+    ax8.set_ylabel("Normalized voxel count")
     ax8.set_title("Input White Matter Histogram")
     ax8.legend()
     fig1.tight_layout()
@@ -475,7 +525,6 @@ def construct_class_histogram(inputs, target, gen_pred):
     fig1.clf()
     plt.close(fig1)
     return "/tmp/histograms-{}.png".format(str(id))
-
 
 def count(tensor, n_classes):
     count = torch.Tensor().new_zeros(size=(n_classes,), device="cpu")

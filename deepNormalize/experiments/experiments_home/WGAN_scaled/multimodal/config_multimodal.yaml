@@ -125,7 +125,7 @@ dataset:
     path_augmented: !!null
     modalities: ["T1", "T2"]
     max_subjects: !!null
-    max_num_patches: 20000
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -138,7 +138,7 @@ dataset:
     path_augmented: !!null
     modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
-    max_num_patches: 20000
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
