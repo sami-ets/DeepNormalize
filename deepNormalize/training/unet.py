@@ -292,7 +292,7 @@ class UNetTrainer(Trainer):
         self._ABIDE_confusion_matrix_gauge.reset()
 
     def on_test_epoch_end(self):
-        if self.epoch % 20 == 0:
+        if self.epoch % 10 == 0:
             self._per_dataset_hausdorff_distance_gauge.reset()
 
             all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)

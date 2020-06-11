@@ -624,7 +624,7 @@ class WGANTrainer(Trainer):
         self.custom_variables["Total Loss"] = [self._total_loss_valid_gauge.compute()]
 
     def on_test_epoch_end(self):
-        if self.epoch % 20 == 0:
+        if self.epoch % 10 == 0:
             self._per_dataset_hausdorff_distance_gauge.reset()
             self._class_dice_gauge_on_reconstructed_iseg_images.reset()
             self._class_dice_gauge_on_reconstructed_mrbrains_images.reset()

@@ -85,6 +85,7 @@ models:
       in_channels: 1
       out_channels: 3
       gaussian_filter: True
+      gaussian_kernel: 3
     optimizer:
       type: "Adam"
       params:

@@ -95,7 +95,7 @@ models:
     optimizer:
       type: "Adam"
       params:
-        lr: 0.0001
+        lr: 0.00001
         weight_decay: 0.001
     scheduler:
       type: "MultiStepLR"

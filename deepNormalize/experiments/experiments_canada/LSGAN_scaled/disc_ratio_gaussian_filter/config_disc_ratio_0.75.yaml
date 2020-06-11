@@ -92,6 +92,7 @@ models:
       zero_init_residual: False
       replace_stride_with_dilation: !!null
       gaussian_filter: True
+      gaussian_kernel: 3
     optimizer:
       type: "Adam"
       params:
