@@ -4,6 +4,7 @@ import math
 import pandas
 import visdom
 
+# find $directory -type f -name "*.in"
 
 class LogParser(object):
 

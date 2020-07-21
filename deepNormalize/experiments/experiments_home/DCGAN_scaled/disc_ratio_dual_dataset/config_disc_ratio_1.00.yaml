@@ -121,7 +121,7 @@ dataset:
     max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    patch_size: !python/tuple [1, 32, 32, 32]
+    patch_size: !python/tuple [1, 64, 64, 64]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
@@ -134,7 +134,7 @@ dataset:
     max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
-    patch_size: !python/tuple [1, 32, 32, 32]
+    patch_size: !python/tuple [1, 64, 64, 64]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
@@ -143,7 +143,7 @@ dataset:
 training:
   trainer: "DCGAN"
   n_critics: 3
-  batch_size: 15
+  batch_size: 2
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False

@@ -1,0 +1,617 @@
+%% This is file `elsarticle-template-1-num.tex',
+%%
+%% Copyright 2009 Elsevier Ltd
+%%
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%%
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.2 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.2 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%%
+%% Template article for Elsevier's document class `elsarticle'
+%% with numbered style bibliographic references
+%%
+%% $Id: elsarticle-template-1-num.tex 149 2009-10-08 05:01:15Z rishi $
+%% $URL: http://lenova.river-valley.com/svn/elsbst/trunk/elsarticle-template-1-num.tex $
+%%
+\documentclass[preprint,12pt]{elsarticle}
+
+%% Use the option review to obtain double line spacing
+%% \documentclass[preprint,review,12pt]{elsarticle}
+
+%% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
+%% for a journal layout:
+%% \documentclass[final,1p,times]{elsarticle}
+%% \documentclass[final,1p,times,twocolumn]{elsarticle}
+%% \documentclass[final,3p,times]{elsarticle}
+%% \documentclass[final,3p,times,twocolumn]{elsarticle}
+%% \documentclass[final,5p,times]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn]{elsarticle}
+
+%% The graphicx package provides the includegraphics command.
+\usepackage{graphicx}
+%% The amssymb package provides various useful mathematical symbols
+\usepackage{amssymb}
+%% The amsthm package provides extended theorem environments
+%% \usepackage{amsthm}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers after \end{frontmatter}.
+\usepackage{lineno}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{amssymb, graphicx, booktabs, xcolor, upgreek, algorithm, algpseudocode, changepage}
+
+\setlength {\marginparwidth}{3cm}
+\usepackage{todonotes}
+\newcommand{\pierreluc}[1]{\todo[fancyline,backgroundcolor=green!25,bordercolor=green]{\footnotesize{}Pierre-Luc says: #1}}
+\newcommand{\herve}[1]{\todo[fancyline,backgroundcolor=red!25,bordercolor=red]{\footnotesize{}Herv\'{e} says: #1}}
+\newcommand{\chris}[1]{\todo[fancyline,backgroundcolor=blue!25,bordercolor=blue]{\footnotesize{}Chris says: #1}}
+\newcommand{\benoit}[1]{\todo[fancyline,backgroundcolor=orange!25,bordercolor=orange]{\footnotesize{}Benoit says: #1}}
+
+
+%% natbib.sty is loaded by default. However, natbib options can be
+%% provided with \biboptions{...} command. Following options are
+%% valid:
+
+%%   round  -  round parentheses are used (default)
+%%   square -  square brackets are used   [option]
+%%   curly  -  curly braces are used      {option}
+%%   angle  -  angle brackets are used    <option>
+%%   semicolon  -  multiple citations separated by semi-colon
+%%   colon  - same as semicolon, an earlier confusion
+%%   comma  -  separated by comma
+%%   numbers-  selects numerical citations
+%%   super  -  numerical citations as superscripts
+%%   sort   -  sorts multiple citations according to order in ref. list
+%%   sort&compress   -  like sort, but also compresses numerical citations
+%%   compress - compresses without sorting
+%%
+%% \biboptions{comma,round}
+
+% \biboptions{}
+
+% Maths
+\newcommand{\tr}[1]{{#1}^\top}
+\renewcommand{\vec}[1]{\mathbf{#1}}
+\newcommand{\mr}[1]{\mathrm{#1}}
+\newcommand{\tx}[1]{\textrm{#1}}
+\newcommand{\yy}{\vec{y}}
+\newcommand{\xx}{\vec{x}}
+\newcommand{\zz}{\vec{z}}
+\newcommand{\sss}{\vec{s}}
+\newcommand{\xnorm}{\widehat{\vec{x}}}
+\newcommand{\expect}{\mathbb{E}}
+\newcommand{\XX}{\mathcal{X}}
+\newcommand{\YY}{\mathcal{Y}}
+\newcommand{\data}{\mathcal{D}}
+\newcommand{\real}{\mathbb{R}}
+\newcommand{\loss}{\mathcal{L}}
+\newcommand{\lossSeg}{\loss_{\mr{seg}}}
+\newcommand{\lossDis}{\loss_{\mr{dis}}}
+\newcommand{\img}{\Upomega}
+\newcommand{\params}{\uptheta}
+\newcommand{\ttm}{$\times$}
+
+\journal{Neuroimage}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title, authors and addresses
+
+\title{Adversarial normalization for multi domain image segmentation}
+
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for the associated footnote;
+%% use the fnref command within \author or \address for footnotes;
+%% use the fntext command for the associated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for the associated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%%
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \address{Address\fnref{label3}}
+%% \fntext[label3]{}
+
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{<author name>}
+%% \address[label1]{<address>}
+%% \address[label2]{<address>}
+
+
+\tnotetext[1]{This document is the results of the research
+   project funded by the National Natural Sciences and Engineering Research Council of Canada.}
+
+\author[1]{Pierre-Luc Delisle}
+
+\ead{pierre-luc.delisle.1@etsmtl.net}
+
+
+\address[1]{Ecole de technologie superieure, Montreal, Canada}
+
+\author[1]{Benoit Anctil-Robitaille}
+\author[1]{Christian Desrosiers}
+\author[1]{Herve Lombaert}
+
+\begin{abstract}
+Image normalization is an important step in medical imaging. Furthermore, jointly learning from multiple sites increase the statistical power of a study by increasing the sample size. While Generative adversarial networks (GANs) have proven to be very helpful in a plethora of applications in medical imaging, especially in domain adaptation, it hasn't been applied to both domain adaptation and image normalization in a single task-and-data-driven approach.
+Current image normalization technique, while being a fundamental step in deep learning, is mostly done on a per-dataset basis, preventing current segmentation algorithms from fully exploiting jointly normalized information across multiple datasets. In this paper, we propose a fully automated and intelligent adversarial normalization approach for multi domain image segmentation which learns common normalizing functions across multiple datasets. Our method aims at keeping the normalized image realistic and interpretable while being on-par performance with other normalizing method. Adversarially training our normalizing network aims at finding the optimal transfer function that improves both the segmentation accuracy and the rejection of unrealistic normalizing functions. We evaluated the optimality of our common normalizer on iSEG, MRBrainS and ABIDE dataset, which contains both infants and adult brains images. Results reveal the potential of our adversarial normalization approach for a segmentation task, with Dice improvements of up to 57.5\% the baseline. We also discuss on how our method can increase data availability and increase performance of learning algorithm.
+\end{abstract}
+
+\begin{keyword}
+Task-and-data driven intensity normalization \sep Brain segmentation \sep 3-D generative adversarial neural network \sep Deep learning \sep
+%% keywords here, in the form: keyword \sep keyword
+
+%% MSC codes here, in the form: \MSC code \sep code
+%% or \MSC[2008] code \sep code (2000 is the default)
+
+\end{keyword}
+
+\end{frontmatter}
+
+%%
+%% Start line numbering here if you want
+%%
+\linenumbers
+
+%% main text
+\section{Introduction}
+\label{S:1}
+Powered by their capacity to learn hierarchical feature representations solely from data, deep learning algorithms have achieved record-breaking performance and gained attention in multiple applications, especially in the field of medical imaging. Convolutional neural networks (CNNs), a currently popular method for medical image segmentation, require optimizing millions of parameters in order to achieve good performance. %It achieves this accuracy by learning intrinsic discriminative features in the input images.
+Images being high dimensional data, especially 3-D medical volumes, a large amount of training examples is needed to effectively learn the variability of input and output spaces. Unfortunately, in medical imaging applications, datasets with annotated images are rare and often composed of few samples. This is mainly due to the important cost of producing high-quality, handcrafted segmentation masks by clinical experts. This causes an accessibility problem for developing supervised learning algorithms such as those based on deep learning. Having a robust, fully automated pipeline without the time consuming and costly process of manually reviewing and subjectively correcting the images would be greatly beneficial at increasing productivity.
+
+%Although these algorithms have helped in automating image segmentation \cite{Dolz2019, Kamnitsas2017} to delineate anatomical structures and lesions in the brain, they need a massive amount of training samples to obtain accurate segmentation masks that generalize well.
+
+One possible approach to alleviate the lack of training data, and thus to increase the generalization performance of the learning algorithm, is to use examples acquired from multiple sites. However, medical images from separate datasets or sites can be acquired using various protocols, and therefore may have very different distributions. Unlike X-rays, where voxel intensities are directly related to the physical absorption of the signal by tissues between the ray emitting source and the captor, magnetic resonance (MR) images do not have a standardized scale for intensities. The type of MR machine (1.5, 3 or 7 Tesla) and the different settings composing the acquisition protocol (e.g., field of view value, voxel resolution, gradient strength, b0 value, etc.) leads to a high variance in grayscale intensities and resolution. This variance increases the sensitivity of segmentation algorithms on raw images, thus impairing their performance \cite{maartensson2020reliability}. The physical difference between the MRI scanners, like the number of head coils used and their sensitivity, can make a difference on the resulting image intensity and noise distribution. Even if we try to minimize the inter-site differences in the acquisition protocol by using, for example, a similar type of machinery and acquisition parameters, the resulting reconstructed image can still be very different between both sites \citep{Kochunov2014}. Because medical images deeply rely on the acquisition protocol, which can vary greatly from one site to another, normalizing images to have the same global mean intensity is generally insufficient.
+%\chris{Explain the meaning of ``removing the global mean''.}
+Also, because datasets are generally small in terms of subjects, per image normalization is typically the only option for training learning algorithms. As a result, developing an optimized normalization method could greatly help multi-domain segmentation performance.
+
+Recent advances in non-invasive medical imaging have allowed better image quality, making it an indispensable diagnostic tool for clinicians. The quantitative analysis of brain regions plays a key role in various scenarios such as following the brain development, delineating abnormalities, and planing surgery, all of which require highly precise measurements. However, manually segmenting regions of interest is a costly process requiring considerable time from experts. For example, segmenting brain tissues in T1 and T2 images of a single infant in isointense phase can take up to a week for a trained neuroradiologist\footnote{ \url{http://iseg2017.web.unc.edu/reference/}}. Automating the segmentation process with machine learning models like neural networks could therefore be very valuable to increase the productivity of clinicians and maximize their time spent with patients. However, it has been demonstrated that any modification either in the hardware or in the software processing the final image leads to modification in the data distributions, thus affecting any subsequent quantitative results. Unfortunately, deep learning models are sensitive to the data distribution on which they are trained, leading to sub-optimal performance when evaluating on different set of medical images, urging the need of intelligently normalizing the distributions between sites.
+
+Healthy brains are composed of three types of tissues which are cerebrospinal fluids, gray matter and white matter. Brain tissue segmentation consists in classifying each voxel of a 3-D volume in one of these three classes based on their intensity and context. As shown in Figure \ref{figure1}, each tissue class has a different intensity distribution. However, the distributions of two tissue classes may have significant overlap which makes separating these classes challenging. This is particularly true for 6-8 months old infants in isointense phase where the contrast between gray matter and white matter tissues is extremely low (see the right-side histogram of Fig. \ref{figure1}). Brain imaging datasets may have more than one modality available, typically T1-weighted (spin-lattice relaxation) and T2-weighted (spin-spin relaxation) images. Since each modality has a distinct signature for different brain tissues, there is a growing trend in medical image analysis that uses all available modalities jointly to increase the accuracy of learning algorithms.
+\chris{Is there a particular reason to mention the advantage of processing multiple modalities? Seems like we are not doing it in our experiments.}
+\pierreluc{I will have experiments using multiple modalities by the release time.}
+%Since each modality has a distinct signature for different brain tissues, a learning algorithm could benefit from the information contained in both modalities.
+
+\begin{figure*}
+    \begin{center}
+        \includegraphics[width=\linewidth, height=10.0cm, keepaspectratio]{figures/dataset_histograms_per_class-3.pdf}
+    \end{center}
+    \caption{Intensity histograms of different brain tissue classes for adult brains in the MRBrainS dataset and 6-8 month infants in the iSEG dataset. We can see the important overlap in intensities, especially for iSEG, which is the cause of misleading classifiers. One can also notice the intensity range being largely different between both datasets.}
+    \label{figure1}
+\end{figure*}
+
+\subsection{Related work}
+
+\paragraph{Image normalization}
+Image normalization in the medical imaging has seen a resurgence in interest over the last few years. In \cite{Drozdzal}, Drozdal et al. showed that two consecutive fully convolutional deep neural networks (FCN), a preprocessor network followed by a segmentation network trained with Dice loss, can normalize an input prior to a segmentation task. Using this pipeline, the method achieved a significant gain in segmentation performance over several datasets.
+%Based on the Dice loss function, the first network outputs a normalized image which optimizes the segmentation task.
+Despite these achievements, neither experiments on learning from multiple datasets nor efforts on keeping the preprocessed image medically realistic were done in this prior work. As a result, intermediate images produced by the preprocessing network lack interpretability, which is of prime importance in clinical settings. Moreover, because images are encoded for a specific network, they cannot be used with other segmentation models without retraining. The work in \cite{Onofrey2019} studied different techniques for normalizing medical images from different sites with traditional techniques such as histogram equalization or Gaussian standardization. Unlike the preprocessing network by Drozdal et al., these standard normalization techniques are not learned for a specific task, and thus can lead to sub-optimal results compared to a task-driven normalization approach. In \cite{Ciga2019}, the authors explored a domain adaptation strategy that adds a domain classifier at the end of each layer of a classification network to extract domain-invariant features. While it supports multiple domains (e.g., datasets acquired with different imaging protocols), this strategy has not been demonstrated to work with segmentation tasks. % nor it could increase the accuracy of a specific task.
+
+\paragraph{Brain segmentation}
+Recent studies have shown a rapid adoption of MRI in medical imaging \cite{Litjens2017}. Accelerated by the ever-increasing power of GPUs, a breadth of deep convolutional models have been proposed for brain MRI segmentation in different interventional applications, including segmenting multiple sclerosis lesions \cite{Kamnitsas2017}, brain tumors \cite{Kamnitsas2018, Zhao2018, Havaei2017}, brain tissue \cite{Dolz2019, Chen2018, Xue2007, Gui2012} and (sub) cortical regions \cite{dolz20183d,roy2019quicknat}. Various preprocessing techniques are applied to the inputs of the network. The most popular normalization technique is image standardization which is used in many studies involving MRI \cite{Birenbaum2016, Kamnitsas2017, Casamitjana2016, Chen2018}. Standardization consists of normalizing the data within each input volume by subtracting the volume’s mean and dividing by the volume’s standard deviation. It doesn’t take in account the global dataset statistics. Others have used alternative preprocessing techniques such as histogram equalization \cite{Onofrey2019} and bias field correction  \cite{Birenbaum2016, Baid2018, Feng2019} for correcting the intensity inhomogeneity of the images.
+
+\paragraph{Data harmonization}
+Data harmonization between sites also sparked interest of some researchers, specially to increase the sample size of statistical studies. We notably saw in \cite{LOGUE2018244}, which is a study composed of 16 cohorts from five countries, that there are evidences between volumetric data of the brain and post-traumatic stress disorder (PTSD). These evidences were being revealed due to increased statistical power out of the bigger sample size. In \cite{Shinohara2017}, the authors mention that multicenter image acquisitions using the same scanner vendor while carefully harmonizing the acquisition protocols result in systematic differences in images. This leads to severely decrease the accuracy of volumetric analyses, introducing biases notably in measured white and gray matter volumes. To prevent disparities between sites, the UK7T Network has been established in the United Kingdoms as an attempt to harmonize through a set of sequences, protocols, and calibration process for structural and functional neuroimaging across all the 7 Tesla MRI machines deployed in the United Kingdom. Using this standard procedure, each machine will output a resulting image that harmonize best across all deployed sites \cite{clarke2020multi}. Multi-site studies also have the potential to have a greater variability in demographics and ages. Multiplying the number of sites can introduce nonlinear age-related differences in regions of interests (ROIs) within the brain (\cite{pomponio2020harmonization}). Data harmonization is then used to remove this nonlinear site-related effect in the cross-sectional LIFESPAN dataset, especially the location and scale differences in imaging measurements across sites. But this method takes place after image registration and apply harmonization once the segmentation in ROIs is done, adding a step into the processing pipeline. In \cite{mirzaalian2018multi}, a registration-based framework has been used to harmonize diffusion MRI data between seven different sites using different scanners and acquisition protocols. They harmonize the diffusion signal by computing and modifying the rotation invariant spherical harmonic (RISH) features, resulting in the removal of statistical difference between sites. By scaling the spherical harmonics coefficients and registering the images to a template, it is demonstrated that the statistical differences of each sites are removed. While the method is independent from a specific task, it's purely based on statistics and lies only on one set of features extracted at different orders (which represent different signal frequencies), thus is not a learned method and do not optimize a task, for instance a segmentation task. RISH features are also used in \citet{karayumak2019retrospective} to harmonize diffusion data between different sites. After a remapping of the he b-value of each site and resampling of the data to a common voxel size, RISH feature were used to learn inter-site differences. In \cite{modanwal2020mri}, a CycleGAN is used to generate harmonized structural breast images between two different types of scanner. The method uses unpaired data with two generator-discriminator pairs to bypass common limitation of image translation algorithms that require paired data. Using this algorithm, authors are able to make bi-directional predictions between harmonized domains. Special attention to patch size has been made to help preserve fine structures and characteristics of the breast. While the results proven to produce visually realistic harmonized images, the task in this context is explicitly the harmonization, therefore is not the crucial pre-op image segmentation, neither looking into improving it. Moreover, the harmonization task is limited to only two domains (here, GE Healthcare and Siemens scanners). The 3-D UNet architecture also have been used for contrast harmonization between two protocols in \cite{dewey2019deepharmony}, demonstrating a gain in consistency of volume quantification across different protocols. However, the same subjects were scanned twice with a different acquisition protocol, easing the training to learn the translation function from one protocol to the other one.
+
+
+\paragraph{FCN for segmentation}
+Fully Convolutional Neural Networks (FCNs) emerged based on the idea to make pixel-wise image segmentation \cite{Long_2015_CVPR}. U-Net \cite{Ronneberger2015} pushed the idea further with a network which can localize. Skip connections help restore spatial features from the encoder part to the decoder part of the network, increasing the accuracy of the network. In \cite{Cicek}, U-Net has been ported to volumetric medical data and sparse annotation, demonstrating the potential of this variant of FCNs in medical imaging where a few images can be annotated.
+
+\paragraph{Generative adversarial networks}
+Generative Adversarial Networks (GANs) debuted in \cite{Goodfellow2014} and is a deep neural network architecture which groups a generator \emph{G} which draws samples directly from the desired data distribution and a discriminator \emph{D} which aims at classifying whether the samples are fake or real. At the beginning of the training, the input of \emph{G} is noise sampled from a prior distribution, generally a Gaussian or uniform distribution $p_z$. As the training goes, the generator \emph{G} network will output a distribution $p_g$ very similar to the input. This is likely because of the consequence of the backpropagation of the discriminator's classification error to \emph{G}. The goal of the generator network is then to adjust its parameters to fool the discriminator by producing ever increasing realistic images of the target distribution. Since the inception of GANs, many variants made their apparition, most notably DCGAN. Instead of using multiple linear layers in the \emph{G} network, DCGAN uses a fully convolutional model as a generator with downsampling and upsampling layers and non-linear activation such as ReLU or Leaky-ReLU \cite{Maas2013}. This unlocked the potential to directly generate images instead of their vector representation and taking into account the spatial dimension of images with the convolution operation. GANs have also been used in medical imaging, a field in which they can greatly help discover and explore underlying structures of the data \cite{Yi2019}. Applications such as image reconstruction, synthesis, segmentation, classification and registration has been explored using GANs and their variants. Another method explored is LSGAN, where least squares loss function is used for the discriminator, enhancing learning stability while improving the image generation by inserting a notion of distance to the decision boundary. Using the least squares loss, if a sample is correctly classified, it will still be penalized from being far from the decision boundary, helping to avoid a frequent problem with GANs commonly called vanishing gradients. CycleGAN \cite{CycleGAN2017}, which consist of a pair of generator and discriminator, introduced a cycle consistency loss to force both pairs of image translators to be consistent with each other, acting like a regularizing term. CycleGAN also paved the way for training with unpaired data, a technique used in \cite{modanwal2020mri} for data harmonization.
+
+\subsection{Contributions}
+
+Our contributions can be summarized as two-folds:
+\begin{itemize}
+    \item an adversarially-constrained 3-D pre-processing and segmentation technique using fully-convolutional neural networks which can train on more than one dataset;
+
+    \item a learned normalization network for medical images which produces optimized normalized images that are realistic and interpretable by clinicians.
+\end{itemize}
+
+The proposed method yields a significant improvement in segmentation performance over using a conventional segmentation model trained and tested on two different data distributions which intensities haven’t been normalized. To the best of our knowledge this is the first work using purely task-and-data driven medical image normalization while keeping the intermediary image medically usable and exploiting jointly learn information from multiple datasets.
+
+\section{Method}
+
+Our method of image normalization consists in three main components. The first one is a fully convolutional neural network (FCN) which acts as an image pre-processor, also called \emph{Generator}. This network aims at producing a normalized image. The second one, called \emph{Segmenter}, is another FCN which produces an accurate segmentation map. Finally, the third component of our method is a convolutional neural network which classifies the domain of its inputs. The latter is called \emph{Discriminator} throughout this article.
+
+\subsection{Image normalization}
+
+The first neural network in our architecture is a fully convolutional image generator which act as a normalizing network. It consists of a slight variation of 3-D U-Net \cite{Cicek} where the change resides primarily in the expanding path. The original 3-D U-Net used transposed 3-D convolutions and concatenate feature maps to recover spatial resolution. Because of GPU memory constraints, we used a simpler upscaling operator to upsample by a factor of 2 the image's resolution at each level of the U-Net coupled with feature concatenation. This allowed us to reduce the total number of parameters of our model. We kept the original contracting path, which consists of alternating convolutions and max-pooling layers, intact from \cite{Cicek}. The model also uses shortcut connections from encoding to decoding path between layers of equal resolution to help recover high-resolution features. Each convolution is followed by a batch normalization and ReLU non-linear operations. We kept the same number of feature maps per convolution as the original 3-D U-Net. Table \ref{table1} describes in detail the \emph{Generator} network architecture. Note that the \emph{Generator} model could be any other fully convolutional neural network architecture. The model takes patches of shape 1 \ttm 32 \ttm 32 \ttm 32 without any prior preprocessing on voxel intensities and transforms it into a cross-domain normalized image $\xnorm = G(\xx)$ where $\xx \in \real^{|\img|}$ is a 3-D image.
+
+\begin{table}[ht]
+\centering
+  \begin{footnotesize}
+    \begin{tabular}{lcc}
+        \hline
+            \textbf{Layer} & \textbf{Ouput resolution} & \textbf{Output width}\\
+            \hline
+            Conv.1 + BatchNorm + Leaky ReLU & 32 \ttm 32 \ttm 32 & 32 \\
+            Conv.2 + BatchNorm + Leaky ReLU & 32 \ttm 32 \ttm 32 & 64 \\
+            MaxPool & 16 \ttm 16 \ttm 16 & \\
+            Conv.3 + BatchNorm + Leaky ReLU & 16 \ttm 16 \ttm 16 & 64 \\
+            Conv.4 + BatchNorm + Leaky ReLU & 16 \ttm 16 \ttm 16 & 128 \\
+            MaxPool & 8 \ttm 8 \ttm 8 & \\
+            Conv.5 + BatchNorm + Leaky ReLU & 8 \ttm 8 \ttm 8 & 128 \\
+            Conv.6 + BatchNorm + Leaky ReLU & 8 \ttm 8 \ttm 8 & 256 \\
+            MaxPool & 4 \ttm 4 \ttm 4 & \\
+            Conv.7 + BatchNorm + Leaky ReLU & 4 \ttm 4 \ttm 4 & 256 \\
+            Upsampling + Concatenation & 8 \ttm 8 \ttm 8 & 256 + 512 \\
+            Conv.8 + BatchNorm + Leaky ReLU & 8 \ttm 8 \ttm 8 & 256 \\
+            Upsampling + Concatenation & 16 \ttm 16 \ttm 16 & 128 + 256 \\
+            Conv.9 + BatchNorm + Leaky ReLU & 16 \ttm 16 \ttm 16 & 128 \\
+            Upsampling + Concatenation & 32 \ttm 32 \ttm 32 &  64 + 128 \\
+            Conv.10 + BatchNorm + Leaky ReLU & 32 \ttm 32 \ttm 32 & 64 \\
+            Conv.11 + BatchNorm + Leaky ReLU & 32 \ttm 32 \ttm 32 & 64 \\
+            Conv.12 + Final activation & 32 \ttm 32 \ttm 32 & 1 \\
+        \hline
+        \end{tabular}
+    \end{footnotesize}
+\caption{Generator and Segmenter network architecture. Output resolution corresponds to the spatial resolution of feature maps and output width refers to the feature map dimensionality. Final activation is ReLU in case of Generator and Softmax in case of segmentation network.}
+\label{table1}
+\end{table}
+
+\begin{figure*}
+    \begin{center}
+        \includegraphics[width=\linewidth, height=6.0cm, keepaspectratio]{figures/simple_block.pdf}
+    \caption{A ResNet Simple Block composition layers. Downsampling is optional depending where the block is applied in the ResNet architecture}
+    \end{center}
+    \label{figure2}
+\end{figure*}
+
+\subsection{Image segmentation}
+
+The second neural network is a fully convolutional segmentation network. It shares the exact same 3-D U-Net architecture of the image generator. This network receives the normalized output of the image generator and performs voxel classification using a final $1^3$ convolution. The resulting output of this network is the segmentation map of the input patch $S(\xnorm)$. The Dice loss $\lossSeg(\sss,\yy)$ is then computed with the corresponding manual expert segmentation $\yy_i$ and backpropagated up to the Generator network.
+
+\subsection{Domain classification}
+
+The particularity of our architecture resides in its third component, a domain classifier. The chosen architecture for this network is a 3-D ResNet \cite{He2015} with 18 layers. This network receives as inputs both non-normalized, raw dataset patches and normalized patches of dimension 1 \ttm 32 \ttm 32 \ttm 32 from the Generator network. Each patch is labeled with an image domain label $z_i \in \{1, \ldots, K\}$ which determines from which dataset the patch comes from. The discriminator network $D$ learns a $(K\!+\!1)$-class classification problem, with one class for each raw image domain and a $(K\!+\!1)$-th class for generated images of any domain. The role of the discriminator is to ensure that images produced by $G$ are both realistic and domain invariant. This network could be replaced by any classification neural network.
+
+The three networks of our model are trained together in an adversarial manner by optimizing the following loss function:
+\begin{multline*}
+    \min_{G,S} \max_{D} \ \loss(G, S, D) \ = \ \sum_{i=1}^{M} \lossSeg \big(S(G(\xx_i)), \yy_i\big)  \\ \quad -
+    \lambda\left[\sum_{i=1}^{M} \left( \lossDis\big(D(\xx_i), z_i\big) \, + \, \lossDis\big(D(G(\xx_i)), \mr{fake}\big)\right )\right]\nonumber, % adding a comma
+\label{eq:total_loss}
+\end{multline*}
+where
+\begin{equation}
+    \lossSeg (\sss,\yy) \ = \ 1 \, - \, \frac{\epsilon \, + \, 2 \sum_{c} w_c \sum_{v \in \img} s_{v,c} \cdot y_{v,c}}{\epsilon \, + \, \sum_{c} w_c \sum_{v \in \img} (s_{v,c} +  y_{v,c})}
+\end{equation}
+is the Dice loss and where $s_{v,c} \in [0, 1]$ is the softmax output of $S$ for voxel $v$ and class $c$, and $\epsilon$ is a small constant to avoid zero-division. For the discriminator classification loss, we employ the standard weighted negative log likelihood loss. We applied weights proportionally to the number of images the discriminator sees from each class. Let $p_D$ be the output class distribution of $D$ following the softmax. For raw (non-normalized) images, the loss is given by:
+%
+\begin{equation}
+    \lossDis\big(D(\xx), z\big) \ = \ - \log \, p_D(Z = z \, | \, \xx).
+\end{equation}In the case of generated (normalized) images, the loss becomes:
+%
+\begin{align}
+    \lossDis\big(D(G(\xx)), \mr{fake}\big) & \ = \
+        - \log \, p_D(Z = \mr{fake} \, | \, G(\xx)) \\
+        & \ = \ - \log \big[1 - p_D(Z \leq K \, | \, G(\xx))\big]\nonumber.
+\end{align}
+
+As in standard adversarial learning methods, we train our model in two alternating steps, first updating the parameters of $G$ and $S$, and then updating the parameters of $D$.
+
+\begin{figure*}
+    \begin{center}
+        \includegraphics[width=\linewidth, height=6.0cm, keepaspectratio]{figures/network_architecture.pdf}
+        \caption{Proposed architecture. A first FCN generator network (G) takes a non-normalized patch and generates a normalized patch. The normalized patch is input to a second FCN segmentation network (S) for proper segmentation. Discriminator (D) network apply the constraint of realism on the normalized output. The algorithm learns the optimal normalizing function based on the observed differences between input datasets.}
+    \end{center}
+\end{figure*}
+
+\begin{algorithm}
+\caption{Task-driven adversarial image normalization}
+\textbf{Requires:} source samples from domains $\zz \in \{1, \ldots, K\}$ with samples $\xx_i$ and labels $\yy_i$, number of discriminator iterations \emph{k} per generator iteration, batch size \emph{m}, learning rates $\alpha_g$ $\alpha_d$ $\alpha_s$, initial parameters for the discriminator, generator and segmenter neural network $\theta_d$, $\theta_g$, $\theta_s$
+    \begin{algorithmic}
+    \For{number of training iterations} %\Do
+        \For{\emph{k} steps} %\Do
+            \State Sample batch of \emph{m} real samples from all domains $\big\{\xx^{m}_\zz, \yy^{m}_\zz\big\}$
+            \State Sample batch of \emph{m} examples $\big\{G \big(\xx^{m}_{\zz \in K+1}, \yy^{m}_{\zz \in K+1}\big)\big\}$ from data generating distribution.
+            \State Update the discriminator by descending its stochastic gradient: \\
+            \begin{align*}
+            \theta_d \gets {\nabla_d} \frac{1}{m} \sum_{i=1}^{m} ( \lossDis\big(D(\xx_i), z_i\big) \, + \, \lossDis\big(D(G(\xx_i)), \mr{\zz | \zz = K+1})
+            \end{align*}
+        \EndFor
+        \\
+        \State Sample batch of \emph{m} examples $\{G(\xx^{(m)}, \yy^{(m)})\}$ from data generating distribution.
+        \State $\loss_g \gets \lossSeg \big(S \big(G(\xx_i) \big), \yy_i \big)$
+        \State $\loss_d \gets \lossDis \big(G(\xx_i, \zz = K+1)\big)$
+        \State Update the generator by descending its stochastic gradient: \\
+        \begin{align*}
+            \theta_g \gets \nabla_g \frac{1}{m} \sum_{i=1}^{m} \loss_g + \nabla_d \lambda \frac{1}{m} \sum_{i=1}^{m} \loss_d
+        \end{align*}
+    \EndFor
+    \end{algorithmic}
+\label{alg:deepNormalize}
+\end{algorithm}
+
+\section{Experiments}
+The proposed architecture is evaluated on three publicly available challenging datasets which are iSEG \cite{Wang2019}, MRBrainS \cite{Mendrik2015} and ABIDE \cite{DiMartino2014}. We report a detailed description of each dataset used and a quantitative report of our method in the next sections. We trained the three models for 120 epochs. Training took 5 days on a NVIDIA Tesla V100 32 GB GPU. Extensive research has been done by running multiple experiments to find the best ratio between segmentation loss and discriminator loss to obtain best segmentation performance while keeping the generated image realistic. For the Generator $G$ network, a variable multi-step learning rate has been used which decrease the learning rate at epoch 50 and 75 by a factor of 10, synchronized with the learning rate of the segmentation network. A variable learning rate with a decay of 0.1 when reaching a plateau with a patience of 7 epochs on validation metric has been used for the \emph{Discriminator} $D$ networks. We used a weight decay of 0.001 on all experiments. Starting learning rate was $0.001$ for both \emph{Generator} and segmentation networks, while \emph{Discriminator} learning rate was $0.0001$. We trained each model with a Stochastic Gradient Descent (SGD) optimizer. Model architecture has been implemented with PyTorch \footnote{\url{http://pytorch.org}} deep learning framework.
+
+\subsection{Data}
+
+To evaluate the performance of our method, three databases have been carefully retained for their drastic difference in intensity profile and nature. The first one, iSEG \cite{Wang2019}, is a set of 10 T1 and T2 MRI images of infants. The ground truth is the segmentation of the three main structures of the brain: white matter (WM), gray matter (GM) and cerebrospinal fluids (CSF), all three being critical for detecting abnormalities in brain development. Images are sampled into an isotropic 1.0 mm$^3$ resolution. The second dataset is MRBrainS \cite{Mendrik2015} which contains 5 adult subjects with T1 and T2 modalities. The dataset also contains the same classes as ground truth. Images were acquired following a voxel size of 0.958 mm \ttm 0.958 mm \ttm 3.0 mm. Finally, a third dataset, ABIDE, has been retained to further validate our method and show a third, multi-site dataset could be used. ABIDE consists or 1,103 usable training images acquired across 17 international sites which allow a good variety of images.
+
+Images from iSEG dataset have been acquired with a 3 Tesla scanner on 6-8 month-old infants. This dataset is particularly challenging because the images have been acquired during subject's isointense phase in which the white matter and gray matter voxel intensities greatly overlap, thus leading to a lower tissue contrast. This lower contrast is known to misleads common classifiers, thus increasing considerably the difficulty of the segmentation task. This lower contrast is due to the higher concentration of water in all brain's structures and the presence of unmyelinated white matter \cite{Xue2007}. Images are also notably noisier because of the shorter scanning time used to avoid motion artifacts and suffer from the mislabeled partial volume voxels effect due to lower contrast between tissues. MRBrainS images also come from a 3 Tesla scanner. Since ABIDE is a multi-site initiative, thus images have been acquired differently. The anatomical scan parameters are available for each site on ABIDE's website \footnote{\url{http://fcon_1000.projects.nitrc.org/indi/abide/}}. For iSEG, eight subjects were randomly selected for training, while one was kept for validation and the last subject was kept for test purpose. For MRBrainS, three images were randomly selected for training. One other for validation and the last for test. For ABIDE, which has more images, the 1,103 images were randomly split in three sets. 60\% were kept for training, 20\% for validation and 20\% for test purpose. A total of 40,000 randomly chosen patches were retained for training. For all three datasets, overlapping patches of $32^3$ voxels centered on the foreground were extracted from full volumes with stride of $4^3$. The same subjects and patches were selected across all experiments through a common random seed. For all three datasets, 12,000 patches were randomly selected from validation and test subjects, all centered on the foreground. Image reconstruction happened every 20 epochs. Dice score and MHD were computed from reconstructed, normalized, segmented image and its corresponding segmentation ground truth.
+
+For all three datasets, images have been cropped to brain dimensions to minimize background and resized to a normalized shape across their respective dataset. Since images in MRBrainS dataset are a full head scan, skull stripping was performed using the segmentation map. Resampling to isotropic 1.0 $mm^3$ as been done to match iSEG sampling. Images from ABIDE have been pre-processed using FreeSurfer recon-all process which extracts segmentation maps for each subject. This segmentation map has been used as ground truth for training the segmentation network.
+
+We also trained the presented architecture using data augmentation. We fed the Generator network with patches with a 33\% probability of being transformed with the addition of a bias field and rician noise. We modeled a linear bias field out of a random location within the images. Rice density can be described as the following  (\cite{Gudbjartsson1996}):
+\begin{equation}
+    p_m(M) \ = \ \frac{M}{\sigma^2} e^{-\frac{\big(M^2 +A^2\big)}{2 \sigma^2}} I_0 \Big(\frac{A \cdot M}{\sigma^2} \Big)
+\end{equation}
+where: $M$ is the pixel intensity, A is the original, non degraded signal, $I_0$ is the modified zeroth order Bessel function and $\sigma$ denotes the standard deviation of the Gaussian noise. Signal-to-noise ratio (SNR) is set at 60. With such a SNR, one is able to clearly see the impact of noise on the image.
+
+\subsection{Evaluation}
+
+We evaluate the performance of our method using the mean Dice Similarity Coefficient (DSC) which measure the degree of overlap between the predicted segmentation map and the ground truth:
+\begin{equation}
+    \mr{DSC}(\sss,\yy) \ = \ \frac{\epsilon \, + \, 2 \sum_{c} w_c \sum_{v \in \img} s_{v,c} \cdot y_{v,c}}{\epsilon \, + \, \sum_{c} w_c \sum_{v \in \img} (s_{v,c} +  y_{v,c})}
+\end{equation}{}
+
+where $s_{v,c} \in [0, 1]$ is the Softmax output of $S$ for voxel $v$ and class $c$, and $\epsilon$ is a small constant to avoid zero-division. Compared to Cross-Entropy Loss, the DSC is less prone to class imbalance, which is the case here since the cerebro-spinal fluid (CSF) voxel count is less than the white and grey matter count.
+
+We also used the Mean Hausdorff Distance (MHD): \\
+\begin{equation}
+\mr{MHD}(\sss, \yy) \ = \ \frac{1}{2}\big(D (\sss, \yy) + D(\yy, \sss)\big)
+\end{equation}
+where $D (\sss, \yy)$  and $D (\yy, \sss)$ measures the euclidean distance between predicted segmentation map and ground truth.
+
+These two metrics are widely adopted metrics in the field of medical imaging to denote and measure the generalization capability of the network at segmenting regions of interests.
+
+We used the Jensen-Shannon distance to measure the distance between input and normalized distribution. A lower divergence means more similar intensities across distributions, demonstrating the effect of normalization.
+
+\subsection{MRBrainS and iSEG datasets, setting the baseline}
+
+The fully convolutional architecture we use takes a 3-D volume as input and produces a voxel-wise segmentation map of the same shape as the input. It does so by classifying each voxel independently and by doing multiple sequential convolutions with kernel size of $3^3$ on the neighborhood of a center voxel. This creates multiple layers of filters, also called \textit{feature maps}, whose weights are learned through the training of the network. The loss function computed with the output of the final layer and the corresponding dense label map, defines the task. By using the previously described \textit{Dice loss} function, we try to minimize the error of overlap between the segmentation output and labels.
+
+Using a single 3-D U-Net segmentation network, we established a baseline segmentation performance on both datasets independently using T1 images. These baselines represent the segmentation performance that a single 3-D U-Net network could achieve on both datasets. Results are shown in table \ref{table2}.
+As the goal of our method is to do domain adaptation and learning on multiple domains, the baseline includes a segmentation score which has been obtained by training on one of the aforementioned datasets and testing on the other one. As we can denote, the segmentation performance is suboptimal, the segmentation network being unable to correctly classify the voxels of an input image.
+
+\begin{table}
+  \centering
+  \begin{scriptsize}
+  \begin{tabular}{r*{6}{c}}
+    \toprule
+    &  &  & & \multicolumn{3}{c}{Dice} \\
+     \cmidrule(lr){5-7}
+    Exp. \# & Train dataset & Test dataset & Method & CSF & GM & WM \\
+    \midrule
+    1 & iSEG & iSEG & No adaptation & 0.920 & 0.857 & 0.828 \\
+    2 & MRBrainS & MRBrainS & No adaptation & 0.861 & 0.789 & 0.839 \\
+    3 & iSEG & MRBrainS & No adaptation, Cross-testing & 0.401 & 0.354 & 0.519  \\
+    4 & MRBrainS & iSEG & No adaptation, Cross-testing & 0.293 & 0.082 & 0.563  \\
+    \bottomrule
+  \end{tabular}
+  \end{scriptsize}
+  \caption{Dice score in function of the model architecture and data. The non-adaptation of the acquisition domains seriously impacts the segmentation accuracy.}
+    \label{table2}
+\end{table}
+
+\subsection{Adding a preprocessor}
+
+We first added a fully convolutional neural network in front of the segmentation network, commonly called a \emph{preprocessor} in \cite{Drozdzal}. This served as a baseline to reproduce the results with the previously described datasets. Using this architecture, segmentation Dice loss is backpropagated along both the segmentation up to the preprocessor, producing a segmentation-optimized image without constraint of realism. This constitutes the upper bound baseline of what's possible to achieve regarding segmentation performance with the aforementioned datasets. Results are referenced as \emph{without constraint} in table \ref{table3}.
+
+While the intensity histograms of this solution show near-perfect normal curves, the produced intermediate images are not interpretable by a clinician as seen in \ref{figure6}. Results show it's still able to segment all classes correctly when training with two or three datasets by severely  adjusting the intensities of all classes in favor of the segmentation performance but result in distorted images.
+
+\begin{figure}
+\begin{center}
+    \begin{footnotesize}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/WM_Input_Intensity_Histogram.png} \\ WM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/GM_input_intensity_histogram.png} \\ GM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/CSF_input_intensity_histogram.png} \\ CSF}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/WM_Generated_Intensity_Histogram.png} \\ WM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/GM_generated_intensity_histogram.png} \\ GM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_dualUNet/CSF_generated_intensity_histogram.png} \\ CSF}
+    \end{footnotesize}
+    \caption{Histograms of tests images without constraint of realism. \textbf{Top}: Input images. \textbf{Bottom}: Generated images with \cite{Drozdzal} method.}
+    \label{figure4}
+\end{center}
+\end{figure}
+
+\subsection{Adding the Generator and Discriminator networks}
+\todo{Images are subject to change as training goes.}
+Our method relies on the segmentation task while performing online normalization. Since the Dice loss is being used, structural elements are kept when generating the intermediate image, while cross-entropy aims at keeping the global features of the image while reducing the differences across domains. The main advantage of our method is the ability to train on drastically different datasets regarding to structures and intensity distributions while still maintaining a good segmentation performance.
+
+The segmentation of structures on both test adults and infant brain images is still achieving 85.2\% of mean Dice score across all classes. This demonstrates the relevance of adding adversarial normalization, increasing the Dice score of up to 57.5\% up in mean segmentation performance over all classes against training on a single dataset and testing on the other one. Our method is also able to normalize the images while maximizing the segmentation and keeping the image interpretable and realistic. This is achieved by the discriminator’s loss which aims at minimizing the cross-entropy between real inputs and generated input up to the point it cannot differentiate anymore from which domain (real iSEG input, real MRBrainS input or generated input) the generator’s output comes from.
+
+Table \ref{table2} compares our method with the baseline method described in section 3.4.
+
+\subsection{Adding ABIDE dataset}
+
+Since we want to learn a common representation among multiple domains, we added a third dataset which is constituted of images coming from multiple domains. We randomly select patches among all patients who come from 17 different imaging locations, all having different acquisition protocols.
+
+In this case, our method achieved to segment all three test images with a mean dice score of 89.0\%. This higher score reveals the benefits of adding more data and increasing the variety of intensity distributions to the problem. The images stayed very close to their original visual representation, just like the histograms of these images.
+
+We also ran multiple experiments to measure the impact of the lambda ($\lambda$) variable which defines the ratio between the discriminator's signal and the segmenter's loss. It has been experimentally defined that a $\lambda$ value of 1.0 produced the best segmentation results while still maintaining the image medically plausible and realistic. This forces the Cross Entropy Loss and Dice Loss values to be in similar scale.
+
+The Jensen-Shannon Divergence (JSD) measures the mean Kullback–Leibler divergence between a distribution (i.e., histogram) and the average of distributions. Table \ref{table3} gives the JSD between input images and images normalized by the generator. Lower values of the JSD mean more similar distribution between inputs and generator's outputs. We see a decrease in JSD for normalized images showing that the intensity profiles of generated images are more similar to each other. \pierreluc{Maybe reformulate this section as the histograms are not as described anymore, or find histograms that fits this description in the logs.}. The normalization effect of our method can be better appreciated in figure \ref{figure5}. This figure shows a narrower distribution that is more centered around a single mode therefore reducing the intra-class variance and increasing segmentation accuracy. Another benefit of our method is the slight contrast enhancement it provides to the generated images. This is mainly brought by our task-driven approach, where minimizing the segmentation loss helps at increasing the contrast along region boundaries.
+
+\begin{table}[ht!]
+  \centering
+  \begin{small}
+  \begin{tabular}{r*{6}{c}}
+    \toprule
+    &  & Input data & Normalized images \\
+    \midrule
+    & iSEG + MRBrainS & 1.55209 & 1.55131 \\
+    & iSEG + MRBrainS + ABIDE & 1.55457 & 1.55414 \\
+    \bottomrule
+  \end{tabular}
+  \end{small}
+  \label{table3}
+  \caption{Jensen-Shannon divergence (JSD) of input and normalized images from the generator. A lower value corresponds to more similar distributions.}\label{tlc}
+\end{table}
+
+\begin{figure}
+\begin{center}
+    \begin{footnotesize}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_WM_input_intensity_histogram.png} \\ WM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_GM_input_intensity_histogram.png} \\ GM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_CSF_input_intensity_histogram.png} \\ CSF}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_WM_generated_intensity_histogram.png} \\ WM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_GM_generated_intensity_histogram.png} \\ GM}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/histograms_ResNet/ResNet_CSF_generated_intensity_histogram.png} \\ CSF}
+    \end{footnotesize}
+    \caption{Histograms of tests images with constraint of realism. One can notice the intensities have been re-scaled but shape stayed relatively the same as the input.  \textbf{Top}: Input images. \textbf{Bottom}: Generated images with our method.}
+    \label{figure5}
+\end{center}
+\end{figure}
+
+\subsection{Degrading the image}
+
+During this experiment, there was a slight change in the algorithm. The discriminator aims at classifying the domain of the original, non-degraded data, although loss of the generated domain is computed after a forward pass on the generator with augmented images. This way, the generator is rewarded when it learns feature maps useful at denoising and removing the bias field of the augmented inputs, as the discriminator penalizes more the generated domain with degraded images. As one can notice in \ref{figure6}, the \emph{Normalized} image seems more uniform, with slightly less bias field, and has less noise than the original degraded image.
+
+\begin{figure}
+\begin{center}
+    \begin{footnotesize}
+    \shortstack{\includegraphics[width=.24\linewidth]{figures/data_augmentation/Input.pdf} \\ Input}
+    \shortstack{\includegraphics[width=.24\linewidth]{figures/data_augmentation/Noise.pdf} \\ Noise and bias field}
+    \shortstack{\includegraphics[width=.24\linewidth]{figures/data_augmentation/Augmented.pdf} \\ Degraded image}
+    \shortstack{\includegraphics[width=.24\linewidth]{figures/data_augmentation/Normalized.pdf} \\ Normalized}
+    \end{footnotesize}
+    \caption{Inference result on a degraded test image. One can notice the more uniform Normalized image with reduced bias field and with virtually no more rician noise. \textbf{Left}: Test input. \textbf{Middle-left}: The applied bias field and rician noise transformation. \textbf{Middle-right}: The resulting degraded test input. \textbf{Right}: The generator's output with degraded input.}
+    \label{figure6}
+\end{center}
+\end{figure}
+
+
+\subsection{Discriminator analysis}
+
+In this subsection, we provide an analysis of our architecture with different classification networks. In addition to the previously described ResNet, we trained our architecture with a simpler DCGAN \cite{Radford2016} network. We also changed the classifier's loss function to match LSGAN \cite{Mao2017} with the least-square objective function instead of the Cross-Entropy loss. In the latter, we kept the ResNet-18 model architecture while adopting the least squares loss function. When using ResNet model with Cross-Entropy loss and the same network using least squares loss, we can notice the increased training stability using the former objective function. Unfortunately, due to limited number of subjects in each dataset, the ResNet discriminator overfits quickly even when trained with the least square function. The model that seems to suffer less from overfitting is the DCGAN classifier, which has far fewer parameters than the smallest variant of ResNet.
+
+\todo{Include comparison of average Dice score between models.}
+\todo{Refactor the curves if judged worthy.}
+\begin{figure}
+\begin{center}
+    \begin{footnotesize}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/DCGAN Loss.png} \\ DCGAN Loss}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/LSGAN_Loss.png} \\ LSGAN Loss}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/ResNet_loss.png} \\ ResNet Loss}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/DCGAN_Dice.png} \\ DCGAN Dice}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/LSGAN_Dice.png} \\ LSGAN Dice}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/model_comparison/ResNet_Dice.png} \\ ResNet Dice}
+    \end{footnotesize}
+    \caption{Visualization of the evolution of the Dice loss and Dice coefficient during training according to the classifier's architecture. DCGAN, which is having the fewest parameters, overfits less than the ResNet classifier.}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+    \begin{footnotesize}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/ABIDE_input_95mm.pdf} \\ ABIDE (input)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/MRBrainS_input_160mm.pdf} \\ MRBrainS (input)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/iSEG_input_145mm.pdf} \\ iSEG (input)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/ABIDE_drozdzal.pdf} \\ ABIDE (Drozdzal)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/MRBrainS_drozdzal.pdf} \\ MRBrainS (Drozdzal)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/iSEG_drozdzal.pdf} \\ iSEG (Drozdzal)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/ABIDE_normalized_95mm.pdf} \\ ABIDE (ours)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/MRBrainS_normalized_160mm.pdf} \\ MRBrainS (ours)}
+    \shortstack{\includegraphics[width=.32\linewidth]{figures/normalization/iSEG_normalized_145mm.pdf} \\ iSEG (ours)}
+    \end{footnotesize}
+    \caption{Visualization of the generator's output. One can notice the realism of the bottom line, the optimized images still being medically plausible. \textbf{Top}: Respective dataset's test input. \textbf{Middle}: Preprocessor's output with  \cite{Drozdzal} method. \textbf{Bottom}: Generator's output with our method.}
+    \label{figure7}
+\end{center}
+\end{figure}
+
+\begin{table}
+\begin{adjustwidth}{-7em}{-5em}
+  \centering
+  \begin{tiny}
+  \begin{tabular}{r*{11}{c}}
+    \toprule
+    & & & & \multicolumn{2}{c}{CSF} & \multicolumn{2}{c}{GM} & \multicolumn{2}{c}{WM} \\
+     \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(lr){9-10}
+    Exp. \# &  Train dataset & Test dataset & Method & DSC & MHD & DSC & MHD & DSC & MHD \\
+    \midrule
+    5 & iSEG + MRBrainS & iSEG + MRBrainS & Standardized & 0.897 & 24.62 & 0.836 & 42.91 & 0.790 & 37.63\\
+    & Standardized & Standardized & & & & \\
+    6 & iSEG + MRBrainS & iSEG + MRBrainS & Without constraint ( \cite{Drozdzal}) & 0.908 & 23.27 & 0.848 & 41.47 & 0.810 & 36.47 \\
+    7 & \textbf{iSEG + MRBrainS} & \textbf{iSEG + MRBrainS} & {\textbf{Adv. normalized (ours)}} &\textbf{0.902} & \textbf{24.30} & \textbf{0.843} & \textbf{42.30} & \textbf{0.810} & \textbf{36.60} \\
+    \midrule
+    8 & iSEG + MRBrainS + ABIDE & iSEG + MRBrainS + ABIDE & Standardized & 0.860 & 20.16 & 0.881 & 37.26 & 0.856 & 33.41 \\
+    & Standardized & Standardized & & & & \\
+    9 & iSEG + MRBrainS + ABIDE & iSEG + MRBrainS + ABIDE &  Without constraint ( \cite{Drozdzal}) & 0.934 & 18.86 & 0.888 & 35.79 & 0.856 & 31.36 \\
+    10 & \textbf{iSEG + MRBrainS + ABIDE} & \textbf{iSEG + MRBrainS + ABIDE} &  {\textbf{Adv. normalized (ours)}} &  \textbf{0.913} & \textbf{18.57} & \textbf{0.887} & \textbf{36.99} & \textbf{0.870} & \textbf{33.96} \\
+    \bottomrule
+  \end{tabular}
+  \end{tiny}
+  \end{adjustwidth}
+  \caption{Dice score in function of the model architecture and data. The proposed method yielded a significant performance improvement over training and testing on single-domain or on standardized inputs.}
+\label{table3}
+\end{table}
+
+\section{Discussion and conclusion}
+
+\todo{Still no multimodal results. Must add prior final release.}
+
+In this paper, we have presented a novel task-and-data-driven normalization technique to improve a segmentation task using two or three datasets acquired differently. By finding the optimal intermediate representation,  our method can effectively learn from multiple datasets at the same time. This is made possible by using the Dice loss which aims at keeping the structural elements of the image and the cross entropy loss of the discriminator which keeps global features of the image. The produced images are optimized for segmentation, but are still clinically interpretable, a crucial point for clinicians. We believe this work is an important contribution to biomedical imaging as it unlocks the possibility of training deep learning models with data from multiple sites easily, thus reducing the strain on data accessibility for supervised learning algorithms.
+
+We also demonstrated our method can learn on multiple datasets at the same time while still maintaining the intermediate, adapted images medically plausible and realistic. We reported segmentation performance above the commonly used standardization method, effectively demonstrating the efficiency of a task-and-data driven normalization technique on multiple datasets.
+
+Our architecture is certainly not limited to the models explicitly described in this paper. It could be valuable to study other network architectures to study the effect on normalization. It could also be interesting to see our architecture performing on multiple datasets with greatly imbalanced data such as brain lesions. Brain lesions have particularities to be very small regions of the brain and location are greatly variable from one individual to another. Training brain lesions segmentation algorithms with more adapted and normalized data would certainly lead to great benefit on segmentation accuracy. We could also analyze the discriminator's patch size to see if field of view has an effect on the data harmonization part of our architecture. A greater field of view could possibly discriminate more global features and focus less on the fine brain structures of our images, hardening the classification task.
+
+\medskip
+
+\textbf{Acknowledgment} -- This work was supported financially by the Research Council of Canada (NSERC), the  Fonds  de Recherche du Quebec (FQRNT), ETS Montreal, and NVIDIA for the donation of a GPU.
+
+%% The Appendices part is started with the command \appendix;
+%% appendix sections are then done as normal sections
+%% \appendix
+
+%% \section{}
+%% \label{}
+
+%% References
+%%
+%% Following citation commands can be used in the body text:
+%% Usage of \cite is as follows:
+%%   \cite{key}          ==>>  [#]
+%%   \cite[chap. 2]{key} ==>>  [#, chap. 2]
+%%   \citet{key}         ==>>  Author [#]
+
+%% References with bibTeX database:
+
+% \bibliographystyle{model1-num-names}
+
+%% New version of the num-names style
+\bibliographystyle{elsarticle-num-names}
+\bibliography{sample.bib}
+
+%% Authors are advised to submit their bibtex database files. They are
+%% requested to list a bibtex style file in the manuscript if they do
+%% not want to use model1-num-names.bst.
+
+%% References without bibTeX database:
+
+% \begin{thebibliography}{00}
+
+%% \bibitem must have the following form:
+%%   \bibitem{key}...
+%%
+
+% \bibitem{}
+
+% \end{thebibliography}
+
+
+\end{document}
+
+%%
+%% End of file `elsarticle-template-1-num.tex'.
