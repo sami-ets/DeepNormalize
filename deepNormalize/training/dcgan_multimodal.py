@@ -557,24 +557,23 @@ class DCGANMultimodalTrainer(Trainer):
                           num_classes=4),
                 torch.squeeze(target[IMAGE_TARGET].long(), dim=1)))
 
-            inputs_reshaped = inputs[AUGMENTED_INPUTS].reshape(inputs[AUGMENTED_INPUTS].shape[0],
-                                                               inputs[AUGMENTED_INPUTS].shape[1] *
-                                                               inputs[AUGMENTED_INPUTS].shape[2] *
-                                                               inputs[AUGMENTED_INPUTS].shape[3] *
-                                                               inputs[AUGMENTED_INPUTS].shape[4])
+            c, d, h, w = inputs[AUGMENTED_INPUTS].shape[1], inputs[AUGMENTED_INPUTS].shape[2], \
+                         inputs[AUGMENTED_INPUTS].shape[3], inputs[AUGMENTED_INPUTS].shape[4]
 
-            gen_pred_reshaped = gen_pred.reshape(gen_pred.shape[0],
-                                                 gen_pred.shape[1] * gen_pred.shape[2] * gen_pred.shape[3] *
-                                                 gen_pred.shape[4])
-            inputs_ = torch.Tensor().new_zeros((inputs_reshaped.shape[0], 256))
-            gen_pred_ = torch.Tensor().new_zeros((gen_pred_reshaped.shape[0], 256))
-            for image in range(inputs_reshaped.shape[0]):
-                inputs_[image] = torch.nn.functional.softmax(torch.histc(inputs_reshaped[image], bins=256), dim=0)
-                gen_pred_[image] = torch.nn.functional.softmax(torch.histc(gen_pred_reshaped[image].float(), bins=256),
-                                                               dim=0)
+            hist_inputs = torch.cat(
+                [torch.histc(inputs[AUGMENTED_INPUTS][i].view(1, c * d * h * w), bins=256, min=0, max=1).unsqueeze(0)
+                 for i in range(inputs[0].shape[0])]).unsqueeze(0)
+            hist_inputs = hist_inputs / (c * d * h * w)
+            hist_inputs = torch.nn.Softmax(dim=2)(hist_inputs)
 
-            self._js_div_inputs_gauge.update(js_div(inputs_).item())
-            self._js_div_gen_gauge.update(js_div(gen_pred_).item())
+            hist_gen = torch.cat(
+                [torch.histc(gen_pred[i].view(1, c * d * h * w), bins=256, min=0, max=1).unsqueeze(0)
+                 for i in range(gen_pred.shape[0])]).unsqueeze(0)
+            hist_gen = hist_gen / (c * d * h * w)
+            hist_gen = torch.nn.Softmax(dim=2)(hist_gen)
+
+            self._js_div_inputs_gauge.update(js_div(hist_inputs).item())
+            self._js_div_gen_gauge.update(js_div(hist_gen).item())
 
         self._discriminator_confusion_matrix_gauge.update((
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
