@@ -135,8 +135,8 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         labels = natural_sort(extract_file_paths(os.path.join(self._root_dir, "label")))
         files = np.stack((np.array(images_T1), np.array(images_T2), np.array(labels)), axis=1)
 
-        self._dispatch_jobs(files, 5)
-        # self._do_job(files)
+        # self._dispatch_jobs(files, 5)
+        self._do_job(files)
 
     def _do_job(self, files):
         for file in files:
