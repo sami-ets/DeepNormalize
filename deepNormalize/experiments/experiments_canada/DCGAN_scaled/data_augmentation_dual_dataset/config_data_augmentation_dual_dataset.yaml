@@ -154,12 +154,12 @@ training:
   build_augmented_images: True
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 1.5
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_canada_data_augmentation_dual_dataset_disc_ratio_1_00"
+  env: "DCGAN_canada_data_augmentation_dual_dataset_disc_ratio_1_50"
   offline: True
-  filename: "DCGAN_canada_data_augmentation_dual_dataset_disc_ratio_1_00.json"
+  filename: "DCGAN_canada_data_augmentation_dual_dataset_disc_ratio_1_50.json"
