@@ -178,7 +178,8 @@ if __name__ == "__main__":
                        output_dir="/mnt/md0/Data/ABIDE_scaled_augmented/").run('output_abide_augmented_images.csv')
     ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE_augmented/",
                        output_dir="/mnt/md0/Data/ABIDE_augmented/").run('output_abide_augmented_images.csv')
-
+    ToCSVABIDEPipeline("/mnt/md0/Data/ABIDE_standardized_triple/",
+                       output_dir="/mnt/md0/Data/ABIDE_standardized_triple/").run('output_abide_standardized_images.csv')
     ToCSViSEGPipeline("/mnt/md0/Data/iSEG/Training/",
                       output_dir="/mnt/md0/Data/iSEG/Training").run("output_iseg_images.csv")
     ToCSViSEGPipeline("/mnt/md0/Data/iSEG_scaled/Training/",
@@ -189,7 +190,12 @@ if __name__ == "__main__":
     ToCSViSEGPipeline("/mnt/md0/Data/iSEG_augmented/Training/",
                       output_dir="/mnt/md0/Data/iSEG_augmented/Training/").run(
         "output_iseg_augmented_images.csv")
-
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG_standardized_dual/Training/",
+                      output_dir="/mnt/md0/Data/iSEG_standardized_dual/Training/").run(
+        "output_iseg_standardized_dual_images.csv")
+    ToCSViSEGPipeline("/mnt/md0/Data/iSEG_standardized_triple/Training/",
+                      output_dir="/mnt/md0/Data/iSEG_standardized_triple/Training/").run(
+        "output_iseg_standardized_triple_images.csv")
     ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS/DataNii/TrainingData/",
                           output_dir="/mnt/md0/Data/MRBrainS/DataNii/TrainingData").run(
         "output_mrbrains_images.csv")
@@ -202,3 +208,9 @@ if __name__ == "__main__":
     ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData/",
                           output_dir="/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData").run(
         "output_mrbrains_augmented_images.csv")
+    ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS_standardized_dual/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS_standardized_dual/DataNii/TrainingData").run(
+        "output_mrbrains_standardized_dual_images.csv")
+    ToCSVMRBrainSPipeline("/mnt/md0/Data/MRBrainS_standardized_triple/DataNii/TrainingData/",
+                          output_dir="/mnt/md0/Data/MRBrainS_standardized_triple/DataNii/TrainingData").run(
+        "output_mrbrains_standardized_triple_images.csv")

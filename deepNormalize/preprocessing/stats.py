@@ -4,6 +4,7 @@ import multiprocessing
 
 import abc
 import math
+import re
 import nibabel as nib
 import numpy as np
 import os
@@ -16,8 +17,6 @@ from samitorch.utils.files import extract_file_paths
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
 
-from deepNormalize.utils.utils import natural_sort
-
 logging.basicConfig(level=logging.INFO)
 
 LABELSFORTESTING = 0
@@ -27,6 +26,12 @@ T1 = 3
 T1_1MM = 4
 T1_IR = 5
 T2_FLAIR = 6
+
+
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -133,8 +138,8 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         labels = natural_sort(extract_file_paths(os.path.join(self._root_dir, "label")))
         files = np.stack((np.array(images_T1), np.array(labels)), axis=1)
 
-        # self._dispatch_jobs(files, 5)
-        self._do_job(files)
+        self._dispatch_jobs(files, 8)
+        # self._do_job(files)
 
     def _do_job(self, files):
         patches = list()
@@ -191,8 +196,8 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
         for subject in sorted(os.listdir(os.path.join(self._root_dir))):
             source_paths.append(extract_file_paths(os.path.join(self._root_dir, subject)))
 
-        # self._dispatch_jobs(source_paths, 5)
-        self._do_job(source_paths)
+        self._dispatch_jobs(source_paths, 8)
+        # self._do_job(source_paths)
 
     def _do_job(self, files):
         patches = list()
@@ -377,15 +382,15 @@ class MultipleDatasetPipeline(AbstractPreProcessingPipeline):
         labels = natural_sort(extract_file_paths(os.path.join(self._root_dirs["iSEG"], "label")))
         files = np.stack((np.array(images_T1), np.array(labels)), axis=1)
 
-        self._dataset_mean_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_mean_iseg))
-        self._dataset_std_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_std_iseg))
+        self._dataset_mean_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_mean_iseg))
+        self._dataset_std_iSEG = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_std_iseg))
 
         files = list()
         for subject in sorted(os.listdir(os.path.join(self._root_dirs["MRBrainS"]))):
             files.append(extract_file_paths(os.path.join(self._root_dirs["MRBrainS"], subject)))
 
-        self._dataset_mean_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_mean_mrbrains))
-        self._dataset_std_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 5, self._get_std_mrbrains))
+        self._dataset_mean_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_mean_mrbrains))
+        self._dataset_std_MRBrainS = np.mean(self._dispatch_jobs_in_pool(files, 8, self._get_std_mrbrains))
 
         files = pandas.read_csv(self._root_dirs["ABIDE"])
         images_T1 = np.asarray(files["T1"])
@@ -529,4 +534,4 @@ if __name__ == "__main__":
 
     MultipleDatasetPipeline({"iSEG": "/mnt/md0/Data/Direct/iSEG/Training",
                              "MRBrainS": "/mnt/md0/Data/Direct/MRBrainS/DataNii/TrainingData",
-                             "ABIDE": "/home/pierre-luc-delisle/ABIDE/5.1/output_abide_images.csv"}).run()
+                             "ABIDE": "/mnt/md0/Data/ABIDE/output_abide_images.csv"}).run()

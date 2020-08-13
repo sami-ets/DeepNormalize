@@ -14,12 +14,10 @@ from samitorch.inputs.augmentation.transformers import AddBiasField, AddNoise
 from samitorch.inputs.patch import Patch, CenterCoordinate
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
-    ResampleNiftiImageToTemplate, LoadNifti, PadToPatchShape, CropToContent, PadToShape
+    ResampleNiftiImageToTemplate, LoadNifti, PadToPatchShape, CropToContent, PadToShape, Normalize
 from samitorch.utils.files import extract_file_paths
 from samitorch.utils.slice_builder import SliceBuilder
 from torchvision.transforms import transforms
-
-from deepNormalize.utils.utils import natural_sort
 
 logging.basicConfig(level=logging.INFO)
 print(os.getenv("FREESURFER_HOME"))
@@ -30,6 +28,12 @@ T1 = 3
 T1_1MM = 4
 T1_IR = 5
 T2_FLAIR = 6
+
+
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
 
 
 class AbstractPreProcessingPipeline(metaclass=abc.ABCMeta):
@@ -119,13 +123,17 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("iSEGPipeline")
     PATCH_SIZE = (1, 32, 32, 32)
 
-    def __init__(self, root_dir, output_dir, step, do_extract_patches=True, augment=False, do_min_max_scaling=False):
+    def __init__(self, root_dir, output_dir, step, do_extract_patches=True, augment=False, do_min_max_scaling=False,
+                 do_standardization=False):
         self._root_dir = root_dir
         self._output_dir = output_dir
         self._step = step
         self._do_extract_patches = do_extract_patches
         self._augment = augment
         self._do_min_max_scaling = do_min_max_scaling
+        self._do_standardization = do_standardization
+        self._mean = 19.50588192452182
+        self._std = 64.0868640254305
         self._augmentation_transforms = transforms.Compose(
             [AddBiasField(1.0, alpha=0.5), AddNoise(1.0, snr=60, noise_type="rician")])
 
@@ -135,8 +143,8 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         labels = natural_sort(extract_file_paths(os.path.join(self._root_dir, "label")))
         files = np.stack((np.array(images_T1), np.array(images_T2), np.array(labels)), axis=1)
 
-        # self._dispatch_jobs(files, 5)
-        self._do_job(files)
+        self._dispatch_jobs(files, 5)
+        # self._do_job(files)
 
     def _do_job(self, files):
         for file in files:
@@ -152,6 +160,8 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
             t1 = self._to_numpy_array(file[0])
             if self._do_min_max_scaling:
                 t1 = self._min_max_scale(t1)
+            if self._do_standardization:
+                t1 = self._normalize(t1, self._mean, self._std)
             if self._augment:
                 t1 = self._augmentation_transforms(t1)
             if self._do_extract_patches:
@@ -208,17 +218,26 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
                  NiftiToDisk(os.path.join(self._output_dir, subject, modality, str(i) + ".nii.gz"))])
             transforms_(x)
 
+    @staticmethod
+    def _normalize(input, mean, std):
+        transform_ = transforms.Compose([Normalize(mean, std)])
+        return transform_(input)
+
 
 class MRBrainSPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("MRBrainSPipeline")
     PATCH_SIZE = (1, 32, 32, 32)
 
-    def __init__(self, root_dir, output_dir, step, do_extract_patches=True, augment=False, do_min_max_scaling=False):
+    def __init__(self, root_dir, output_dir, step, do_extract_patches=True, augment=False, do_min_max_scaling=False,
+                 do_standardization=False):
         self._root_dir = root_dir
         self._output_dir = output_dir
         self._step = step
         self._do_extract_patches = do_extract_patches
         self._do_min_max_scaling = do_min_max_scaling
+        self._do_standardization = do_standardization
+        self._mean = 19.50588192452182
+        self._std = 64.0868640254305
         self._augment = augment
         self._augmentation_transforms = transforms.Compose(
             [AddBiasField(1.0, alpha=0.5), AddNoise(1.0, snr=60, noise_type="rician")])
@@ -264,6 +283,8 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             t1 = self._apply_mask(t1, label_for_testing)
             if self._do_min_max_scaling:
                 t1 = self._min_max_scale(t1)
+            if self._do_standardization:
+                t1 = self._normalize(t1, self._mean, self._std)
             if self._augment:
                 t1 = self._augmentation_transforms(t1)
             if self._do_extract_patches:
@@ -343,6 +364,11 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
 
         return np.expand_dims(X / X.max(), 0)
 
+    @staticmethod
+    def _normalize(input, mean, std):
+        transform_ = transforms.Compose([Normalize(mean, std)])
+        return transform_(input)
+
     def _extract_patches(self, image, subject, modality, patch_size, step):
         transforms_ = transforms.Compose([PadToPatchShape(patch_size=patch_size, step=step)])
         transformed_image = transforms_(image)
@@ -367,7 +393,7 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("PreProcessingPipeline")
 
     def __init__(self, root_dir: str, output_dir: str, patch_size=(1, 32, 32, 32), step=(1, 4, 4, 4),
-                 do_extract_patches=False, augment=True, do_min_max_scaling=True):
+                 do_extract_patches=False, augment=True, do_min_max_scaling=True, do_standardization=False):
         """
         Pre-processing pipeline constructor.
 
@@ -380,6 +406,9 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         self._do_extract_patches = do_extract_patches
         self._augment = augment
         self._do_min_max_scaling = do_min_max_scaling
+        self._do_standardization = do_standardization
+        self._mean = 19.50588192452182
+        self._std = 64.0868640254305
         self._step = step
         self._normalized_shape = (1, 212, 211, 189)
         self._augmentation_transforms = transforms.Compose(
@@ -409,6 +438,8 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
                     t1 = self._min_max_scale(t1)
                 if self._augment:
                     t1 = self._augmentation_transforms(t1)
+                if self._do_standardization:
+                    t1 = self._normalize(t1, self._mean, self._std)
                 if self._do_extract_patches:
                     self._extract_patches(t1, subject, "T1", self._patch_size, self._step)
                     self._extract_patches(labels, subject, "Labels", self._patch_size, self._step)
@@ -555,6 +586,11 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
 
         return np.expand_dims(X / X.max(), 0)
 
+    @staticmethod
+    def _normalize(input, mean, std):
+        transform_ = transforms.Compose([Normalize(mean, std)])
+        return transform_(input)
+
 
 class Transpose(object):
     def __init__(self, axis):
@@ -612,16 +648,28 @@ if __name__ == "__main__":
     #              do_extract_patches=False,
     #              augment=False,
     #              do_min_max_scaling=True).run()
-    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_augmented/iSEG/Training",
-                 step=None,
-                 do_extract_patches=False,
-                 augment=True,
-                 do_min_max_scaling=False).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_augmented/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=True,
+    #              do_min_max_scaling=False).run()
     # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
     #              step=None,
     #              do_extract_patches=False,
     #              augment=True,
     #              do_min_max_scaling=True).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_standardized_triple/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=False,
+    #              do_min_max_scaling=False,
+    #              do_standardization=True).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_standardize/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=False,
+    #              do_min_max_scaling=True,
+    #              do_standardization=True).run()
     # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS/DataNii/TrainingData",
     #                  step=None,
     #                  do_extract_patches=False,
@@ -632,16 +680,28 @@ if __name__ == "__main__":
     #                  do_extract_patches=False,
     #                  augment=False,
     #                  do_min_max_scaling=True).run()
-    MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData",
-                     step=None,
-                     do_extract_patches=False,
-                     augment=True,
-                     do_min_max_scaling=False).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_augmented/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=True,
+    #                  do_min_max_scaling=False).run()
     # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData",
     #                  step=None,
     #                  do_extract_patches=False,
     #                  augment=True,
     #                  do_min_max_scaling=True).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_standardized_triple/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=False,
+    #                  do_min_max_scaling=False,
+    #                  do_standardization=True).run()
+    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_scaled_standardized/DataNii/TrainingData",
+    #                  step=None,
+    #                  do_extract_patches=False,
+    #                  augment=False,
+    #                  do_min_max_scaling=True,
+    #                  do_standardization=True).run()
     # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE/",
     #                            step=None,
     #                            do_extract_patches=False,
@@ -652,13 +712,25 @@ if __name__ == "__main__":
     #                            do_extract_patches=False,
     #                            augment=False,
     #                            do_min_max_scaling=True).run()
-    ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_augmented/",
-                               step=None,
-                               do_extract_patches=False,
-                               augment=True,
-                               do_min_max_scaling=False).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_augmented/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=True,
+    #                            do_min_max_scaling=False).run()
     # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_scaled_augmented/",
     #                            step=None,
     #                            do_extract_patches=False,
     #                            augment=True,
     #                            do_min_max_scaling=True).run()
+    ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_standardized_triple/",
+                               step=None,
+                               do_extract_patches=False,
+                               augment=False,
+                               do_min_max_scaling=False,
+                               do_standardization=True).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_scaled_standardized/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=False,
+    #                            do_min_max_scaling=True,
+    #                            do_standardization=True).run()

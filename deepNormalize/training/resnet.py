@@ -347,7 +347,7 @@ class ResNetTrainer(Trainer):
 
             for iter_critic in range(self._n_critics):
                 real_images, real_targets = self._real_T1_pool.query(
-                    (inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS]))
+                    (inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS]))
                 fake_images, _ = self._fake_T1_pool.query((gen_pred, target[AUGMENTED_TARGETS]))
 
                 disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
