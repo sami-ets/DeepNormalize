@@ -119,25 +119,20 @@ if __name__ == '__main__':
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
-        normalized_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                            dataset_configs['iSEG'].patch_size,
-                                                            dataset_configs["iSEG"].step,
-                                                            [model_trainers[GENERATOR]],
-                                                            normalize=True))
+        normalized_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].patch_size,
+                               dataset_configs["iSEG"].step, [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               dataset_configs['iSEG'].patch_size,
-                               dataset_configs["iSEG"].step,
-                               [model_trainers[GENERATOR],
-                                model_trainers[SEGMENTER]],
-                               segment=True))
-        input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                       dataset_configs['iSEG'].patch_size,
-                                                       dataset_configs["iSEG"].step))
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].patch_size,
+                               dataset_configs["iSEG"].step, [model_trainers[GENERATOR],
+                                                              model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].patch_size,
+                               dataset_configs["iSEG"].step))
 
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                    dataset_configs['iSEG'].patch_size,
-                                                    dataset_configs["iSEG"].step))
+        gt_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].patch_size,
+                               dataset_configs["iSEG"].step))
 
     if dataset_configs.get("MRBrainS", None) is not None:
         if dataset_configs["MRBrainS"].hist_shift_augmentation:
@@ -166,22 +161,18 @@ if __name__ == '__main__':
         test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
         normalized_reconstructors.append(
-            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               dataset_configs['MRBrainS'].patch_size,
-                               dataset_configs["MRBrainS"].step,
-                               [model_trainers[GENERATOR]], normalize=True))
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size, dataset_configs['MRBrainS'].patch_size,
+                               dataset_configs["MRBrainS"].step, [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               dataset_configs['MRBrainS'].patch_size,
-                               dataset_configs["MRBrainS"].step,
-                               [model_trainers[GENERATOR],
-                                model_trainers[SEGMENTER]], segment=True))
-        input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                                                       dataset_configs['MRBrainS'].patch_size,
-                                                       dataset_configs["MRBrainS"].step))
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                                                    dataset_configs['MRBrainS'].patch_size,
-                                                    dataset_configs["MRBrainS"].step))
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size, dataset_configs['MRBrainS'].patch_size,
+                               dataset_configs["MRBrainS"].step, [model_trainers[GENERATOR],
+                                                                  model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size, dataset_configs['MRBrainS'].patch_size,
+                               dataset_configs["MRBrainS"].step))
+        gt_reconstructors.append(
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size, dataset_configs['MRBrainS'].patch_size,
+                               dataset_configs["MRBrainS"].step))
 
 
     if dataset_configs.get("ABIDE", None) is not None:
@@ -210,22 +201,19 @@ if __name__ == '__main__':
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
-        normalized_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                            dataset_configs['ABIDE'].patch_size,
-                                                            dataset_configs["ABIDE"].step,
-                                                            [model_trainers[GENERATOR]], normalize=True))
+        normalized_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].patch_size,
+                               dataset_configs["ABIDE"].step, [model_trainers[GENERATOR]], normalize=True))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                               dataset_configs['ABIDE'].patch_size,
-                               dataset_configs["ABIDE"].step,
-                               [model_trainers[GENERATOR],
-                                model_trainers[SEGMENTER]], segment=True))
-        input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                       dataset_configs['ABIDE'].patch_size,
-                                                       dataset_configs["ABIDE"].step))
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                    dataset_configs['ABIDE'].patch_size,
-                                                    dataset_configs["ABIDE"].step))
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].patch_size,
+                               dataset_configs["ABIDE"].step, [model_trainers[GENERATOR],
+                                                               model_trainers[SEGMENTER]], segment=True))
+        input_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].patch_size,
+                               dataset_configs["ABIDE"].step))
+        gt_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].patch_size,
+                               dataset_configs["ABIDE"].step))
 
     # Concat datasets.
     if len(dataset_configs) > 1:

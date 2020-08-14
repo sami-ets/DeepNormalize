@@ -101,8 +101,8 @@ class SlicedImageReconstructorTest(unittest.TestCase):
         patches = iSEGSliceDatasetFactory.get_patches([self._image], [self._target], (1, 32, 32, 32), (1, 16, 16, 16))
         self._dataset = iSEGSliceDatasetFactory.create([self._image], [self._target], patches, Modality.T1, 0,
                                                        transforms=[ToNDTensor()])
-        self._reconstructor = ImageReconstructor([256, 192, 160], [1,32, 32, 32], [1, 16, 16, 16], models=None,
-                                                 dataset=self._dataset, test_image=self._image)
+        self._reconstructor = ImageReconstructor([256, 192, 160], [1, 32, 32, 32], [1, 16, 16, 16], models=None,
+                                                 test_image=self._image)
 
     def test_should_output_reconstructed_image(self):
         all_patches = list(map(lambda dataset: [patch.slice for patch in dataset._patches],
