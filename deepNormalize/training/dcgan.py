@@ -110,7 +110,7 @@ class DCGANTrainer(Trainer):
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
         self._save_folder = save_folder
-        self._sampler = Sampler(0.33)
+        self._sampler = Sampler(0.50)
         self._discriminator_loss_train_gauge = AverageGauge()
         self._discriminator_loss_valid_gauge = AverageGauge()
         self._discriminator_loss_test_gauge = AverageGauge()
@@ -347,7 +347,7 @@ class DCGANTrainer(Trainer):
 
             for iter_critic in range(self._n_critics):
                 real_images, real_targets = self._real_T1_pool.query(
-                    (inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS]))
+                    (inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_INPUTS]))
                 fake_images, _ = self._fake_T1_pool.query((gen_pred, target[AUGMENTED_TARGETS]))
 
                 disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
