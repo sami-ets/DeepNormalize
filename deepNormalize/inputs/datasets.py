@@ -43,7 +43,6 @@ class SliceDataset(Dataset):
         image = self._source_images[image_id]
         target = self._target_images[image_id]
 
-
         slice = patch.slice
 
         slice_x, slice_y = image[tuple(slice)], target[tuple(slice)]
@@ -4186,3 +4185,23 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
     def shuffle_split(subjects: np.ndarray, split_ratio: Union[float, int]):
         shuffle(subjects)
         return subjects[ceil(len(subjects) * split_ratio):], subjects[0:ceil(len(subjects) * split_ratio)]
+
+
+class SingleImageDataset(Dataset):
+    def __init__(self, root_path: str, subject: str, patch_size, step):
+        self._image_path = os.path.join(root_path, subject, "T1", "T1.nii.gz")
+        self._image = PadToPatchShape(patch_size=patch_size, step=step)(ToNumpyArray()(self._image_path))
+        self._slices = SliceBuilder(self._image.shape, patch_size=patch_size, step=step).build_slices()
+        self._image_max = self._image.max()
+        self._patch_size = patch_size
+        self._step = step
+
+    def __getitem__(self, index):
+        try:
+            image = torch.tensor([(self._image[self._slices[index]])], dtype=torch.float32, requires_grad=False).squeeze(0)
+            return image
+        except Exception as e:
+            pass
+
+    def __len__(self):
+        return len(self._slices)

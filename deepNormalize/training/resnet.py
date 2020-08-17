@@ -101,11 +101,15 @@ class ResNetTrainer(Trainer):
         self._js_div_inputs_gauge = AverageGauge()
         self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
+        self._generator_output_confusion_matrix_iseg = ConfusionMatrix(num_classes=2)
+        self._generator_output_confusion_matrix_mrbrains = ConfusionMatrix(num_classes=2)
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets)
         self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets)
+        self._discriminator_pred_on_generated_data_iseg = 0
+        self._discriminator_pred_on_generated_data_MRBrainS = 0
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
@@ -389,15 +393,15 @@ class ResNetTrainer(Trainer):
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
                 torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear",
                                                 align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
         if self._should_activate_autoencoder():
@@ -620,6 +624,8 @@ class ResNetTrainer(Trainer):
         self._discriminator_loss_train_gauge.reset()
         self._discriminator_loss_valid_gauge.reset()
         self._discriminator_loss_test_gauge.reset()
+        self._discriminator_pred_on_generated_data_MRBrainS = 0
+        self._discriminator_pred_on_generated_data_iseg = 0
 
         if self._current_epoch == self._training_config.patience_segmentation:
             self._model_trainers[GENERATOR].optimizer_lr = 0.001
@@ -635,6 +641,8 @@ class ResNetTrainer(Trainer):
         else:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.zeros(
                 (self._num_datasets, self._num_datasets))
+        print(str(self._discriminator_pred_on_generated_data_iseg.cpu().numpy()))
+        print(str(self._discriminator_pred_on_generated_data_MRBrainS.cpu().numpy()))
 
     def on_valid_epoch_end(self):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]

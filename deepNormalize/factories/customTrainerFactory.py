@@ -1180,6 +1180,24 @@ class TrainerFactory(object):
                                         "rownames": list(dataset_configs.keys()) + ["Generated"],
                                         "title": "Discriminator Confusion Matrix Training"}},
                                     every=1), Event.ON_TRAIN_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Discriminator Augmented Confusion Matrix Training",
+                                    PlotType.HEATMAP_PLOT,
+                                    params={"opts": {
+                                        "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                        "rownames": list(dataset_configs.keys()) + ["Generated iSEG",
+                                                                                    "Generated MRBrainS"],
+                                        "title": "Discriminator Augmented Confusion Matrix Training"}},
+                                    every=1), Event.ON_TRAIN_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Discriminator Augmented Confusion Matrix Test",
+                                    PlotType.HEATMAP_PLOT,
+                                    params={"opts": {
+                                        "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                        "rownames": list(dataset_configs.keys()) + ["Generated iSEG",
+                                                                                    "Generated MRBrainS"],
+                                        "title": "Discriminator Augmented Confusion Matrix Test"}},
+                                    every=1), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
