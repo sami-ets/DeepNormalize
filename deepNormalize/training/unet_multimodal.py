@@ -317,8 +317,10 @@ class UNetMultimodalTrainer(Trainer):
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
-
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][0], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Input T2 {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][1], 0), 0), 160)
                 self.custom_variables[
                     "Reconstructed Initial Noise {} Image".format(
                         dataset)] = np.zeros((224, 192))

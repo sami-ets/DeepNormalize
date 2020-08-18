@@ -347,7 +347,7 @@ class ResNetMultimodalTrainer(Trainer):
 
             for iter_critic in range(self._n_critics):
                 real_images, real_targets = self._real_T1_pool.query(
-                    (inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS]))
+                    (inputs[NON_AUGMENTED_INPUTS], target[NON_AUGMENTED_TARGETS]))
                 fake_images, _ = self._fake_T1_pool.query((gen_pred, target[AUGMENTED_TARGETS]))
 
                 disc_loss, disc_pred, disc_target, x_conv1, x_layer1, x_layer2, x_layer3 = self._train_d(
@@ -658,7 +658,8 @@ class ResNetMultimodalTrainer(Trainer):
             img_norm = rebuild_image(self._dataset_configs.keys(), all_patches, self._normalize_reconstructors)
             img_seg = rebuild_image(self._dataset_configs.keys(), all_patches, self._segmentation_reconstructors)
 
-            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input, "Input")
+            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input,
+                               "Input")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_gt,
                                "Ground_Truth")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_norm,
@@ -677,9 +678,6 @@ class ResNetMultimodalTrainer(Trainer):
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
-                    "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset], 0), 0), 160)
-                self.custom_variables[
                     "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0), 160).squeeze(0)
                 self.custom_variables[
@@ -687,7 +685,16 @@ class ResNetMultimodalTrainer(Trainer):
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][0], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Input T2 {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][1], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset][0], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Normalized T2 {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset][1], 0), 0), 160)
 
                 if self._training_config.build_augmented_images:
                     self.custom_variables[

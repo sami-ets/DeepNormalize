@@ -526,6 +526,7 @@ def construct_class_histogram(inputs, target, gen_pred):
     plt.close(fig1)
     return "/tmp/histograms-{}.png".format(str(id))
 
+
 def count(tensor, n_classes):
     count = torch.Tensor().new_zeros(size=(n_classes,), device="cpu")
     for i in range(n_classes):
@@ -606,12 +607,29 @@ def save_rebuilt_image(current_epoch, save_folder, datasets, image, image_type):
         os.makedirs(os.path.join(save_folder, "reconstructed_images"))
 
     for dataset in datasets:
-        transform_img = Compose(
-            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
-                                                       "Reconstructed_{}_{}_Image_{}.nii.gz".format(image_type, dataset,
-                                                                                                    str(
-                                                                                                        current_epoch))))])
-        transform_img(image[dataset])
+        if image[dataset].shape[0] == 2:
+            transform_img = Compose(
+                [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                           "Reconstructed_{}_T1_{}_Image_{}.nii.gz".format(image_type,
+                                                                                                           dataset,
+                                                                                                           str(
+                                                                                                               current_epoch))))])
+            transform_img(image[dataset][0])
+            transform_img = Compose(
+                [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                           "Reconstructed_{}_T2_{}_Image_{}.nii.gz".format(image_type,
+                                                                                                           dataset,
+                                                                                                           str(
+                                                                                                               current_epoch))))])
+            transform_img(image[dataset][1])
+        else:
+            transform_img = Compose(
+                [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
+                                                           "Reconstructed_{}_{}_Image_{}.nii.gz".format(image_type,
+                                                                                                        dataset,
+                                                                                                        str(
+                                                                                                            current_epoch))))])
+            transform_img(image[dataset])
 
 
 def save_rebuilt_images(current_epoch, save_folder, datasets, img_input, img_norm, img_seg, img_gt):

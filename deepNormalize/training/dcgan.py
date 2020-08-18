@@ -670,7 +670,8 @@ class DCGANTrainer(Trainer):
             img_norm = rebuild_image(self._dataset_configs.keys(), all_patches, self._normalize_reconstructors)
             img_seg = rebuild_image(self._dataset_configs.keys(), all_patches, self._segmentation_reconstructors)
 
-            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input, "Input")
+            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input,
+                               "Input")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_gt,
                                "Ground_Truth")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_norm,

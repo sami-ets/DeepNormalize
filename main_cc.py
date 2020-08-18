@@ -122,9 +122,10 @@ if __name__ == '__main__':
                                dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR]], normalize=True,
                                test_image=iSEG_reconstruction._augmented_images[
                                    0] if iSEG_reconstruction._augmented_images is not None else
-                               iSEG_reconstruction._source_images[0], is_multimodal=True))
+                               iSEG_reconstruction._source_images[0],
+                               is_multimodal=True if isinstance(dataset_configs["iSEG"].modalities, list) else False))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:], dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR],
                                                                    model_trainers[SEGMENTER]],
                                normalize_and_segment=True, test_image=iSEG_reconstruction._augmented_images[
@@ -132,10 +133,11 @@ if __name__ == '__main__':
                 iSEG_reconstruction._source_images[0]))
         input_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
-                               dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._source_images[0], is_multimodal=True))
+                               dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._source_images[0],
+                               is_multimodal=True if isinstance(dataset_configs["iSEG"].modalities, list) else False))
 
         gt_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:], dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._target_images[0]))
 
         if dataset_configs["iSEG"].path_augmented is not None:
@@ -172,9 +174,11 @@ if __name__ == '__main__':
                                                             [model_trainers[GENERATOR]], normalize=True,
                                                             test_image=MRBrainS_reconstruction._augmented_images[
                                                                 0] if MRBrainS_reconstruction._augmented_images is not None else
-                                                            MRBrainS_reconstruction._source_images[0], is_multimodal=True))
+                                                            MRBrainS_reconstruction._source_images[0],
+                                                            is_multimodal=True if isinstance(
+                                                                dataset_configs["iSEG"].modalities, list) else False))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+            ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size[-3:],
                                dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]], normalize_and_segment=True,
@@ -184,9 +188,11 @@ if __name__ == '__main__':
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                        dataset_configs['MRBrainS'].test_patch_size,
                                                        dataset_configs["MRBrainS"].test_step,
-                                                       test_image=MRBrainS_reconstruction._source_images[0], is_multimodal=True))
+                                                       test_image=MRBrainS_reconstruction._source_images[0],
+                                                       is_multimodal=True if isinstance(
+                                                           dataset_configs["iSEG"].modalities, list) else False))
 
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+        gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size[-3:],
                                                     dataset_configs['MRBrainS'].test_patch_size,
                                                     dataset_configs["MRBrainS"].test_step,
                                                     test_image=MRBrainS_reconstruction._target_images[0]))

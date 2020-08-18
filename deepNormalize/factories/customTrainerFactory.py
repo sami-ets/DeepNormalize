@@ -369,6 +369,11 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -403,6 +408,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -808,6 +818,11 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
@@ -841,6 +856,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -1702,6 +1722,11 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
@@ -1735,6 +1760,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -2103,32 +2133,37 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Noise iSEG After Normalization"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -2138,33 +2173,38 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Noise MRBrainS After Normalization"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -2174,22 +2214,22 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Per Dataset Mean Hausdorff Distance", every=1,
                                              params={"title": "Per Dataset Mean Hausdorff Distance",
@@ -2433,6 +2473,11 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented iSEG Image"}},
@@ -2447,6 +2492,11 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
+                                    every=100), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -2855,6 +2905,11 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -2889,6 +2944,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -3352,6 +3412,11 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
@@ -3385,6 +3450,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -3848,9 +3918,19 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Normalized T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Normalized T2 iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
@@ -3883,9 +3963,19 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Normalized T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Normalized T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -4343,6 +4433,11 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -4377,6 +4472,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -4806,32 +4906,37 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Noise iSEG After Normalization"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -4841,33 +4946,38 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Initial Noise MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Noise MRBrainS After Normalization"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -4877,22 +4987,22 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Ground Truth ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Ground Truth ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented ABIDE Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented ABIDE Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomLinePlotWithLegend(visdom_logger, "Per Dataset Mean Hausdorff Distance", every=1,
                                              params={"title": "Per Dataset Mean Hausdorff Distance",
@@ -5167,6 +5277,11 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
+                                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 iSEG Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -5181,6 +5296,11 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
+                                    every=10), Event.ON_TEST_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
+                                    params={"opts": {"store_history": True,
+                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,

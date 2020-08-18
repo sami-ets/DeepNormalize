@@ -26,6 +26,7 @@ from torchvision.transforms import Compose
 
 from deepNormalize.inputs.images import SliceType
 from deepNormalize.utils.constants import EPSILON, ISEG_ID, MRBRAINS_ID, ABIDE_ID
+import copy
 
 
 class LabelMapper(object):
@@ -151,9 +152,6 @@ class ImageReconstructor(object):
         divisor = np.zeros(self._image_size)
 
         if self._is_multimodal:
-            self._image_size.insert(0, 2)
-            img = np.zeros(self._image_size)
-            divisor = np.zeros(self._image_size)
             n_d = self._image_size[1] - self._patch_size[1] + 1
             n_h = self._image_size[2] - self._patch_size[2] + 1
             n_w = self._image_size[3] - self._patch_size[3] + 1

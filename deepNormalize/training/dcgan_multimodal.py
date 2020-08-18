@@ -658,7 +658,8 @@ class DCGANMultimodalTrainer(Trainer):
             img_norm = rebuild_image(self._dataset_configs.keys(), all_patches, self._normalize_reconstructors)
             img_seg = rebuild_image(self._dataset_configs.keys(), all_patches, self._segmentation_reconstructors)
 
-            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input, "Input")
+            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input,
+                               "Input")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_gt,
                                "Ground_Truth")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_norm,
@@ -677,9 +678,6 @@ class DCGANMultimodalTrainer(Trainer):
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
-                    "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset], 0), 0), 160)
-                self.custom_variables[
                     "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0), 160).squeeze(0)
                 self.custom_variables[
@@ -687,7 +685,16 @@ class DCGANMultimodalTrainer(Trainer):
                     SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][0], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Input T2 {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset][1], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset][0], 0), 0), 160)
+                self.custom_variables[
+                    "Reconstructed Normalized T2 {} Image".format(dataset)] = self._slicer.get_slice(
+                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset][1], 0), 0), 160)
 
                 if self._training_config.build_augmented_images:
                     self.custom_variables[

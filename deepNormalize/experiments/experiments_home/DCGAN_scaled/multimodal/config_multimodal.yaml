@@ -120,27 +120,27 @@ dataset:
     path_augmented: !!null
     modalities: ["T1", "T2"]
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 150
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
-    reconstruction_size: [256, 192, 160]
+    reconstruction_size: [2, 256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 150
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
     test_step: [1, 16, 16, 16]
-    reconstruction_size: [256, 256, 192]
+    reconstruction_size: [2, 256, 256, 192]
 
 training:
   trainer: "DCGAN_Multimodal"
