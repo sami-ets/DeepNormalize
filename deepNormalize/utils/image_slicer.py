@@ -129,8 +129,8 @@ class ImageSlicer(object):
 class ImageReconstructor(object):
 
     def __init__(self, image_size: List[int], patch_size: List[int], step: List[int],
-                 models: List[torch.nn.Module] = None, normalize: bool = False,
-                 segment: bool = False, normalize_and_segment: bool = False, test_image: np.ndarray = None):
+                 models: List[torch.nn.Module] = None, normalize: bool = False, segment: bool = False,
+                 normalize_and_segment: bool = False, test_image: np.ndarray = None, is_multimodal=False):
         self._patch_size = patch_size
         self._image_size = image_size
         self._step = step
@@ -140,6 +140,7 @@ class ImageReconstructor(object):
         self._do_normalize_and_segment = normalize_and_segment
         self._transform = Compose([ToNumpyArray()])
         self._test_image = test_image
+        self._is_multimodal = is_multimodal
 
     @staticmethod
     def _normalize(img):
@@ -149,9 +150,17 @@ class ImageReconstructor(object):
         img = np.zeros(self._image_size)
         divisor = np.zeros(self._image_size)
 
-        n_d = self._image_size[0] - self._patch_size[1] + 1
-        n_h = self._image_size[1] - self._patch_size[2] + 1
-        n_w = self._image_size[2] - self._patch_size[3] + 1
+        if self._is_multimodal:
+            self._image_size.insert(0, 2)
+            img = np.zeros(self._image_size)
+            divisor = np.zeros(self._image_size)
+            n_d = self._image_size[1] - self._patch_size[1] + 1
+            n_h = self._image_size[2] - self._patch_size[2] + 1
+            n_w = self._image_size[3] - self._patch_size[3] + 1
+        else:
+            n_d = self._image_size[0] - self._patch_size[1] + 1
+            n_h = self._image_size[1] - self._patch_size[2] + 1
+            n_w = self._image_size[2] - self._patch_size[3] + 1
 
         for p, (z, y, x) in zip(patches, product(range(0, n_d, self._step[1]),
                                                  range(0, n_h, self._step[2]),
@@ -183,8 +192,12 @@ class ImageReconstructor(object):
                     p = torch.argmax(torch.nn.functional.softmax(self._models[1].forward(p), dim=1), dim=1,
                                      keepdim=True).float().cpu().detach().numpy()
 
-            img[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += p[0][0]
-            divisor[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += 1
+            if self._is_multimodal:
+                img[0:2, z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += p[0]
+                divisor[0:2, z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += 1
+            else:
+                img[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += p[0][0]
+                divisor[z:z + self._patch_size[1], y:y + self._patch_size[2], x:x + self._patch_size[3]] += 1
 
         if self._do_segment or self._do_normalize_and_segment:
             return np.clip(np.round(img / divisor), a_min=0, a_max=3)

@@ -125,11 +125,11 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/iSEG_scaled/Training/"
+    path: "/project/def-lombaert/pld2602/Data/iSEG_scaled/Training/"
     path_augmented: !!null
     modalities: ["T1", "T2"]
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -138,11 +138,11 @@ dataset:
     test_step: [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
-    path: "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData/"
+    path: "/project/def-lombaert/pld2602/Data/MRBrainS_scaled/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: ["T1", "T2_FLAIR"]
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     hist_shift_augmentation: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -153,19 +153,19 @@ dataset:
 
 training:
   trainer: "ResNet_Multimodal"
-  batch_size: 14
+  batch_size: 72
   n_critics: 3
   nb_epochs: 150
   patience_segmentation: 3
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 1.5
     seg_ratio: 1.0
 
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "ResNet_home_scaled_disc_ratio_multi_modal_1_00"
+  env: "ResNet_canada_scaled_disc_ratio_multi_modal_1_50"
   offline: True
-  filename: "ResNet_home_scaled_disc_ratio_multi_modal_1_00.json"
+  filename: "ResNet_canada_scaled_disc_ratio_multi_modal_1_50.json"

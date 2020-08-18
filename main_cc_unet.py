@@ -121,32 +121,26 @@ if __name__ == '__main__':
         reconstruction_datasets.append(iSEG_reconstruction)
 
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                               dataset_configs['iSEG'].test_patch_size,
-                               dataset_configs["iSEG"].test_step,
-                               [model_trainers[0]],
-                               segment=True,
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+                               dataset_configs["iSEG"].test_step, [model_trainers[0]], segment=True,
                                test_image=iSEG_augmentation_strategy(
                                    iSEG_reconstruction._source_images[0]) if iSEG_augmentation_strategy is not None else
                                iSEG_reconstruction._source_images[0]))
 
-        input_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                       dataset_configs['iSEG'].test_patch_size,
-                                                       dataset_configs["iSEG"].test_step,
-                                                       test_image=iSEG_augmentation_strategy(
-                                                           iSEG_reconstruction._source_images[
-                                                               0]) if iSEG_augmentation_strategy is not None else
-                                                       iSEG_reconstruction._source_images[0]))
+        input_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+                               dataset_configs["iSEG"].test_step, test_image=iSEG_augmentation_strategy(
+                    iSEG_reconstruction._source_images[
+                        0]) if iSEG_augmentation_strategy is not None else
+                iSEG_reconstruction._source_images[0]))
 
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                                    dataset_configs['iSEG'].test_patch_size,
-                                                    dataset_configs["iSEG"].test_step,
-                                                    test_image=iSEG_reconstruction._target_images[0]))
+        gt_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+                               dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._target_images[0]))
 
         if dataset_configs["iSEG"].path_augmented is not None:
             augmented_input_reconstructors.append(
-                ImageReconstructor(dataset_configs["iSEG"].reconstruction_size,
-                                   dataset_configs['iSEG'].test_patch_size,
+                ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
                                    dataset_configs["iSEG"].test_step,
                                    test_image=iSEG_reconstruction._augmented_images[0]))
 
@@ -175,10 +169,8 @@ if __name__ == '__main__':
 
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                               dataset_configs['MRBrainS'].test_patch_size,
-                               dataset_configs["MRBrainS"].test_step,
-                               [model_trainers[0]],
-                               segment=True,
+                               dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
+                               [model_trainers[0]], segment=True,
                                test_image=MRBrainS_augmentation_strategy(MRBrainS_reconstruction._source_images[
                                                                              0]) if MRBrainS_augmentation_strategy is not None else
                                MRBrainS_reconstruction._source_images[0]))
@@ -198,8 +190,7 @@ if __name__ == '__main__':
         if dataset_configs["MRBrainS"].path_augmented is not None:
             augmented_input_reconstructors.append(
                 ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
-                                   dataset_configs['MRBrainS'].test_patch_size,
-                                   dataset_configs["MRBrainS"].test_step,
+                                   dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
                                    test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
@@ -225,26 +216,21 @@ if __name__ == '__main__':
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                               dataset_configs['ABIDE'].test_patch_size,
-                               dataset_configs["ABIDE"].test_step,
-                               [model_trainers[0]],
-                               segment=True,
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
+                               dataset_configs["ABIDE"].test_step, [model_trainers[0]], segment=True,
                                test_image=ABIDE_augmentation_strategy(ABIDE_reconstruction._source_images[
                                                                           0]) if ABIDE_augmentation_strategy is not None else
                                ABIDE_reconstruction._source_images[0]))
-        input_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                       dataset_configs['ABIDE'].test_patch_size,
-                                                       dataset_configs["ABIDE"].test_step,
-                                                       test_image=ABIDE_augmentation_strategy(
-                                                           ABIDE_reconstruction._source_images[
-                                                               0]) if ABIDE_augmentation_strategy is not None else
-                                                       ABIDE_reconstruction._source_images[0]))
+        input_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
+                               dataset_configs["ABIDE"].test_step, test_image=ABIDE_augmentation_strategy(
+                    ABIDE_reconstruction._source_images[
+                        0]) if ABIDE_augmentation_strategy is not None else
+                ABIDE_reconstruction._source_images[0]))
 
-        gt_reconstructors.append(ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size,
-                                                    dataset_configs['ABIDE'].test_patch_size,
-                                                    dataset_configs["ABIDE"].test_step,
-                                                    test_image=ABIDE_reconstruction._target_images[0]))
+        gt_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
+                               dataset_configs["ABIDE"].test_step, test_image=ABIDE_reconstruction._target_images[0]))
 
     # Concat datasets.
     if len(dataset_configs) > 1:

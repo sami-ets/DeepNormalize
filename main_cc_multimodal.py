@@ -30,7 +30,7 @@ from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.augmentation.strategies import AugmentInput
-from samitorch.inputs.transformers import Normalize
+from samitorch.inputs.augmentation.transformers import ShiftHistogram
 from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
@@ -39,8 +39,7 @@ from torchvision.transforms import Compose
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customModelFactory import CustomModelFactory
 from deepNormalize.factories.customTrainerFactory import TrainerFactory
-from deepNormalize.inputs.datasets import ABIDESliceUNetDatasetFactory, MRBrainSSliceUNetDatasetFactory, \
-    iSEGSliceUNetDatasetFactory
+from deepNormalize.inputs.datasets import iSEGSliceDatasetFactory, MRBrainSSliceDatasetFactory, ABIDESliceDatasetFactory
 from deepNormalize.nn.criterions import CustomCriterionFactory
 from deepNormalize.utils.constants import *
 from deepNormalize.utils.image_slicer import ImageReconstructor
@@ -64,7 +63,7 @@ if __name__ == '__main__':
     dataset_configs = YamlConfigurationParser.parse_section(args.config_file, "dataset")
     dataset_configs = {k: DatasetConfiguration(v) for k, v, in dataset_configs.items()}
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs.values())),
-                   list(map(lambda config: config.to_html(), [model_trainer_configs]))]
+                   list(map(lambda config: config.to_html(), model_trainer_configs))]
 
     # Prepare the data.
     train_datasets = list()
@@ -98,11 +97,10 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
-        if training_config.data_augmentation:
+        if dataset_configs["iSEG"].hist_shift_augmentation:
             iSEG_augmentation_strategy = AugmentInput(
-                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
-
-        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceUNetDatasetFactory.create_train_valid_test(
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
+        iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
             dataset_id=ISEG_ID,
@@ -115,23 +113,27 @@ if __name__ == '__main__':
             augmented_path=dataset_configs["iSEG"].path_augmented,
             test_patch_size=dataset_configs["iSEG"].test_patch_size,
             test_step=dataset_configs["iSEG"].test_step)
+        train_datasets.append(iSEG_train)
         valid_datasets.append(iSEG_valid)
         test_datasets.append(iSEG_test)
         reconstruction_datasets.append(iSEG_reconstruction)
-
+        normalized_reconstructors.append(
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
+                               dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR]], normalize=True,
+                               test_image=iSEG_reconstruction._augmented_images[
+                                   0] if iSEG_reconstruction._augmented_images is not None else
+                               iSEG_reconstruction._source_images[0], is_multimodal=True))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
-                               dataset_configs["iSEG"].test_step, [model_trainers[0]], segment=True,
-                               test_image=iSEG_augmentation_strategy(
-                                   iSEG_reconstruction._source_images[0]) if iSEG_augmentation_strategy is not None else
-                               iSEG_reconstruction._source_images[0]))
-
+                               dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR],
+                                                                   model_trainers[SEGMENTER]],
+                               normalize_and_segment=True, test_image=iSEG_reconstruction._augmented_images[
+                    0] if iSEG_reconstruction._augmented_images is not None else
+                iSEG_reconstruction._source_images[0]))
         input_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
-                               dataset_configs["iSEG"].test_step, test_image=iSEG_augmentation_strategy(
-                    iSEG_reconstruction._source_images[
-                        0]) if iSEG_augmentation_strategy is not None else
-                iSEG_reconstruction._source_images[0]))
+                               dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._source_images[0],
+                               is_multimodal=True))
 
         gt_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
@@ -144,11 +146,11 @@ if __name__ == '__main__':
                                    test_image=iSEG_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        if training_config.data_augmentation:
+        if dataset_configs["MRBrainS"].hist_shift_augmentation:
             MRBrainS_augmentation_strategy = AugmentInput(
-                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
 
-        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceUNetDatasetFactory.create_train_valid_test(
+        MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
             dataset_id=MRBRAINS_ID,
@@ -161,23 +163,31 @@ if __name__ == '__main__':
             augmented_path=dataset_configs["MRBrainS"].path_augmented,
             test_patch_size=dataset_configs["MRBrainS"].test_patch_size,
             test_step=dataset_configs["MRBrainS"].test_step)
-        train_datasets.append(MRBrainS_test)
+        train_datasets.append(MRBrainS_train)
+        valid_datasets.append(MRBrainS_valid)
+        test_datasets.append(MRBrainS_test)
         reconstruction_datasets.append(MRBrainS_reconstruction)
-
+        normalized_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
+                                                            dataset_configs['MRBrainS'].test_patch_size,
+                                                            dataset_configs["MRBrainS"].test_step,
+                                                            [model_trainers[GENERATOR]], normalize=True,
+                                                            test_image=MRBrainS_reconstruction._augmented_images[
+                                                                0] if MRBrainS_reconstruction._augmented_images is not None else
+                                                            MRBrainS_reconstruction._source_images[0],
+                                                            is_multimodal=True))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
-                               [model_trainers[0]], segment=True,
-                               test_image=MRBrainS_augmentation_strategy(MRBrainS_reconstruction._source_images[
-                                                                             0]) if MRBrainS_augmentation_strategy is not None else
+                               [model_trainers[GENERATOR],
+                                model_trainers[SEGMENTER]], normalize_and_segment=True,
+                               test_image=MRBrainS_reconstruction._augmented_images[
+                                   0] if MRBrainS_reconstruction._augmented_images is not None else
                                MRBrainS_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                        dataset_configs['MRBrainS'].test_patch_size,
                                                        dataset_configs["MRBrainS"].test_step,
-                                                       test_image=MRBrainS_augmentation_strategy(
-                                                           MRBrainS_reconstruction._source_images[
-                                                               0]) if MRBrainS_augmentation_strategy is not None else
-                                                       MRBrainS_reconstruction._source_images[0]))
+                                                       test_image=MRBrainS_reconstruction._source_images[0],
+                                                       is_multimodal=True))
 
         gt_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                     dataset_configs['MRBrainS'].test_patch_size,
@@ -191,11 +201,11 @@ if __name__ == '__main__':
                                    test_image=MRBrainS_reconstruction._augmented_images[0]))
 
     if dataset_configs.get("ABIDE", None) is not None:
-        if training_config.data_augmentation:
+        if dataset_configs["ABIDE"].hist_shift_augmentation:
             ABIDE_augmentation_strategy = AugmentInput(
-                Compose([Normalize(training_config.variables["mean"], training_config.variables["std"])]))
+                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
 
-        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceUNetDatasetFactory.create_train_valid_test(
+        ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
             dataset_id=ABIDE_ID,
@@ -212,18 +222,22 @@ if __name__ == '__main__':
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
         reconstruction_datasets.append(ABIDE_reconstruction)
+        normalized_reconstructors.append(
+            ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
+                               dataset_configs["ABIDE"].test_step, [model_trainers[GENERATOR]], normalize=True,
+                               test_image=ABIDE_reconstruction._augmented_images[
+                                   0] if ABIDE_reconstruction._augmented_images is not None else
+                               ABIDE_reconstruction._source_images[0]))
         segmentation_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
-                               dataset_configs["ABIDE"].test_step, [model_trainers[0]], segment=True,
-                               test_image=ABIDE_augmentation_strategy(ABIDE_reconstruction._source_images[
-                                                                          0]) if ABIDE_augmentation_strategy is not None else
-                               ABIDE_reconstruction._source_images[0]))
+                               dataset_configs["ABIDE"].test_step, [model_trainers[GENERATOR],
+                                                                    model_trainers[SEGMENTER]],
+                               normalize_and_segment=True, test_image=ABIDE_reconstruction._augmented_images[
+                    0] if ABIDE_reconstruction._augmented_images is not None else
+                ABIDE_reconstruction._source_images[0]))
         input_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
-                               dataset_configs["ABIDE"].test_step, test_image=ABIDE_augmentation_strategy(
-                    ABIDE_reconstruction._source_images[
-                        0]) if ABIDE_augmentation_strategy is not None else
-                ABIDE_reconstruction._source_images[0]))
+                               dataset_configs["ABIDE"].test_step, test_image=ABIDE_reconstruction._source_images[0]))
 
         gt_reconstructors.append(
             ImageReconstructor(dataset_configs["ABIDE"].reconstruction_size, dataset_configs['ABIDE'].test_patch_size,
@@ -281,7 +295,8 @@ if __name__ == '__main__':
 
     trainer = TrainerFactory(training_config.trainer).create(training_config, model_trainers, dataloaders,
                                                              reconstruction_datasets, normalized_reconstructors,
-                                                             input_reconstructors, segmentation_reconstructors,
+                                                             input_reconstructors,
+                                                             segmentation_reconstructors,
                                                              augmented_input_reconstructors, gt_reconstructors,
                                                              run_config, dataset_configs, save_folder,
                                                              visdom_logger)
