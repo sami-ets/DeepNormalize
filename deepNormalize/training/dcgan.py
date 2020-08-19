@@ -300,16 +300,23 @@ class DCGANTrainer(Trainer):
 
         return seg_pred, loss_S
 
-    def _loss_D_G_X_as_X(self, D: ModelTrainer, inputs, target, loss_gauge: AverageGauge):
-        pred_D_G_X, x_conv1, x_layer1, x_layer2, x_layer3 = D.forward(inputs)
+    def _loss_D_G_X_as_X(self, D: ModelTrainer, real, generated, real_target, fake_target, loss_gauge: AverageGauge):
+        pred_D_G_X, _, _, _, _ = D.forward(generated)
         ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
                                        requires_grad=False)
-        loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
-                                                                           torch.nn.functional.log_softmax(
-                                                                               ones - torch.nn.functional.softmax(
-                                                                                   pred_D_G_X, dim=1),
-                                                                               dim=1),
-                                                                           target)
+        term_1 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
+                                                                  torch.nn.functional.log_softmax(
+                                                                      ones - torch.nn.functional.softmax(
+                                                                          pred_D_G_X, dim=1),
+                                                                      dim=1),
+                                                                  fake_target)
+        term_2 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
+                                                                  torch.nn.functional.log_softmax(
+                                                                      torch.nn.functional.softmax(
+                                                                          pred_D_G_X, dim=1),
+                                                                      dim=1),
+                                                                  real_target)
+        loss_D_G_X_as_X = term_1 + term_2
         loss_gauge.update(loss_D_G_X_as_X.item())
 
         return loss_D_G_X_as_X
@@ -362,7 +369,9 @@ class DCGANTrainer(Trainer):
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
-            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred, fake_target,
+
+            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS],
+                                                   gen_pred, target[NON_AUGMENTED_TARGETS][DATASET_ID], fake_target,
                                                    self._D_G_X_as_X_train_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
@@ -427,8 +436,9 @@ class DCGANTrainer(Trainer):
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
-            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred, fake_target,
-                                                   self._D_G_X_as_X_valid_gauge)
+            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS],
+                                                   gen_pred, target[DATASET_ID], fake_target,
+                                                   self._D_G_X_as_X_train_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
@@ -464,8 +474,9 @@ class DCGANTrainer(Trainer):
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
-            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred, fake_target,
-                                                   self._D_G_X_as_X_test_gauge)
+            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], inputs[NON_AUGMENTED_INPUTS],
+                                                   gen_pred, target[DATASET_ID], fake_target,
+                                                   self._D_G_X_as_X_train_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
