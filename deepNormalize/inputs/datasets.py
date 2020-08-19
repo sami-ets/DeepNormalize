@@ -32,11 +32,17 @@ class SliceDataset(Dataset):
         self._dataset_id = dataset_id
         self._transform = transforms
         self._augment = augment
+        self._number_of_calls = 0
 
     def __len__(self):
-        return len(self._patches)
+        return int(len(self._patches) / 2)
 
     def __getitem__(self, idx):
+        self._number_of_calls += 1
+
+        if self._number_of_calls >= len(self):
+            np.random.shuffle(self._patches)
+
         patch = self._patches[idx]
         image_id = patch.image_id
 
@@ -4198,7 +4204,8 @@ class SingleImageDataset(Dataset):
 
     def __getitem__(self, index):
         try:
-            image = torch.tensor([(self._image[self._slices[index]])], dtype=torch.float32, requires_grad=False).squeeze(0)
+            image = torch.tensor([(self._image[self._slices[index]])], dtype=torch.float32,
+                                 requires_grad=False).squeeze(0)
             return image
         except Exception as e:
             pass

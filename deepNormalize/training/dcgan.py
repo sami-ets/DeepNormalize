@@ -19,6 +19,7 @@ from typing import List
 
 import cv2
 import numpy as np
+import os
 import pynvml
 import torch
 from ignite.metrics.confusion_matrix import ConfusionMatrix
@@ -27,6 +28,8 @@ from kerosene.metrics.gauges import AverageGauge
 from kerosene.nn.functional import js_div
 from kerosene.training.trainers import ModelTrainer
 from kerosene.training.trainers import Trainer
+from kerosene.utils.constants import CHECKPOINT_EXT
+from kerosene.utils.files import should_create_dir
 from kerosene.utils.tensors import to_onehot
 from samitorch.utils.tensors import flatten
 from torch.utils.data import DataLoader, Dataset
@@ -170,7 +173,7 @@ class DCGANTrainer(Trainer):
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                      target)
+                                                      y_bad)
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
@@ -195,7 +198,7 @@ class DCGANTrainer(Trainer):
         y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_test_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                     target)
+                                                     y_bad)
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
@@ -649,6 +652,13 @@ class DCGANTrainer(Trainer):
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.zeros(
                 (self._num_datasets, self._num_datasets))
 
+        self._save(str(self.epoch), "Generator", self._model_trainers[GENERATOR].model_state,
+                   self._model_trainers[GENERATOR].optimizer_state, self._save_folder)
+        self._save(str(self.epoch), "Discriminator", self._model_trainers[DISCRIMINATOR].model_state,
+                   self._model_trainers[GENERATOR].optimizer_state, self._save_folder)
+        self._save(str(self.epoch), "Segmenter", self._model_trainers[SEGMENTER].model_state,
+                   self._model_trainers[GENERATOR].optimizer_state, self._save_folder)
+
     def on_valid_epoch_end(self):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_valid_gauge.compute()]
         self.custom_variables["Discriminator Loss"] = [self._discriminator_loss_valid_gauge.compute()]
@@ -1028,3 +1038,12 @@ class DCGANTrainer(Trainer):
         heatmap[3][0] += iseg_generated
         heatmap[3][1] += iseg_mrbrains
         heatmap[3][2] += iseg_iseg
+
+    @staticmethod
+    def _save(epoch_num, model_name, model_state, optimizer_states, save_folder):
+        if should_create_dir(save_folder, model_name):
+            os.makedirs(os.path.join(save_folder, model_name))
+        torch.save({"epoch_num": epoch_num,
+                    "model_state_dict": model_state,
+                    "optimizer_state_dict": optimizer_states},
+                   os.path.join(save_folder, model_name, "{}_{}{}".format(model_name, epoch_num, CHECKPOINT_EXT)))

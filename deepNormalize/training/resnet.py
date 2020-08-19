@@ -139,10 +139,10 @@ class ResNetTrainer(Trainer):
         # Forward on fake data.
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
+        y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_train_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                      y_bad)
+                                                      y_fake)
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
@@ -151,7 +151,7 @@ class ResNetTrainer(Trainer):
 
         # Forge bad class (K+1) tensor.
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
-        target = torch.cat((target, y_bad), dim=0)
+        target = torch.cat((target, y_fake), dim=0)
 
         metric = D.compute_metrics(pred, target)
         D.update_train_metrics(metric)
@@ -169,17 +169,17 @@ class ResNetTrainer(Trainer):
         # Forward on fake data.
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
+        y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                      target)
+                                                      y_fake)
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
         loss_gauge.update(loss_D.item())
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
-        target = torch.cat((target, y_bad), dim=0)
+        target = torch.cat((target, y_fake), dim=0)
 
         metric = D.compute_metrics(pred, target)
         D.update_valid_metrics(metric)
@@ -194,17 +194,17 @@ class ResNetTrainer(Trainer):
         # Forward on fake data.
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
-        y_bad = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
+        y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_test_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
-                                                     target)
+                                                     y_fake)
 
         # Combined loss
         loss_D = (loss_D_fake + loss_D_real) / 2
         loss_gauge.update(loss_D.item())
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
-        target = torch.cat((target, y_bad), dim=0)
+        target = torch.cat((target, y_fake), dim=0)
 
         metric = D.compute_metrics(pred, target)
         D.update_test_metrics(metric)
