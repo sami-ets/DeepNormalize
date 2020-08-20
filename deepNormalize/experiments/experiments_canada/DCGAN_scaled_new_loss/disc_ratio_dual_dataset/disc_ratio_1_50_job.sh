@@ -15,4 +15,4 @@
 #SBATCH --job-name=DCGAN_canada_new_loss_scaled_dual_dataset_disc_ratio_1_50
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled/disc_ratio_dual_dataset/config_disc_ratio_1.50.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/config_disc_ratio_1.50.yaml

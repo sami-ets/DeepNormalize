@@ -49,7 +49,7 @@ from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, 
     rebuild_image, save_rebuilt_image
 
 
-class DCGANTrainerNewLoss(Trainer):
+class ResNetTrainerNewLoss(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
@@ -57,8 +57,8 @@ class DCGANTrainerNewLoss(Trainer):
                  normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
                  augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
                  dataset_config: dict, save_folder: str):
-        super(DCGANTrainerNewLoss, self).__init__("DCGANTrainer", train_data_loader, valid_data_loader,
-                                                  test_data_loader, model_trainers, run_config)
+        super(ResNetTrainerNewLoss, self).__init__("ResNetTrainer", train_data_loader, valid_data_loader,
+                                                   test_data_loader, model_trainers, run_config)
 
         self._training_config = training_config
         self._run_config = run_config
@@ -104,13 +104,13 @@ class DCGANTrainerNewLoss(Trainer):
         self._js_div_inputs_gauge = AverageGauge()
         self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
+        self._generator_output_confusion_matrix_iseg = ConfusionMatrix(num_classes=2)
+        self._generator_output_confusion_matrix_mrbrains = ConfusionMatrix(num_classes=2)
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets)
         self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets)
-        self._heatmap_train_data = np.zeros((4, 3))
-        self._heatmap_test_data = np.zeros((4, 3))
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
@@ -141,7 +141,7 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_train_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_fake)
 
@@ -171,12 +171,12 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_fake)
 
         # Combined loss
-        loss_D = (loss_D_fake + loss_D_real)
+        loss_D = (loss_D_fake + loss_D_real) / 2
         loss_gauge.update(loss_D.item())
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
@@ -196,7 +196,7 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_test_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                      y_fake)
 
@@ -399,23 +399,19 @@ class DCGANTrainerNewLoss(Trainer):
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
                       num_classes=self._num_datasets), disc_target))
 
-        if self._num_real_datasets == 2:
-            self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID],
-                                                     self._heatmap_train_data)
-
         if self.current_train_step % 500 == 0:
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
                 torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear",
                                                 align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
-            self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-                torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
-                                                align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
+        self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+            torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
+                                            align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
         if self._should_activate_autoencoder():
@@ -601,9 +597,6 @@ class DCGANTrainerNewLoss(Trainer):
                       num_classes=self._num_datasets),
             disc_target))
 
-        if self._num_real_datasets == 2:
-            self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID],
-                                                     self._heatmap_test_data)
         if self.current_test_step % 100 == 0:
             self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
             self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
@@ -644,8 +637,6 @@ class DCGANTrainerNewLoss(Trainer):
         self._discriminator_loss_train_gauge.reset()
         self._discriminator_loss_valid_gauge.reset()
         self._discriminator_loss_test_gauge.reset()
-        self._heatmap_train_data = np.zeros((4, 3))
-        self._heatmap_test_data = np.zeros((4, 3))
 
         if self._current_epoch == self._training_config.patience_segmentation:
             self._model_trainers[GENERATOR].optimizer_lr = 0.001
@@ -654,7 +645,6 @@ class DCGANTrainerNewLoss(Trainer):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_train_gauge.compute()]
         self.custom_variables["Discriminator Loss"] = [self._discriminator_loss_train_gauge.compute()]
         self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
-        self.custom_variables["Discriminator Augmented Confusion Matrix Training"] = self._heatmap_train_data
 
         if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
@@ -950,7 +940,6 @@ class DCGANTrainerNewLoss(Trainer):
         self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
         self.custom_variables[
             "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
-        self.custom_variables["Discriminator Augmented Confusion Matrix Test"] = self._heatmap_test_data
 
     def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
@@ -1015,40 +1004,6 @@ class DCGANTrainerNewLoss(Trainer):
             torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
         self.custom_variables["WM Input Intensity Histogram"] = inputs[
             torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
-
-    def _compute_augmented_confusion_matrix(self, disc_pred, real_targets, heatmap):
-        disc_pred_on_real = (
-            torch.argmax(torch.nn.functional.softmax(disc_pred[:self._training_config.batch_size], dim=1), dim=1))
-        disc_pred_on_generated = (
-            torch.argmax(torch.nn.functional.softmax(disc_pred[self._training_config.batch_size:], dim=1), dim=1))
-
-        gen_mrbrains_generated = ((disc_pred_on_generated == 2) & (real_targets == 1)).sum()
-        gen_iseg_generated = ((disc_pred_on_generated == 2) & (real_targets == 0)).sum()
-        mrbrains_generated = ((disc_pred_on_real == 2) & (real_targets == 1)).sum()
-        iseg_generated = ((disc_pred_on_real == 2) & (real_targets == 0)).sum()
-
-        gen_mrbrains_mrbrains = ((disc_pred_on_real == 1) & (disc_pred_on_generated == 1)).sum()
-        gen_iseg_mrbrains = ((disc_pred_on_real == 1) & (disc_pred_on_generated == 0)).sum()
-        mrbrains_mrbrains = ((disc_pred_on_real == 1) & (real_targets == 1)).sum()
-        iseg_mrbrains = ((disc_pred_on_real == 1) & (real_targets == 0)).sum()
-
-        gen_mrbrains_iseg = ((disc_pred_on_real == 0) & (disc_pred_on_generated == 1)).sum()
-        gen_iseg_iseg = ((disc_pred_on_real == 0) & (disc_pred_on_generated == 0)).sum()
-        mrbrains_iseg = ((disc_pred_on_real == 0) & (real_targets == 1)).sum()
-        iseg_iseg = ((disc_pred_on_real == 0) & (real_targets == 0)).sum()
-
-        heatmap[0][0] += gen_mrbrains_generated
-        heatmap[0][1] += gen_mrbrains_mrbrains
-        heatmap[0][2] += gen_mrbrains_iseg
-        heatmap[1][0] += gen_iseg_generated
-        heatmap[1][1] += gen_iseg_mrbrains
-        heatmap[1][2] += gen_iseg_iseg
-        heatmap[2][0] += mrbrains_generated
-        heatmap[2][1] += mrbrains_mrbrains
-        heatmap[2][2] += mrbrains_iseg
-        heatmap[3][0] += iseg_generated
-        heatmap[3][1] += iseg_mrbrains
-        heatmap[3][2] += iseg_iseg
 
     @staticmethod
     def _save(epoch_num, model_name, model_state, optimizer_states, save_folder):

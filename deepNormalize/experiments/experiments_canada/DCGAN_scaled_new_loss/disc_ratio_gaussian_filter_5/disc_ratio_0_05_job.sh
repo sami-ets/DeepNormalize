@@ -15,4 +15,4 @@
 #SBATCH --job-name=DCGAN_canada_new_loss_scaled_gaussian_filter_5_disc_ratio_0_05
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled/disc_ratio_gaussian_filter_5/config_disc_ratio_0.05.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled_new_loss/disc_ratio_gaussian_filter_5/config_disc_ratio_0.05.yaml

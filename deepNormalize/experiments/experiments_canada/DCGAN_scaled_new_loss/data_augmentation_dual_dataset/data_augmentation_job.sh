@@ -15,4 +15,4 @@
 #SBATCH --job-name=DCGAN_canada_new_loss_scaled_data_augmentation
 nvidia-smi
 source /home/pld2602/venv/bin/activate
-CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled/data_augmentation_dual_dataset/config_data_augmentation_dual_dataset.yaml
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/project/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/DCGAN_scaled_new_loss/data_augmentation_dual_dataset/config_data_augmentation_dual_dataset.yaml
