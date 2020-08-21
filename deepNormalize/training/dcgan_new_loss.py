@@ -440,7 +440,7 @@ class DCGANTrainerNewLoss(Trainer):
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
             disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID], fake_target,
+                                                   target[DATASET_ID], fake_target,
                                                    self._D_G_X_as_X_valid_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
@@ -478,7 +478,7 @@ class DCGANTrainerNewLoss(Trainer):
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
             disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID],
+                                                   target[DATASET_ID],
                                                    fake_target,
                                                    self._D_G_X_as_X_valid_gauge)
 

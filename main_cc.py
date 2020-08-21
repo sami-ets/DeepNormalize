@@ -125,7 +125,8 @@ if __name__ == '__main__':
                                iSEG_reconstruction._source_images[0],
                                is_multimodal=True if isinstance(dataset_configs["iSEG"].modalities, list) else False))
         segmentation_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:], dataset_configs['iSEG'].test_patch_size,
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:],
+                               dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR],
                                                                    model_trainers[SEGMENTER]],
                                normalize_and_segment=True, test_image=iSEG_reconstruction._augmented_images[
@@ -137,7 +138,8 @@ if __name__ == '__main__':
                                is_multimodal=True if isinstance(dataset_configs["iSEG"].modalities, list) else False))
 
         gt_reconstructors.append(
-            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:], dataset_configs['iSEG'].test_patch_size,
+            ImageReconstructor(dataset_configs["iSEG"].reconstruction_size[-3:],
+                               dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._target_images[0]))
 
         if dataset_configs["iSEG"].path_augmented is not None:
@@ -291,7 +293,14 @@ if __name__ == '__main__':
                                 len(ABIDE_train) if ABIDE_train is not None else 0],
                              y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
 
-    save_folder = "saves/" + os.path.basename(os.path.normpath(visdom_config.env))
+    exp = args.config_file.split("/")[-3:]
+    if visdom_config.save_destination is not None:
+
+        save_folder = visdom_config.save_destination + os.path.join(exp[0], exp[1],
+                                                                os.path.basename(os.path.normpath(visdom_config.env)))
+    else:
+        save_folder = "saves/{}".format(os.path.basename(os.path.normpath(visdom_config.env)))
+
     [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
      for model in
      ["Discriminator", "Generator", "Segmenter"]]

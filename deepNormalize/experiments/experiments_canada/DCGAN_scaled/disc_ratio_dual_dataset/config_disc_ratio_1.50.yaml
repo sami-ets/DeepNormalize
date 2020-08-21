@@ -162,3 +162,4 @@ visdom:
   env: "DCGAN_canada_scaled_dual_dataset_disc_ratio_1_50"
   offline: True
   filename: "DCGAN_canada_scaled_dual_dataset_disc_ratio_1_50.json"
+  save_destination: "/scratch/"

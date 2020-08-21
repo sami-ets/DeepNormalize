@@ -11,6 +11,8 @@ from samitorch.inputs.images import Modality
 from samitorch.inputs.patch import CenterCoordinate, Patch
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, ToNDTensor, PadToPatchShape
+from samitorch.inputs.augmentation.transformers import AddNoise
+from deepNormalize.inputs.transformers import AddBiasField
 from samitorch.utils.slice_builder import SliceBuilder
 from sklearn.utils import shuffle
 from torch.utils.data.dataset import Dataset
@@ -4194,9 +4196,13 @@ class ABIDESegmentationFactory(AbstractDatasetFactory):
 
 
 class SingleImageDataset(Dataset):
-    def __init__(self, root_path: str, subject: str, patch_size, step):
+    def __init__(self, root_path: str, subject: str, patch_size, step, prob_bias, prob_noise, alpha, snr):
         self._image_path = os.path.join(root_path, subject, "T1", "T1.nii.gz")
-        self._image = PadToPatchShape(patch_size=patch_size, step=step)(ToNumpyArray()(self._image_path))
+        self._transforms = transforms.Compose(
+            [ToNumpyArray(),
+             PadToPatchShape(patch_size=patch_size, step=step),
+             AddBiasField(prob_bias, alpha)])
+        self._image = self._transforms(self._image_path)
         self._slices = SliceBuilder(self._image.shape, patch_size=patch_size, step=step).build_slices()
         self._image_max = self._image.max()
         self._patch_size = patch_size
@@ -4206,9 +4212,13 @@ class SingleImageDataset(Dataset):
         try:
             image = torch.tensor([(self._image[self._slices[index]])], dtype=torch.float32,
                                  requires_grad=False).squeeze(0)
-            return image
+            return image, self._slices[index]
         except Exception as e:
             pass
 
     def __len__(self):
         return len(self._slices)
+
+    @property
+    def image_shape(self):
+        return self._image.shape

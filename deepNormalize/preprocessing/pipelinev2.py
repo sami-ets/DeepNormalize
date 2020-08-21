@@ -135,7 +135,7 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         self._mean = 19.50588192452182
         self._std = 64.0868640254305
         self._augmentation_transforms = transforms.Compose(
-            [AddBiasField(1.0, alpha=0.5), AddNoise(1.0, snr=60, noise_type="rician")])
+            [AddBiasField(1.0, alpha=0.9), AddNoise(1.0, snr=60, noise_type="rician")])
 
     def run(self):
         images_T1 = natural_sort(extract_file_paths(os.path.join(self._root_dir, "T1")))
@@ -158,22 +158,22 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
                 self._write_image(label, subject, "Labels")
             self.LOGGER.info("Processing file {}".format(file[0]))
             t1 = self._to_numpy_array(file[0])
+            if self._augment:
+                t1 = self._augmentation_transforms(t1)
             if self._do_min_max_scaling:
                 t1 = self._min_max_scale(t1)
             if self._do_standardization:
                 t1 = self._normalize(t1, self._mean, self._std)
-            if self._augment:
-                t1 = self._augmentation_transforms(t1)
             if self._do_extract_patches:
                 self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
             else:
                 self._write_image(t1, subject, "T1")
             self.LOGGER.info("Processing file {}".format(file[1]))
             t2 = self._to_numpy_array(file[1])
-            if self._do_min_max_scaling:
-                t2 = self._min_max_scale(t2)
             if self._augment:
                 t2 = self._augmentation_transforms(t2)
+            if self._do_min_max_scaling:
+                t2 = self._min_max_scale(t2)
             if self._do_extract_patches:
                 self._extract_patches(t2, subject, "T2", self.PATCH_SIZE, self._step)
             else:
@@ -240,7 +240,7 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
         self._std = 64.0868640254305
         self._augment = augment
         self._augmentation_transforms = transforms.Compose(
-            [AddBiasField(1.0, alpha=0.5), AddNoise(1.0, snr=60, noise_type="rician")])
+            [AddBiasField(1.0, alpha=0.9), AddNoise(1.0, snr=60, noise_type="rician")])
 
     def run(self):
         source_paths = list()
@@ -281,12 +281,12 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             t1 = t1.transpose((3, 0, 1, 2))
             t1 = np.rot90(t1, axes=(1, -2))
             t1 = self._apply_mask(t1, label_for_testing)
+            if self._augment:
+                t1 = self._augmentation_transforms(t1)
             if self._do_min_max_scaling:
                 t1 = self._min_max_scale(t1)
             if self._do_standardization:
                 t1 = self._normalize(t1, self._mean, self._std)
-            if self._augment:
-                t1 = self._augmentation_transforms(t1)
             if self._do_extract_patches:
                 self._extract_patches(t1, subject, "T1", self.PATCH_SIZE, self._step)
             else:
@@ -297,10 +297,10 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             t1_ir = t1_ir.transpose((3, 0, 1, 2))
             t1_ir = np.rot90(t1_ir, axes=(1, -2))
             t1_ir = self._apply_mask(t1_ir, label_for_testing)
-            if self._do_min_max_scaling:
-                t1_ir = self._min_max_scale(t1_ir)
             if self._augment:
                 t1_ir = self._augmentation_transforms(t1_ir)
+            if self._do_min_max_scaling:
+                t1_ir = self._min_max_scale(t1_ir)
             if self._do_extract_patches:
                 self._extract_patches(t1_ir, subject, "T1_IR", self.PATCH_SIZE, self._step)
             else:
@@ -311,10 +311,10 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             t2 = t2.transpose((3, 0, 1, 2))
             t2 = np.rot90(t2, axes=(1, -2))
             t2 = self._apply_mask(t2, label_for_testing)
-            if self._do_min_max_scaling:
-                t2 = self._min_max_scale(t2)
             if self._augment:
                 t2 = self._augmentation_transforms(t2)
+            if self._do_min_max_scaling:
+                t2 = self._min_max_scale(t2)
             if self._do_extract_patches:
                 self._extract_patches(t2, subject, "T2_FLAIR", self.PATCH_SIZE, self._step)
             else:
@@ -324,10 +324,10 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
             t1_1mm = np.rot90(np.rot90(t1_1mm, axes=(-1, 1)), axes=(1, -2))
             t1_1mm = np.flip(t1_1mm, axis=-1)
             t1_1mm = self._apply_mask(t1_1mm, label_for_testing)
-            if self._do_min_max_scaling:
-                t1_1mm = self._min_max_scale(t1_1mm)
             if self._augment:
                 t1_1mm = self._augmentation_transforms(t1_1mm)
+            if self._do_min_max_scaling:
+                t1_1mm = self._min_max_scale(t1_1mm)
             if self._do_extract_patches:
                 self._extract_patches(t1_1mm, subject, "T1_1mm", self.PATCH_SIZE, self._step)
             else:
@@ -412,7 +412,7 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         self._step = step
         self._normalized_shape = (1, 212, 211, 189)
         self._augmentation_transforms = transforms.Compose(
-            [AddBiasField(1.0, alpha=0.5), AddNoise(1.0, snr=60, noise_type="rician")])
+            [AddBiasField(1.0, alpha=0.9), AddNoise(1.0, snr=60, noise_type="rician")])
 
     def run(self, prefix: str = ""):
         dirs = sorted(next(os.walk(self._root_dir))[1])
@@ -434,10 +434,10 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
                     os.path.join(self._output_dir, dir, "mri", "labels.nii.gz"))
                 t1, labels = self._align(t1, labels)
                 t1, labels = self._crop_to_content(t1, labels)
-                if self._do_min_max_scaling:
-                    t1 = self._min_max_scale(t1)
                 if self._augment:
                     t1 = self._augmentation_transforms(t1)
+                if self._do_min_max_scaling:
+                    t1 = self._min_max_scale(t1)
                 if self._do_standardization:
                     t1 = self._normalize(t1, self._mean, self._std)
                 if self._do_extract_patches:
@@ -530,16 +530,6 @@ class ABIDEPreprocessingPipeline(AbstractPreProcessingPipeline):
         csf_labels = ToNumpyArray()(os.path.join(output_dir, "csf_mask.mgz"))
         gm_labels = self._remap_labels(os.path.join(output_dir, "gm_mask.mgz"), 1, 2)
         wm_labels = self._remap_labels(os.path.join(output_dir, "wm_mask.mgz"), 1, 3)
-
-        # merged = self._merge_volumes(gm_labels, wm_labels, csf_labels)
-        #
-        # brainmask = ToNumpyArray()(os.path.join(input_dir, "brainmask.mgz"))
-        # T1 = ApplyMask(merged)(brainmask)
-        #
-        # csf = brainmask - T1
-        # csf[csf != 0] = 1
-        #
-        # csf_labels = csf_labels + csf
 
         merged = self._merge_volumes(gm_labels, wm_labels, csf_labels)
 
@@ -722,12 +712,12 @@ if __name__ == "__main__":
     #                            do_extract_patches=False,
     #                            augment=True,
     #                            do_min_max_scaling=True).run()
-    ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_standardized_triple/",
-                               step=None,
-                               do_extract_patches=False,
-                               augment=False,
-                               do_min_max_scaling=False,
-                               do_standardization=True).run()
+    # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_standardized_triple/",
+    #                            step=None,
+    #                            do_extract_patches=False,
+    #                            augment=False,
+    #                            do_min_max_scaling=False,
+    #                            do_standardization=True).run()
     # ABIDEPreprocessingPipeline(args.path_abide, "/mnt/md0/Data/ABIDE_scaled_standardized/",
     #                            step=None,
     #                            do_extract_patches=False,
