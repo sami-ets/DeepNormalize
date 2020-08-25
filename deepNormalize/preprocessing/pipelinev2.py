@@ -10,7 +10,8 @@ import numpy as np
 import os
 import re
 from nipype.interfaces import freesurfer
-from samitorch.inputs.augmentation.transformers import AddBiasField, AddNoise
+from samitorch.inputs.augmentation.transformers import AddNoise
+from deepNormalize.inputs.transformers import AddBiasField
 from samitorch.inputs.patch import Patch, CenterCoordinate
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, RemapClassIDs, ToNifti1Image, NiftiToDisk, ApplyMask, \
@@ -135,7 +136,7 @@ class iSEGPipeline(AbstractPreProcessingPipeline):
         self._mean = 19.50588192452182
         self._std = 64.0868640254305
         self._augmentation_transforms = transforms.Compose(
-            [AddBiasField(1.0, alpha=0.9), AddNoise(1.0, snr=60, noise_type="rician")])
+            [AddNoise(1.0, snr=65, noise_type="rician")])
 
     def run(self):
         images_T1 = natural_sort(extract_file_paths(os.path.join(self._root_dir, "T1")))
@@ -228,7 +229,8 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
     LOGGER = logging.getLogger("MRBrainSPipeline")
     PATCH_SIZE = (1, 32, 32, 32)
 
-    def __init__(self, root_dir, output_dir, step, do_extract_patches=True, augment=False, do_min_max_scaling=False,
+    def __init__(self, root_dir, output_dir, step, alpha, do_extract_patches=True, augment=False,
+                 do_min_max_scaling=False,
                  do_standardization=False):
         self._root_dir = root_dir
         self._output_dir = output_dir
@@ -240,7 +242,7 @@ class MRBrainSPipeline(AbstractPreProcessingPipeline):
         self._std = 64.0868640254305
         self._augment = augment
         self._augmentation_transforms = transforms.Compose(
-            [AddBiasField(1.0, alpha=0.9), AddNoise(1.0, snr=60, noise_type="rician")])
+            [AddNoise(1.0, snr=65, noise_type="rician")])
 
     def run(self):
         source_paths = list()
@@ -643,11 +645,11 @@ if __name__ == "__main__":
     #              do_extract_patches=False,
     #              augment=True,
     #              do_min_max_scaling=False).run()
-    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
-    #              step=None,
-    #              do_extract_patches=False,
-    #              augment=True,
-    #              do_min_max_scaling=True).run()
+    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
+                 step=None,
+                 do_extract_patches=False,
+                 augment=True,
+                 do_min_max_scaling=True).run()
     # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_standardized_triple/iSEG/Training",
     #              step=None,
     #              do_extract_patches=False,
@@ -675,11 +677,14 @@ if __name__ == "__main__":
     #                  do_extract_patches=False,
     #                  augment=True,
     #                  do_min_max_scaling=False).run()
-    # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData",
+
+    # MRBrainSPipeline(args.path_mrbrains,
+    #                  "/mnt/md0/Data/MRBrainS_scaled_augmented/DataNii/TrainingData",
     #                  step=None,
     #                  do_extract_patches=False,
     #                  augment=True,
-    #                  do_min_max_scaling=True).run()
+    #                  do_min_max_scaling=True,
+    #                  alpha=0.0).run()
     # MRBrainSPipeline(args.path_mrbrains, "/mnt/md0/Data/MRBrainS_standardized_triple/DataNii/TrainingData",
     #                  step=None,
     #                  do_extract_patches=False,

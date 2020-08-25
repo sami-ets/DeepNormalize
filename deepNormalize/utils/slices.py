@@ -13,7 +13,7 @@ class SliceBuilder(object):
     Build slices for a data set.
     """
 
-    def __init__(self, image_shape: Tuple[int, int, int, int], patch_size: Tuple[int, int, int, int],
+    def __init__(self, image: np.ndarray, patch_size: Tuple[int, int, int, int],
                  step: Tuple[int, int, int, int]):
         """
         Args:
@@ -22,7 +22,8 @@ class SliceBuilder(object):
             step (tuple of int): The size of the stride between patches.
         """
 
-        self._image_shape = image_shape
+        self._image = image
+        self._image_shape = image.shape
         self._patch_size = patch_size
         self._step = step
         self._slices = None
@@ -63,7 +64,7 @@ class SliceBuilder(object):
         """
         return self._slices
 
-    def build_slices(self) -> list:
+    def build_slices(self, keep_centered_on_foreground: bool = False) -> list:
         """
         Iterates over a given n-dim dataset patch-by-patch with a given step and builds an array of slice positions.
         Returns:
@@ -86,7 +87,14 @@ class SliceBuilder(object):
                     )
                     if len(self._image_shape) == 4:
                         slice_idx = (slice(0, channels),) + slice_idx
-                    slices.append(slice_idx)
+                        slices.append(slice_idx)
+
+        if keep_centered_on_foreground:
+            slices = list(filter(lambda slice: self._image[slice][0][
+                                                   int(self._patch_size[1] // 2),
+                                                   int(self._patch_size[2] // 2),
+                                                   int(self._patch_size[3] // 2)] != 0,
+                                 slices))
 
         self._slices = slices
 

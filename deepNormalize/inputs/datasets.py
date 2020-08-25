@@ -1,3 +1,4 @@
+import random
 from typing import List, Callable, Union, Tuple, Optional
 
 import numpy as np
@@ -11,8 +12,7 @@ from samitorch.inputs.images import Modality
 from samitorch.inputs.patch import CenterCoordinate, Patch
 from samitorch.inputs.sample import Sample
 from samitorch.inputs.transformers import ToNumpyArray, ToNDTensor, PadToPatchShape
-from samitorch.inputs.augmentation.transformers import AddNoise
-from deepNormalize.inputs.transformers import AddBiasField
+from deepNormalize.inputs.transformers import AddBiasField, AddNoise
 from samitorch.utils.slice_builder import SliceBuilder
 from sklearn.utils import shuffle
 from torch.utils.data.dataset import Dataset
@@ -25,25 +25,34 @@ from deepNormalize.utils.utils import natural_sort
 class SliceDataset(Dataset):
     def __init__(self, source_images, target_images, patches: np.ndarray, modalities: Union[Modality, List[Modality]],
                  dataset_id: int = None, transforms: Optional[Callable] = None,
-                 augment: DataAugmentationStrategy = None, augmented_images=None) -> None:
+                 augment: bool = None) -> None:
         self._source_images = source_images
         self._target_images = target_images
-        self._augmented_images = augmented_images
+        self._augment = augment
         self._patches = patches
         self._modalities = modalities
         self._dataset_id = dataset_id
         self._transform = transforms
         self._augment = augment
         self._number_of_calls = 0
+        self._augmented_image = None
+
+        if self._augment:
+            alphas = [0.1, 0.3, 0.5, 0.7, 0.9]
+            self._bias_field_pool = []
+            for alpha in alphas:
+                self._bias_field_pool.append(AddBiasField.compute_bias_field(alpha, self._source_images[0].shape))
+            self._augmented_image = self._source_images[0] * self._bias_field_pool[3]
 
     def __len__(self):
-        return int(len(self._patches) / 2)
+        # return int(len(self._patches) / 2)
+        return int(len(self._patches))
 
     def __getitem__(self, idx):
-        self._number_of_calls += 1
-
-        if self._number_of_calls >= len(self):
-            np.random.shuffle(self._patches)
+        # self._number_of_calls += 1
+        #
+        # if self._number_of_calls >= len(self):
+        #     np.random.shuffle(self._patches)
 
         patch = self._patches[idx]
         image_id = patch.image_id
@@ -57,20 +66,17 @@ class SliceDataset(Dataset):
 
         patch_sample = Sample(x=slice_x, y=slice_y, dataset_id=self._dataset_id, is_labeled=True)
 
-        if self._augmented_images is not None:
-            augmented_image = self._augmented_images[image_id]
+        if self._augment:
+            rand = random.randint(0, len(self._bias_field_pool) - 1)
+            bias_field = self._bias_field_pool[rand]
+            augmented_image = image * bias_field
             slice_x_augmented = augmented_image[tuple(slice)]
             patch_sample.augmented_x = slice_x_augmented
 
         if self._transform is not None:
             patch_sample = self._transform(patch_sample)
 
-        if self._augment is not None:
-            patch_sample.augmented_x = self._augment(
-                patch_sample.x if patch_sample.augmented_x is None else patch_sample.augmented_x)
-
-        else:
-            patch_sample.augmented_x = patch_sample.x if patch_sample.augmented_x is None else patch_sample.augmented_x
+        patch_sample.augmented_x = patch_sample.x if patch_sample.augmented_x is None else patch_sample.augmented_x
 
         return patch_sample
 
@@ -79,14 +85,14 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None, augmented_images: np.ndarray = None):
+               augment: bool = None):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy, augmented_images=augmented_images)
+                                augment=augment)
 
         else:
             raise NotImplementedError
@@ -94,7 +100,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
-                          augmentation_strategy: DataAugmentationStrategy = None,
+                          augment: bool = None,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                           step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
 
@@ -102,47 +108,43 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             return iSEGSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                          dataset_id, test_size, max_subject,
                                                                          max_num_patches,
-                                                                         augmentation_strategy, patch_size, step,
-                                                                         augmented_path)
+                                                                         augment, patch_size, step)
         else:
             return iSEGSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                               dataset_id, test_size, max_subject,
                                                                               max_num_patches,
-                                                                              augmentation_strategy, patch_size,
-                                                                              step, augmented_path)
+                                                                              augment, patch_size,
+                                                                              step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
-                                augmentation_strategy: DataAugmentationStrategy = None,
+                                augment: bool = None,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                 step: Union[List, Tuple] = (1, 4, 4, 4),
                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         if isinstance(modalities, list):
             return iSEGSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities,
                                                                                dataset_id, test_size,
                                                                                max_subjects,
                                                                                max_num_patches,
-                                                                               augmentation_strategy, patch_size,
+                                                                               patch_size,
                                                                                step, test_patch_size, test_step,
-                                                                               augmented_path)
+                                                                               augment)
         else:
-            return iSEGSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
-                                                                                    dataset_id, test_size,
-                                                                                    max_subjects,
-                                                                                    max_num_patches,
-                                                                                    augmentation_strategy, patch_size,
-                                                                                    step, test_patch_size, test_step,
-                                                                                    augmented_path)
+            return iSEGSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities, dataset_id,
+                                                                                    test_size, max_subjects,
+                                                                                    max_num_patches, patch_size, step,
+                                                                                    test_patch_size, test_step, augment)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            max_subjects: int = None, max_num_patches: int = None,
-                                           augmentation_strategy: DataAugmentationStrategy = None,
+                                           augment: bool = False,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                           step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -174,12 +176,10 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
-        train_augmented_images = list()
         train_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
-        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -194,25 +194,6 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
-
-        if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
-
-            train_augmented_paths, train_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_train_csv["labels"]))))
-
-            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
-
-            for train_augmented_path in train_augmented_paths:
-                train_augmented_images.append(transform(train_augmented_path))
-
-            for reconstruction_augmented_path in reconstruction_augmented_paths:
-                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
                                                             patch_size,
@@ -237,12 +218,11 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
-            augmented_images=np.array(train_augmented_images),
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -251,26 +231,25 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
-            augmented_images=np.array(reconstruction_augmented_images),
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, test_dataset, reconstruction_dataset
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
                                       max_subjects: int = None, max_num_patches: int = None,
-                                      augmentation_strategy: DataAugmentationStrategy = None,
+                                      augment: bool = False,
                                       patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                                      step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                                      step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -287,11 +266,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         reconstruction_subject = test_subjects[
             np.random.choice(np.arange(0, len(test_subjects)), 1, replace=False)]
 
-        if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            train_csv = csv_augmented["subject"].isin(train_subjects)
-        else:
-            train_csv = csv[csv["subject"].isin(train_subjects)]
+        train_csv = csv[csv["subject"].isin(train_subjects)]
         test_csv = csv[csv["subject"].isin(test_subjects)]
         reconstruction_csv = csv[csv["subject"].isin(reconstruction_subject)]
 
@@ -355,7 +330,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -364,7 +339,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
@@ -373,19 +348,18 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modalities,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, test_dataset, reconstruction_dataset
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                                  step: Union[List, Tuple] = (1, 4, 4, 4),
                                                  test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
                                                  test_step: Union[List, Tuple] = (1, 16, 16, 16),
-                                                 augmented_path: str = None):
+                                                 augment: bool = False):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_iseg_images.csv"))
 
@@ -421,14 +395,12 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
-        train_augmented_images = list()
         train_targets = list()
         valid_images = list()
         valid_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
-        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -447,25 +419,6 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
-
-        if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_iseg_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
-
-            train_augmented_paths, train_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_train_csv["labels"]))))
-
-            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_reconstruction_csv["labels"]))))
-
-            for train_augmented_path in train_augmented_paths:
-                train_augmented_images.append(transform(train_augmented_path))
-
-            for reconstruction_augmented_path in reconstruction_augmented_paths:
-                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = iSEGSliceDatasetFactory.get_patches(train_images, train_targets,
                                                             patch_size,
@@ -497,12 +450,11 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
-            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
+            augment=augment,
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
-            transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            transforms=[ToNDTensor()])
 
         valid_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -511,7 +463,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         test_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -520,25 +472,23 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
-            augmented_images=np.array(reconstruction_augmented_images) if len(
-                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 
     @staticmethod
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality], dataset_id: int,
                                             test_size: float, max_subjects: int = None, max_num_patches: int = None,
-                                            augmentation_strategy: DataAugmentationStrategy = None,
+                                            augment: bool = False,
                                             patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                             step: Union[List, Tuple] = (1, 4, 4, 4),
                                             test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -660,12 +610,11 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
-            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
             patches=train_patches,
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         valid_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -674,7 +623,7 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         test_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -683,18 +632,16 @@ class iSEGSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = iSEGSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
-            augmented_images=np.array(reconstruction_augmented_images) if len(
-                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modalities,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 
@@ -726,14 +673,14 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None, augmented_images: np.ndarray = None):
+               augment: bool = False):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy, augmented_images=augmented_images)
+                                augment=augment)
 
         else:
             raise NotImplementedError
@@ -741,7 +688,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
-                          augmentation_strategy: DataAugmentationStrategy = None,
+                          augment: bool = False,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                           step: Union[List, Tuple] = (1, 4, 4, 4)):
 
@@ -749,44 +696,43 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             return MRBrainSSliceDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                              dataset_id, test_size, max_subject,
                                                                              max_num_patches,
-                                                                             augmentation_strategy, patch_size, step)
+                                                                             augment, patch_size, step)
         else:
             return MRBrainSSliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                   dataset_id, test_size, max_subject,
                                                                                   max_num_patches,
-                                                                                  augmentation_strategy, patch_size,
+                                                                                  augment, patch_size,
                                                                                   step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, max_subjects: int = None, max_num_patches=None,
-                                augmentation_strategy: DataAugmentationStrategy = None,
+                                augment: bool = False,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                 step: Union[List, Tuple] = (1, 4, 4, 4),
                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                test_step: Union[List, Tuple] = (1, 16, 16, 16), augmented_path: str = None):
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         if isinstance(modalities, list):
             return MRBrainSSliceDatasetFactory._create_multimodal_train_valid_test(source_dir, modalities, dataset_id,
                                                                                    test_size, max_subjects,
                                                                                    max_num_patches,
-                                                                                   augmentation_strategy,
+                                                                                   augment,
                                                                                    patch_size, step, test_patch_size,
-                                                                                   test_step, augmented_path)
+                                                                                   test_step)
         else:
             return MRBrainSSliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                         dataset_id, test_size,
                                                                                         max_subjects,
                                                                                         max_num_patches,
-                                                                                        augmentation_strategy,
+                                                                                        augment,
                                                                                         patch_size, step,
-                                                                                        test_patch_size, test_step,
-                                                                                        augmented_path)
+                                                                                        test_patch_size, test_step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            max_subjects: int = None, max_num_patches: int = None,
-                                           augmentation_strategy: DataAugmentationStrategy = None,
+                                           augment: bool = False,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                            step: Union[List, Tuple] = (1, 4, 4, 4),
                                            test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -868,7 +814,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -877,7 +823,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
@@ -886,14 +832,14 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         return train_dataset, test_dataset, reconstruction_dataset
 
     @staticmethod
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality], dataset_id: int, test_size: float,
                                       max_subjects: int = None, max_num_patches: int = None,
-                                      augmentation_strategy: DataAugmentationStrategy = None,
+                                      augment: bool = False,
                                       patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                       step: Union[List, Tuple] = (1, 4, 4, 4),
                                       test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -978,7 +924,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -987,7 +933,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
@@ -996,19 +942,18 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modalities,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         return train_dataset, test_dataset, reconstruction_dataset
 
     @staticmethod
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None,
+                                                 augment: bool = False,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                                  step: Union[List, Tuple] = (1, 4, 4, 4),
                                                  test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16),
-                                                 augmented_path: str = None):
+                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -1044,14 +989,12 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
-        train_augmented_images = list()
         train_targets = list()
         valid_images = list()
         valid_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
-        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -1070,25 +1013,6 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
                                                                           reconstruction_target_paths):
             reconstruction_images.append(transform(reconstruction_source_path))
             reconstruction_targets.append(transform(reconstruction_target_path))
-
-        if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
-
-            train_augmented_paths, train_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_train_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_train_csv["LabelsForTesting"]))))
-
-            reconstruction_augmented_paths, reconstruction_augmented_target_paths = (
-                np.array(natural_sort(list(augmented_reconstruction_csv[str(modality)]))),
-                np.array(natural_sort(list(augmented_reconstruction_csv["LabelsForTesting"]))))
-
-            for train_augmented_path in train_augmented_paths:
-                train_augmented_images.append(transform(train_augmented_path))
-
-            for reconstruction_augmented_path in reconstruction_augmented_paths:
-                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
                                                                 patch_size,
@@ -1120,12 +1044,11 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
-            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
             patches=train_patches,
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         valid_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -1134,7 +1057,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         test_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -1143,18 +1066,16 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
-            augmented_images=np.array(reconstruction_augmented_images) if len(
-                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 
@@ -1162,12 +1083,11 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
     def _create_multimodal_train_valid_test(source_dir: str, modalities: List[Modality], dataset_id: int,
                                             test_size: float,
                                             max_subjects: int = None, max_num_patches: int = None,
-                                            augmentation_strategy: DataAugmentationStrategy = None,
+                                            augment: bool = False,
                                             patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                             step: Union[List, Tuple] = (1, 4, 4, 4),
                                             test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                            test_step: Union[List, Tuple] = (1, 16, 16, 16),
-                                            augmented_path: str = None):
+                                            test_step: Union[List, Tuple] = (1, 16, 16, 16)):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_mrbrains_images.csv"))
 
@@ -1206,14 +1126,12 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         transform = transforms.Compose([ToNumpyArray(), PadToPatchShape(patch_size=patch_size, step=step)])
 
         train_images = list()
-        train_augmented_images = list()
         train_targets = list()
         valid_images = list()
         valid_targets = list()
         test_images = list()
         test_targets = list()
         reconstruction_images = list()
-        reconstruction_augmented_images = list()
         reconstruction_targets = list()
 
         for train_source_path, train_target_path in zip(train_source_paths, train_target_paths):
@@ -1233,26 +1151,6 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             reconstruction_images.append(
                 np.stack([transform(path) for path in reconstruction_source_path], axis=0).squeeze(1))
             reconstruction_targets.append(transform(reconstruction_target_path))
-
-        if augmented_path is not None:
-            csv_augmented = pandas.read_csv(os.path.join(augmented_path, "output_mrbrains_augmented_images.csv"))
-            augmented_train_csv = csv_augmented[csv_augmented["subject"].isin(train_subjects)]
-            augmented_reconstruction_csv = csv_augmented[csv_augmented["subject"].isin(reconstruction_subject)]
-
-            train_augmented_paths, train_augmented_target_paths = shuffle(
-                np.stack([natural_sort(list(augmented_train_csv[str(modality)])) for modality in modalities], axis=1),
-                np.array(natural_sort(list(augmented_train_csv["LabelsForTesting"]))))
-
-            reconstruction_augmented_paths, reconstruction_augmented_target_paths = shuffle(
-                np.stack([natural_sort(list(augmented_reconstruction_csv[str(modality)])) for modality in modalities],
-                         axis=1),
-                np.array(natural_sort(list(augmented_reconstruction_csv["LabelsForTesting"]))))
-
-            for train_augmented_path in train_augmented_paths:
-                train_augmented_images.append(transform(train_augmented_path))
-
-            for reconstruction_augmented_path in reconstruction_augmented_paths:
-                reconstruction_augmented_images.append(transform(reconstruction_augmented_path))
 
         train_patches = MRBrainSSliceDatasetFactory.get_patches(train_images, train_targets,
                                                                 patch_size,
@@ -1284,12 +1182,11 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
         train_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(train_images),
             target_images=np.array(train_targets),
-            augmented_images=np.array(train_augmented_images) if len(train_augmented_images) > 0 else None,
             patches=train_patches,
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         valid_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -1298,7 +1195,7 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         test_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -1307,18 +1204,16 @@ class MRBrainSSliceDatasetFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = MRBrainSSliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
             target_images=np.array(reconstruction_targets),
-            augmented_images=np.array(reconstruction_augmented_images) if len(
-                reconstruction_augmented_images) > 0 else None,
             patches=reconstruction_patches,
             dataset_id=dataset_id,
             modalities=modalities,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 
@@ -1351,14 +1246,14 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None):
+               augment: bool = None):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy)
+                                augment=augment)
 
         else:
             raise NotImplementedError
@@ -1366,7 +1261,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                          max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
+                          max_num_patches: int = None, augment: bool = False,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                           step: Union[List, Tuple] = (1, 4, 4, 4),
                           test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -1378,13 +1273,13 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             return ABIDESliceDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                dataset_id, test_size, sites,
                                                                                max_subjects, max_num_patches,
-                                                                               augmentation_strategy, patch_size, step,
+                                                                               augment, patch_size, step,
                                                                                test_patch_size, test_step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                                 dataset_id: int, test_size: float, sites: List[str] = None, max_subjects: int = None,
-                                max_num_patches: int = None, augmentation_strategy: DataAugmentationStrategy = None,
+                                max_num_patches: int = None, augment: bool = False,
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                 step: Union[List, Tuple] = (1, 4, 4, 4),
                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -1396,13 +1291,13 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             return ABIDESliceDatasetFactory._create_single_modality_train_valid_test(source_dir, modalities,
                                                                                      dataset_id, test_size, sites,
                                                                                      max_subjects, max_num_patches,
-                                                                                     augmentation_strategy, patch_size,
+                                                                                     augment, patch_size,
                                                                                      step, test_patch_size, test_step)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
                                            sites: List[str] = None, max_subjects: int = None,
-                                           max_num_patches: int = None, augmentation_strategy=None,
+                                           max_num_patches: int = None, augment: bool = False,
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                            step: Union[List, Tuple] = (1, 4, 4, 4),
                                            test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -1491,7 +1386,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -1500,7 +1395,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
@@ -1509,7 +1404,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, test_dataset, reconstruction_dataset
 
@@ -1517,7 +1412,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     def _create_single_modality_train_valid_test(source_dir: str, modality: Modality,
                                                  dataset_id: int, test_size: float, sites: List[str] = None,
                                                  max_subjects: int = None, max_num_patches: int = None,
-                                                 augmentation_strategy: DataAugmentationStrategy = None,
+                                                 augment: bool = False,
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                                  step: Union[List, Tuple] = (1, 4, 4, 4),
                                                  test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
@@ -1624,7 +1519,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         valid_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -1633,7 +1528,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         test_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -1642,7 +1537,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=False)
 
         reconstruction_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(reconstruction_images),
@@ -1651,7 +1546,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 
@@ -1688,14 +1583,14 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augmentation_strategy: DataAugmentationStrategy = None, augmented_images: np.ndarray = None):
+               augment: bool = False):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augmentation_strategy, augmented_images=augmented_images)
+                                augment=augment)
 
         else:
             raise NotImplementedError
@@ -1703,22 +1598,22 @@ class iSEGSliceUNetDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create_train_test(source_dir: str, modalities: Union[Modality, List[Modality]],
                           dataset_id: int, test_size: float, max_subject: int = None, max_num_patches=None,
-                          augmentation_strategy: DataAugmentationStrategy = None,
+                          agument: bool = False,
                           patch_size: Union[List, Tuple] = (1, 32, 32, 32),
-                          step: Union[List, Tuple] = (1, 4, 4, 4), augmented_path: str = None):
+                          step: Union[List, Tuple] = (1, 4, 4, 4)):
 
         if isinstance(modalities, list) and len(modalities) > 1:
             return iSEGSliceUNetDatasetFactory._create_multimodal_train_test(source_dir, modalities,
                                                                              dataset_id, test_size, max_subject,
                                                                              max_num_patches,
-                                                                             augmentation_strategy, patch_size, step,
-                                                                             augmented_path)
+                                                                             agument, patch_size, step)
+
         else:
             return iSEGSliceUNetDatasetFactory._create_single_modality_train_test(source_dir, modalities,
                                                                                   dataset_id, test_size, max_subject,
                                                                                   max_num_patches,
-                                                                                  augmentation_strategy, patch_size,
-                                                                                  step, augmented_path)
+                                                                                  augment, patch_size,
+                                                                                  step)
 
     @staticmethod
     def create_train_valid_test(source_dir: str, modalities: Union[Modality, List[Modality]],
@@ -3799,7 +3694,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
     def _create_multimodal_train_test(source_dir: str, modalities: List[Modality],
                                       dataset_id: int, test_size: float, max_subjects: int = None,
                                       max_num_patches: int = None,
-                                      augmentation_strategy: DataAugmentationStrategy = None):
+                                      augment: bool = False):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output.csv"))
 
@@ -3842,14 +3737,14 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
-            augmentation_strategy=augmentation_strategy)
+            augment=augment)
 
         test_dataset = MRBrainSSegmentationFactory.create(source_paths=test_source_paths,
                                                           target_paths=test_target_paths,
                                                           modalities=modalities,
                                                           dataset_id=dataset_id,
                                                           transforms=[ToNumpyArray(), ToNDTensor()],
-                                                          augmentation_strategy=None)
+                                                          augment=False)
 
         reconstruction_dataset = iSEGSegmentationFactory.create(
             source_paths=reconstruction_source_paths,
@@ -3857,7 +3752,7 @@ class MRBrainSSegmentationFactory(AbstractDatasetFactory):
             modalities=modalities,
             dataset_id=dataset_id,
             transforms=[ToNumpyArray(), ToNDTensor()],
-            augmentation_strategy=None)
+            augment=augment)
 
         return train_dataset, test_dataset, reconstruction_dataset, filtered_csv
 
@@ -4201,7 +4096,37 @@ class SingleImageDataset(Dataset):
         self._transforms = transforms.Compose(
             [ToNumpyArray(),
              PadToPatchShape(patch_size=patch_size, step=step),
-             AddBiasField(prob_bias, alpha)])
+             AddBiasField(prob_bias, alpha),
+             AddNoise(prob_noise, snr)])
+        self._image = self._transforms(self._image_path)
+        self._slices = SliceBuilder(self._image.shape, patch_size=patch_size, step=step).build_slices()
+        self._image_max = self._image.max()
+        self._patch_size = patch_size
+        self._step = step
+
+    def __getitem__(self, index):
+        try:
+            image = torch.tensor([(self._image[self._slices[index]])], dtype=torch.float32,
+                                 requires_grad=False).squeeze(0)
+            return image, self._slices[index]
+        except Exception as e:
+            pass
+
+    def __len__(self):
+        return len(self._slices)
+
+    @property
+    def image_shape(self):
+        return self._image.shape
+
+
+class SingleNDArrayDataset(Dataset):
+    def __init__(self, image: np.ndarray, patch_size, step, prob_bias, prob_noise, alpha, snr):
+
+        self._transforms = transforms.Compose(
+            [PadToPatchShape(patch_size=patch_size, step=step),
+             AddBiasField(prob_bias, alpha),
+             AddNoise(prob_noise, snr)])
         self._image = self._transforms(self._image_path)
         self._slices = SliceBuilder(self._image.shape, patch_size=patch_size, step=step).build_slices()
         self._image_max = self._image.max()

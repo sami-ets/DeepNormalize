@@ -118,9 +118,9 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 100
     validation_split: 0.3
-    hist_shift_augmentation: False
+    augment: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
@@ -131,9 +131,9 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 100
     validation_split: 0.3
-    hist_shift_augmentation: False
+    augment: False
     patch_size: !python/tuple [1, 32, 32, 32]
     step: [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
@@ -157,4 +157,5 @@ visdom:
   port: "8097"
   env: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50"
   offline: True
-  filename: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50.json"
+  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50.json"
+  save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"

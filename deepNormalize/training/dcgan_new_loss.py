@@ -141,7 +141,7 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_train_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_fake)
 
@@ -171,7 +171,7 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_valid_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                       y_fake)
 
@@ -196,7 +196,7 @@ class DCGANTrainerNewLoss(Trainer):
         pred_D_G_X, _, _, _, _ = D.forward(fake.detach())
         # Forge bad class (K+1) tensor.
         y_fake = torch.Tensor().new_full(size=(pred_D_G_X.size(0),), fill_value=self._fake_class_id,
-                                        dtype=torch.long, device=target.device, requires_grad=False)
+                                         dtype=torch.long, device=target.device, requires_grad=False)
         loss_D_fake = D.compute_and_update_test_loss("Pred Fake", torch.nn.functional.log_softmax(pred_D_G_X, dim=1),
                                                      y_fake)
 
@@ -305,21 +305,13 @@ class DCGANTrainerNewLoss(Trainer):
 
     def _loss_D_G_X_as_X(self, D: ModelTrainer, generated, real_target, fake_target, loss_gauge: AverageGauge):
         pred_D_G_X, _, _, _, _ = D.forward(generated)
-        ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
-                                       requires_grad=False)
-        term_1 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
-                                                                  torch.nn.functional.log_softmax(
-                                                                      ones - torch.nn.functional.softmax(pred_D_G_X,
-                                                                                                         dim=1),
-                                                                      dim=1),
-                                                                  fake_target)
-        term_2 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
-                                                                  torch.nn.functional.log_softmax(
-                                                                      ones - torch.nn.functional.softmax(pred_D_G_X,
-                                                                                                         dim=1),
-                                                                      dim=1),
-                                                                  real_target)
-        loss_D_G_X_as_X = term_1 + term_2
+
+        inverse_target = torch.abs(1 - real_target)
+        loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
+                                                                           torch.nn.functional.log_softmax(
+                                                                               pred_D_G_X, dim=1),
+                                                                           inverse_target)
+
         loss_gauge.update(loss_D_G_X_as_X.item())
 
         return loss_D_G_X_as_X

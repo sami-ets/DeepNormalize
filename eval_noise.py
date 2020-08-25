@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -6,7 +5,7 @@ from torch.utils.data import DataLoader
 from deepNormalize.inputs.datasets import SingleImageDataset
 from deepNormalize.models.dcgan3d import DCGAN
 from deepNormalize.models.unet3d import Unet
-from slices import SliceBuilder
+from deepNormalize.utils.slices import SliceBuilder
 from samitorch.inputs.transformers import ToNifti1Image, NiftiToDisk
 
 from torchvision.transforms import transforms
@@ -19,10 +18,10 @@ STEP = (1, 8, 8, 8)
 BATCH_SIZE = 15
 ALPHA = 0.5
 PROB_BIAS = 1.0
-PROB_NOISE = 1.0
+PROB_NOISE = 0.0
 
 NOISE_LEVELS = [0]
-ALPHAS = [10]
+ALPHAS = [0.1, 0.3, 0.5, 0.7, 0.9]
 
 
 def custom_collate(batch):
@@ -49,7 +48,7 @@ if __name__ == "__main__":
             c, d, h, w = dataset.image_shape
             reconstructed_image = np.zeros((1, d, h, w))
 
-            overlap_map = SliceBuilder((1, d, h, w), patch_size=PATCH_SIZE, step=STEP).build_overlap_map()
+            overlap_map = SliceBuilder(dataset._image, patch_size=PATCH_SIZE, step=STEP).build_overlap_map()
 
             generator = Unet(1, 1, True, True)
             discriminator = DCGAN(1, 3)

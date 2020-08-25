@@ -29,12 +29,9 @@ from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
 from kerosene.utils.devices import on_multiple_gpus
-from samitorch.inputs.augmentation.strategies import AugmentInput
-from samitorch.inputs.augmentation.transformers import ShiftHistogram
 from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
-from torchvision.transforms import Compose
 
 from deepNormalize.config.parsers import ArgsParserFactory, ArgsParserType
 from deepNormalize.factories.customModelFactory import CustomModelFactory
@@ -97,9 +94,6 @@ if __name__ == '__main__':
 
     # Create datasets
     if dataset_configs.get("iSEG", None) is not None:
-        if dataset_configs["iSEG"].hist_shift_augmentation:
-            iSEG_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
         iSEG_train, iSEG_valid, iSEG_test, iSEG_reconstruction = iSEGSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["iSEG"].path,
             modalities=dataset_configs["iSEG"].modalities,
@@ -107,10 +101,9 @@ if __name__ == '__main__':
             test_size=dataset_configs["iSEG"].validation_split,
             max_subjects=dataset_configs["iSEG"].max_subjects,
             max_num_patches=dataset_configs["iSEG"].max_num_patches,
-            augmentation_strategy=iSEG_augmentation_strategy,
+            augment=dataset_configs["iSEG"].augment,
             patch_size=dataset_configs["iSEG"].patch_size,
             step=dataset_configs["iSEG"].step,
-            augmented_path=dataset_configs["iSEG"].path_augmented,
             test_patch_size=dataset_configs["iSEG"].test_patch_size,
             test_step=dataset_configs["iSEG"].test_step)
         train_datasets.append(iSEG_train)
@@ -120,8 +113,7 @@ if __name__ == '__main__':
         normalized_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR]], normalize=True,
-                               test_image=iSEG_reconstruction._augmented_images[
-                                   0] if iSEG_reconstruction._augmented_images is not None else
+                               test_image=iSEG_reconstruction._augmented_image if iSEG_reconstruction._augmented_image is not None else
                                iSEG_reconstruction._source_images[0],
                                is_multimodal=True if isinstance(dataset_configs["iSEG"].modalities, list) else False))
         segmentation_reconstructors.append(
@@ -129,9 +121,9 @@ if __name__ == '__main__':
                                dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, [model_trainers[GENERATOR],
                                                                    model_trainers[SEGMENTER]],
-                               normalize_and_segment=True, test_image=iSEG_reconstruction._augmented_images[
-                    0] if iSEG_reconstruction._augmented_images is not None else
-                iSEG_reconstruction._source_images[0]))
+                               normalize_and_segment=True,
+                               test_image=iSEG_reconstruction._augmented_image if iSEG_reconstruction._augmented_image is not None else
+                               iSEG_reconstruction._source_images[0]))
         input_reconstructors.append(
             ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._source_images[0],
@@ -142,17 +134,13 @@ if __name__ == '__main__':
                                dataset_configs['iSEG'].test_patch_size,
                                dataset_configs["iSEG"].test_step, test_image=iSEG_reconstruction._target_images[0]))
 
-        if dataset_configs["iSEG"].path_augmented is not None:
+        if dataset_configs["iSEG"].augment is not None:
             augmented_input_reconstructors.append(
                 ImageReconstructor(dataset_configs["iSEG"].reconstruction_size, dataset_configs['iSEG'].test_patch_size,
                                    dataset_configs["iSEG"].test_step,
-                                   test_image=iSEG_reconstruction._augmented_images[0]))
+                                   test_image=iSEG_reconstruction._augmented_image))
 
     if dataset_configs.get("MRBrainS", None) is not None:
-        if dataset_configs["MRBrainS"].hist_shift_augmentation:
-            MRBrainS_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-
         MRBrainS_train, MRBrainS_valid, MRBrainS_test, MRBrainS_reconstruction = MRBrainSSliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["MRBrainS"].path,
             modalities=dataset_configs["MRBrainS"].modalities,
@@ -160,10 +148,9 @@ if __name__ == '__main__':
             test_size=dataset_configs["MRBrainS"].validation_split,
             max_subjects=dataset_configs["MRBrainS"].max_subjects,
             max_num_patches=dataset_configs["MRBrainS"].max_num_patches,
-            augmentation_strategy=MRBrainS_augmentation_strategy,
+            augment=dataset_configs["MRBrainS"].augment,
             patch_size=dataset_configs["MRBrainS"].patch_size,
             step=dataset_configs["MRBrainS"].step,
-            augmented_path=dataset_configs["MRBrainS"].path_augmented,
             test_patch_size=dataset_configs["MRBrainS"].test_patch_size,
             test_step=dataset_configs["MRBrainS"].test_step)
         train_datasets.append(MRBrainS_train)
@@ -174,8 +161,7 @@ if __name__ == '__main__':
                                                             dataset_configs['MRBrainS'].test_patch_size,
                                                             dataset_configs["MRBrainS"].test_step,
                                                             [model_trainers[GENERATOR]], normalize=True,
-                                                            test_image=MRBrainS_reconstruction._augmented_images[
-                                                                0] if MRBrainS_reconstruction._augmented_images is not None else
+                                                            test_image=MRBrainS_reconstruction._augmented_image if MRBrainS_reconstruction._augmented_image is not None else
                                                             MRBrainS_reconstruction._source_images[0],
                                                             is_multimodal=True if isinstance(
                                                                 dataset_configs["iSEG"].modalities, list) else False))
@@ -184,8 +170,7 @@ if __name__ == '__main__':
                                dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
                                [model_trainers[GENERATOR],
                                 model_trainers[SEGMENTER]], normalize_and_segment=True,
-                               test_image=MRBrainS_reconstruction._augmented_images[
-                                   0] if MRBrainS_reconstruction._augmented_images is not None else
+                               test_image=MRBrainS_reconstruction._augmented_image if MRBrainS_reconstruction._augmented_image is not None else
                                MRBrainS_reconstruction._source_images[0]))
         input_reconstructors.append(ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                                        dataset_configs['MRBrainS'].test_patch_size,
@@ -199,17 +184,13 @@ if __name__ == '__main__':
                                                     dataset_configs["MRBrainS"].test_step,
                                                     test_image=MRBrainS_reconstruction._target_images[0]))
 
-        if dataset_configs["MRBrainS"].path_augmented is not None:
+        if dataset_configs["MRBrainS"].augment:
             augmented_input_reconstructors.append(
                 ImageReconstructor(dataset_configs["MRBrainS"].reconstruction_size,
                                    dataset_configs['MRBrainS'].test_patch_size, dataset_configs["MRBrainS"].test_step,
-                                   test_image=MRBrainS_reconstruction._augmented_images[0]))
+                                   test_image=MRBrainS_reconstruction._augmented_image))
 
     if dataset_configs.get("ABIDE", None) is not None:
-        if dataset_configs["ABIDE"].hist_shift_augmentation:
-            ABIDE_augmentation_strategy = AugmentInput(
-                Compose([ShiftHistogram(exec_probability=0.50, min_lambda=-5, max_lambda=5)]))
-
         ABIDE_train, ABIDE_valid, ABIDE_test, ABIDE_reconstruction = ABIDESliceDatasetFactory.create_train_valid_test(
             source_dir=dataset_configs["ABIDE"].path,
             modalities=dataset_configs["ABIDE"].modalities,
@@ -218,7 +199,7 @@ if __name__ == '__main__':
             max_subjects=dataset_configs["ABIDE"].max_subjects,
             test_size=dataset_configs["ABIDE"].validation_split,
             max_num_patches=dataset_configs["ABIDE"].max_num_patches,
-            augmentation_strategy=ABIDE_augmentation_strategy,
+            augment=dataset_configs["ABIDE"].augment,
             patch_size=dataset_configs["ABIDE"].patch_size,
             step=dataset_configs["ABIDE"].step,
             test_patch_size=dataset_configs["ABIDE"].test_patch_size,
@@ -283,6 +264,18 @@ if __name__ == '__main__':
 
     # Initialize the loggers.
     visdom_config = VisdomConfiguration.from_yml(args.config_file, "visdom")
+    exp = args.config_file.split("/")[-3:]
+    if visdom_config.save_destination is not None:
+
+        save_folder = visdom_config.save_destination + os.path.join(exp[0], exp[1],
+                                                                    os.path.basename(
+                                                                        os.path.normpath(visdom_config.env)))
+    else:
+        save_folder = "saves/{}".format(os.path.basename(os.path.normpath(visdom_config.env)))
+
+    [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
+     for model in
+     ["Discriminator", "Generator", "Segmenter"]]
     visdom_logger = VisdomLogger(visdom_config)
 
     visdom_logger(VisdomData("Experiment", "Experiment Config", PlotType.TEXT_PLOT, PlotFrequency.EVERY_EPOCH, None,
@@ -293,17 +286,6 @@ if __name__ == '__main__':
                                 len(ABIDE_train) if ABIDE_train is not None else 0],
                              y=["iSEG", "MRBrainS", "ABIDE"], params={"opts": {"title": "Patch count"}}))
 
-    exp = args.config_file.split("/")[-3:]
-    if visdom_config.save_destination is not None:
-
-        save_folder = visdom_config.save_destination + os.path.join(exp[0], exp[1],
-                                                                os.path.basename(os.path.normpath(visdom_config.env)))
-    else:
-        save_folder = "saves/{}".format(os.path.basename(os.path.normpath(visdom_config.env)))
-
-    [os.makedirs("{}/{}".format(save_folder, model), exist_ok=True)
-     for model in
-     ["Discriminator", "Generator", "Segmenter"]]
 
     trainer = TrainerFactory(training_config.trainer).create(training_config, model_trainers, dataloaders,
                                                              reconstruction_datasets, normalized_reconstructors,
