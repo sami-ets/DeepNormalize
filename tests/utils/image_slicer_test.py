@@ -22,7 +22,7 @@ class ImageReconstructorTest(unittest.TestCase):
         paths = extract_file_paths(self.PATH)
         self._dataset = iSEGSegmentationFactory.create(natural_sort(paths), None, modalities=Modality.T1,
                                                        dataset_id=0)
-        self._reconstructor = ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8])
+        self._reconstructor = ImageReconstructor([128, 160, 128], [32, 32, 32], [8, 8, 8], )
         transforms = Compose([ToNumpyArray(), PadToPatchShape([1, 32, 32, 32], [1, 8, 8, 8])])
         self._full_image = transforms(self.FULL_IMAGE_PATH)
 
@@ -47,7 +47,7 @@ class ImageReconstructorMRBrainSTest(unittest.TestCase):
         paths = extract_file_paths(self.PATH)
         self._dataset = MRBrainSSegmentationFactory.create(natural_sort(paths), None, modalities=Modality.T1,
                                                            dataset_id=0)
-        self._reconstructor = ImageReconstructor([256, 256, 192], [1, 32, 32, 32], [1, 8, 8, 8])
+        self._reconstructor = ImageReconstructor([256, 256, 192], [1, 32, 32, 32], [1, 8, 8, 8], )
         transforms = Compose([ToNumpyArray(), PadToPatchShape([1, 32, 32, 32], [1, 8, 8, 8])])
         self._full_image = transforms(self.FULL_IMAGE_PATH)
 
@@ -72,7 +72,7 @@ class ImageReconstructorABIDETest(unittest.TestCase):
         paths = extract_file_paths(self.PATH)
         self._dataset = ABIDESegmentationFactory.create(natural_sort(paths), None, modalities=Modality.T1,
                                                         dataset_id=0)
-        self._reconstructor = ImageReconstructor([224, 224, 192], [1, 32, 32, 32], [1, 8, 8, 8])
+        self._reconstructor = ImageReconstructor([224, 224, 192], [1, 32, 32, 32], [1, 8, 8, 8], )
         transforms = Compose([ToNumpyArray(), PadToPatchShape([1, 32, 32, 32], [1, 8, 8, 8])])
         self._full_image = transforms(self.FULL_IMAGE_PATH)
 

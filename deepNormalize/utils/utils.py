@@ -660,25 +660,19 @@ def save_rebuilt_images(current_epoch, save_folder, datasets, img_input, img_nor
         transform_img_input(img_input[dataset])
 
 
-def save_augmented_rebuilt_images(current_epoch, save_folder, datasets, img_augmented, augmented_minus_inputs,
-                                  norm_minus_augmented):
+def save_augmented_rebuilt_images(current_epoch, save_folder, datasets, img_augmented_input, img_augmented_normalized):
     if not os.path.exists(os.path.join(save_folder, "reconstructed_images")):
         os.makedirs(os.path.join(save_folder, "reconstructed_images"))
 
     for dataset in datasets:
-        transform_img_augmented = Compose(
+        transform_img_input_augmented = Compose(
             [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
-                                                       "Reconstructed_Augmented_{}_Image_{}.nii.gz".format(
+                                                       "Reconstructed_Augmented_Input_{}_Image_{}.nii.gz".format(
                                                            dataset, str(current_epoch))))])
-        transform_img_augmented_minus_inputs = Compose(
+        transform_img_normalized_augmented = Compose(
             [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
-                                                       "Reconstructed_Augmented_minus_Inputs_{}_Image_{}.nii.gz".format(
-                                                           dataset, str(current_epoch))))])
-        transform_img_normalized_minus_augmented = Compose(
-            [ToNifti1Image(), NiftiToDisk(os.path.join(save_folder, "reconstructed_images",
-                                                       "Reconstructed_Normalized_minus_Augmented_{}_Image_{}.nii.gz".format(
+                                                       "Reconstructed_Augmented_Normalized_{}_Image_{}.nii.gz".format(
                                                            dataset, str(current_epoch))))])
 
-        transform_img_augmented(img_augmented[dataset])
-        transform_img_augmented_minus_inputs(augmented_minus_inputs[dataset])
-        transform_img_normalized_minus_augmented(norm_minus_augmented[dataset])
+        transform_img_input_augmented(img_augmented_input[dataset])
+        transform_img_normalized_augmented(img_augmented_normalized[dataset])

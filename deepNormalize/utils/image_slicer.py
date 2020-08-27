@@ -13,25 +13,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #  ==============================================================================
-from itertools import product
-from typing import List, Union, Tuple
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from samitorch.inputs.transformers import ToNumpyArray
-from samitorch.inputs.utils import augmented_sample_collate
-from torch.utils.data import Dataset, DataLoader
+from samitorch.inputs.transformers import ToNumpyArray, PadToShape
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
 
-from deepNormalize.inputs.datasets import SingleImageDataset, SingleNDArrayDataset
+from deepNormalize.inputs.datasets import SingleNDArrayDataset
 from deepNormalize.inputs.images import SliceType
-from deepNormalize.utils.constants import EPSILON, ISEG_ID, MRBRAINS_ID, ABIDE_ID
-import copy
+from deepNormalize.utils.constants import EPSILON
+from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID, ABIDE_ID, GENERATOR
 from deepNormalize.utils.slices import SliceBuilder
 
 PATCH = 0
 SLICE = 1
+SEGMENTER = 1
 
 
 class LabelMapper(object):
@@ -209,19 +208,41 @@ class ImageSlicer(object):
 
 class ImageReconstructor(object):
 
-    def __init__(self, image_size: List[int], patch_size: Tuple[int, int, int, int], step: Tuple[int, int, int, int],
-                 models: List[torch.nn.Module] = None, normalize: bool = False, segment: bool = False,
-                 normalize_and_segment: bool = False, test_images: List[np.ndarray] = None, is_multimodal=False):
+    def __init__(self, images: List[np.ndarray], patch_size: Tuple[int, int, int, int],
+                 reconstructed_image_size: Tuple[int, int, int, int], step: Tuple[int, int, int, int],
+                 batch_size: int = 5, models: List[torch.nn.Module] = None, normalize: bool = False,
+                 is_ground_truth: bool = False, normalize_and_segment: bool = False, is_multimodal=False, prob_bias=0.0,
+                 prob_noise=0.0, alpha=0.0, snr=0.0):
         self._patch_size = patch_size
-        self._image_size = image_size
+        self._reconstructed_image_size = reconstructed_image_size
         self._step = step
         self._models = models
         self._do_normalize = normalize
-        self._do_segment = segment
+        self._is_ground_truth = is_ground_truth
         self._do_normalize_and_segment = normalize_and_segment
         self._transform = Compose([ToNumpyArray()])
-        self._test_images = test_images
         self._is_multimodal = is_multimodal
+        self._batch_size = batch_size
+
+        transformed_images = []
+        for image in images:
+            transform = PadToShape(target_shape=self._reconstructed_image_size)
+            transformed_images.append(transform(image))
+
+        self._images = transformed_images
+
+        self._overlap_maps = list(
+            map(lambda image: SliceBuilder(image, self._patch_size, self._step).build_overlap_map(),
+                self._images))
+
+        self._datasets = list(map(lambda image: SingleNDArrayDataset(image,
+                                                                     patch_size=self._patch_size,
+                                                                     step=self._step,
+                                                                     prob_bias=prob_bias,
+                                                                     prob_noise=prob_noise,
+                                                                     alpha=alpha,
+                                                                     snr=snr),
+                                  self._images))
 
     @staticmethod
     def custom_collate(batch):
@@ -234,44 +255,90 @@ class ImageReconstructor(object):
         return (img - np.min(img)) / (np.ptp(img) + EPSILON)
 
     def reconstruct_from_patches_3d(self):
-        overlap_maps = list(map(lambda image: SliceBuilder(image, self._patch_size, self._step).build_overlap_map(),
-                                self._test_images))
-
-        datasets = list(map(lambda image: SingleNDArrayDataset(image,
-                                                               patch_size=self._patch_size,
-                                                               step=self._step,
-                                                               prob_bias=0.0,
-                                                               prob_noise=0.0,
-                                                               alpha=0.0,
-                                                               snr=0.0),
-                            self._test_images))
-
         data_loaders = list(map(
-            lambda dataset: DataLoader(dataset, batch_size=5, num_workers=0, drop_last=False, shuffle=False,
-                                       pin_memory=False, collate_fn=self.custom_collate), datasets))
+            lambda dataset: DataLoader(dataset, batch_size=self._batch_size, num_workers=0, drop_last=False,
+                                       shuffle=False,
+                                       pin_memory=False, collate_fn=self.custom_collate), self._datasets))
 
-        reconstructed_image = [np.zeros(self._image_size)] * len(self._test_images)
+        if len(self._datasets) == 2:
 
-        if len(datasets) == 2:
-            for idx, (iseg_inputs, mrbrains_inputs) in enumerate(zip(data_loaders[0], data_loaders[1])):
+            reconstructed_image = [np.zeros(self._datasets[0].image_shape), np.zeros(self._datasets[1].image_shape)]
+
+            for idx, (iseg_inputs, mrbrains_inputs) in enumerate(zip(data_loaders[ISEG_ID], data_loaders[MRBRAINS_ID])):
                 inputs = torch.cat((iseg_inputs[PATCH], mrbrains_inputs[PATCH]))
                 slices = [iseg_inputs[SLICE], mrbrains_inputs[SLICE]]
 
                 if self._do_normalize:
-                    paches = torch.nn.functional.sigmoid((self._models[0](inputs)))
+                    patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs.cuda())))
 
                 elif self._do_normalize_and_segment:
-                    normalized_patches = torch.nn.functional.sigmoid((self._models[0](inputs)))
+                    normalized_patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs.cuda())))
                     patches = torch.argmax(
-                        torch.nn.functional.softmax(self._models[1](normalized_patches), dim=1), dim=1,
+                        torch.nn.functional.softmax(self._models[SEGMENTER](normalized_patches), dim=1), dim=1,
                         keepdim=True)
+                else:
+                    patches = inputs
 
-                for pred_patch, slice in zip(paches, slices[0]):
-                    reconstructed_image[0][slice] = reconstructed_image[slice] + pred_patch.data.cpu().numpy()
+                for pred_patch, slice in zip(patches[0:self._batch_size], slices[ISEG_ID]):
+                    reconstructed_image[ISEG_ID][slice] = reconstructed_image[ISEG_ID][slice] + \
+                                                          pred_patch.data.cpu().numpy()
 
-                for pred_patch, slice in zip(paches, slices[1]):
-                    reconstructed_image[0][slice] = reconstructed_image[slice] + pred_patch.data.cpu().numpy()
+                for pred_patch, slice in zip(patches[self._batch_size:self._batch_size * 2], slices[MRBRAINS_ID]):
+                    reconstructed_image[MRBRAINS_ID][slice] = reconstructed_image[MRBRAINS_ID][slice] + \
+                                                              pred_patch.data.cpu().numpy()
 
-            reconstructed_image[0] = reconstructed_image[0] * overlap_maps[0]
-            reconstructed_image[1] = reconstructed_image[1] * overlap_maps[1]
-        return reconstructed_image
+            if self._do_normalize_and_segment or self._is_ground_truth:
+                reconstructed_image[ISEG_ID] = np.clip(
+                    np.round(reconstructed_image[ISEG_ID] * self._overlap_maps[ISEG_ID]), a_min=0, a_max=3)
+                reconstructed_image[MRBRAINS_ID] = np.clip(
+                    np.round(reconstructed_image[MRBRAINS_ID] * self._overlap_maps[MRBRAINS_ID]), a_min=0, a_max=3)
+            else:
+                reconstructed_image[ISEG_ID] = reconstructed_image[ISEG_ID] * self._overlap_maps[ISEG_ID]
+                reconstructed_image[MRBRAINS_ID] = reconstructed_image[MRBRAINS_ID] * self._overlap_maps[MRBRAINS_ID]
+
+            return {"iSEG": reconstructed_image[ISEG_ID],
+                    "MRBrainS": reconstructed_image[MRBRAINS_ID]}
+
+        if len(self._datasets) == 3:
+            reconstructed_image = [np.zeros(self._datasets[0].image_shape), np.zeros(self._datasets[1].image_shape),
+                                   np.zeros(self._datasets[1].image_shape)]
+            for idx, (iseg_inputs, mrbrains_inputs, abide_inputs) in enumerate(
+                    zip(data_loaders[ISEG_ID], data_loaders[MRBRAINS_ID], data_loaders[ABIDE_ID])):
+                inputs = torch.cat((iseg_inputs[PATCH], mrbrains_inputs[PATCH], abide_inputs[PATCH]))
+                slices = [iseg_inputs[SLICE], mrbrains_inputs[SLICE], abide_inputs[SLICE]]
+
+                if self._do_normalize:
+                    patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs)))
+
+                elif self._do_normalize_and_segment:
+                    normalized_patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs)))
+                    patches = torch.argmax(
+                        torch.nn.functional.softmax(self._models[SEGMENTER](normalized_patches), dim=1), dim=1,
+                        keepdim=True)
+                else:
+                    patches = inputs
+
+                for pred_patch, slice in zip(patches[0:self._batch_size], slices[ISEG_ID]):
+                    reconstructed_image[ISEG_ID][slice] = reconstructed_image[ISEG_ID][slice] + \
+                                                          pred_patch.data.cpu().numpy()
+
+                for pred_patch, slice in zip(patches[self._batch_size:self._batch_size * 2], slices[MRBRAINS_ID]):
+                    reconstructed_image[MRBRAINS_ID][slice] = reconstructed_image[MRBRAINS_ID][slice] + \
+                                                              pred_patch.data.cpu().numpy()
+
+                for pred_patch, slice in zip(patches[self._batch_size * 2:self._batch_size * 3], slices[ABIDE_ID]):
+                    reconstructed_image[MRBRAINS_ID][slice] = reconstructed_image[ABIDE_ID][slice] + \
+                                                              pred_patch.data.cpu().numpy()
+
+            reconstructed_image[ISEG_ID] = reconstructed_image[ISEG_ID] * self._overlap_maps[ISEG_ID]
+            reconstructed_image[MRBRAINS_ID] = reconstructed_image[MRBRAINS_ID] * self._overlap_maps[MRBRAINS_ID]
+            reconstructed_image[ABIDE_ID] = reconstructed_image[ABIDE_ID] * self._overlap_maps[ABIDE_ID]
+
+            if self._do_normalize_and_segment:
+                reconstructed_image[ISEG_ID] = np.clip(np.round(reconstructed_image[ISEG_ID]), a_min=0, a_max=3)
+                reconstructed_image[MRBRAINS_ID] = np.clip(np.round(reconstructed_image[MRBRAINS_ID]), a_min=0, a_max=3)
+                reconstructed_image[ABIDE_ID] = np.clip(np.round(reconstructed_image[ABIDE_ID]), a_min=0, a_max=3)
+
+        return {"iSEG": reconstructed_image[ISEG_ID],
+                "MRBrainS": reconstructed_image[MRBRAINS_ID],
+                "ABIDE": reconstructed_image[ABIDE_ID]}

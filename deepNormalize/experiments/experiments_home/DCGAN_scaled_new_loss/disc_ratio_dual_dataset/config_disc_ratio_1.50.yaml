@@ -120,11 +120,11 @@ dataset:
     max_subjects: !!null
     max_num_patches: 100
     validation_split: 0.3
-    augment: False
+    augment: True
     patch_size: !python/tuple [1, 32, 32, 32]
-    step: [1, 4, 4, 4]
+    step: !python/tuple [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
-    test_step: [1, 16, 16, 16]
+    test_step: !python/tuple [1, 16, 16, 16]
     reconstruction_size: [256, 192, 160]
   MRBrainS:
     path: "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData/"
@@ -133,12 +133,30 @@ dataset:
     max_subjects: !!null
     max_num_patches: 100
     validation_split: 0.3
-    augment: False
+    augment: True
     patch_size: !python/tuple [1, 32, 32, 32]
-    step: [1, 4, 4, 4]
+    step: !python/tuple [1, 4, 4, 4]
     test_patch_size: !python/tuple [1, 64, 64, 64]
-    test_step: [1, 16, 16, 16]
+    test_step: !python/tuple [1, 16, 16, 16]
     reconstruction_size: [256, 256, 192]
+
+data_augmentation:
+  training:
+    bias_field:
+      alpha: [0.1, 0.3, 0.5, 0.7, 0.9]
+      prob_bias: 1.0
+    noise:
+      type: "rician"
+      snr: 60
+      prob_noise: 1.0
+  test:
+    bias_field:
+      alpha: [0.9]
+      prob_bias: 1.0
+    noise:
+      type: "rician"
+      snr: 60
+      prob_noise: 1.0
 
 training:
   trainer: "DCGAN_new_loss"
@@ -155,7 +173,7 @@ training:
 visdom:
   server: "10.180.113.44"
   port: "8097"
-  env: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50"
+  env: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_2"
   offline: True
-  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50.json"
+  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_2.json"
   save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"

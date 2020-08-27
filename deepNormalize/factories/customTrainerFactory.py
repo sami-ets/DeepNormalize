@@ -56,7 +56,8 @@ class TrainerFactory(object):
 
     def create(self, training_config, model_trainers, dataloaders, reconstruction_datasets,
                normalized_reconstructors, input_reconstructors, segmentation_reconstructors,
-               augmented_input_reconstructors, gt_reconstructors, run_config, dataset_configs, save_folder,
+               augmented_input_reconstructors, augmented_normalized_reconstructors, gt_reconstructors, run_config,
+               dataset_configs, save_folder,
                visdom_logger):
         if self._trainer == TrainerType.WGAN:
             trainer = WGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
@@ -399,9 +400,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -439,10 +440,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -847,9 +848,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -887,10 +888,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -1295,9 +1296,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -1335,10 +1336,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -1756,9 +1757,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -1791,10 +1792,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -1856,6 +1857,7 @@ class TrainerFactory(object):
                                           dataloaders[2],
                                           reconstruction_datasets, normalized_reconstructors, input_reconstructors,
                                           segmentation_reconstructors, augmented_input_reconstructors,
+                                          augmented_normalized_reconstructors,
                                           gt_reconstructors,
                                           run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
@@ -2209,9 +2211,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -2244,10 +2246,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -2303,7 +2305,7 @@ class TrainerFactory(object):
                 .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END)
 
             return trainer
-        
+
         elif self._trainer == TrainerType.LSGAN:
             trainer = LSGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                    dataloaders[2],
@@ -2649,9 +2651,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -2689,10 +2691,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -3062,9 +3064,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -3102,10 +3104,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -3833,9 +3835,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -3873,10 +3875,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -4339,9 +4341,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -4379,10 +4381,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -4850,9 +4852,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -4895,10 +4897,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -5361,9 +5363,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -5401,10 +5403,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -5835,9 +5837,9 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise iSEG After Normalization"}},
+                                                     "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input iSEG Image", PlotType.IMAGE_PLOT,
@@ -5875,10 +5877,10 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Noise MRBrainS After Normalization",
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented MRBrainS After Normalization",
                                     PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Noise MRBrainS After Normalization"}},
+                                                     "title": "Reconstructed Augmented MRBrainS After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Augmented Input MRBrainS Image", PlotType.IMAGE_PLOT,
