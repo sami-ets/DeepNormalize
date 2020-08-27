@@ -55,16 +55,16 @@ class TrainerFactory(object):
         self._trainer = architecture
 
     def create(self, training_config, model_trainers, dataloaders, reconstruction_datasets,
-               normalized_reconstructors, input_reconstructors, segmentation_reconstructors,
-               augmented_input_reconstructors, augmented_normalized_reconstructors, gt_reconstructors, run_config,
+               normalized_reconstructor, input_reconstructor, segmentation_reconstructor,
+               augmented_input_reconstructor, augmented_normalized_reconstructor, gt_reconstructor, run_config,
                dataset_configs, save_folder,
                visdom_logger):
         if self._trainer == TrainerType.WGAN:
             trainer = WGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                   dataloaders[2],
-                                  reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                  segmentation_reconstructors, augmented_input_reconstructors,
-                                  gt_reconstructors,
+                                  reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                  segmentation_reconstructor, augmented_input_reconstructor,
+                                  gt_reconstructor,
                                   run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -400,7 +400,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -506,9 +507,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.ResNet:
             trainer = ResNetTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                     dataloaders[2],
-                                    reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                    segmentation_reconstructors, augmented_input_reconstructors,
-                                    gt_reconstructors,
+                                    reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                    segmentation_reconstructor, augmented_input_reconstructor,
+                                    gt_reconstructor,
                                     run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -848,7 +849,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -954,9 +956,10 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.ResNet_new_loss:
             trainer = ResNetTrainerNewLoss(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                            dataloaders[2],
-                                           reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                           segmentation_reconstructors, augmented_input_reconstructors,
-                                           gt_reconstructors,
+                                           reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                           segmentation_reconstructor, augmented_input_reconstructor,
+                                           augmented_normalized_reconstructor,
+                                           gt_reconstructor,
                                            run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -1271,11 +1274,6 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Input T2 iSEG Image"}},
-                                    every=10), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Normalized iSEG Image"}},
@@ -1296,7 +1294,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -1309,11 +1308,6 @@ class TrainerFactory(object):
                 PlotCustomVariables(visdom_logger, "Reconstructed Input MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
-                                    every=10), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Normalized MRBrainS Image", PlotType.IMAGE_PLOT,
@@ -1402,9 +1396,10 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.DCGAN:
             trainer = DCGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                    dataloaders[2],
-                                   reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                   segmentation_reconstructors, augmented_input_reconstructors,
-                                   gt_reconstructors,
+                                   reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                   segmentation_reconstructor, augmented_input_reconstructor,
+                                   augmented_normalized_reconstructor,
+                                   gt_reconstructor,
                                    run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -1757,7 +1752,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -1855,10 +1851,10 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.DCGAN_new_loss:
             trainer = DCGANTrainerNewLoss(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                           dataloaders[2],
-                                          reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                          segmentation_reconstructors, augmented_input_reconstructors,
-                                          augmented_normalized_reconstructors,
-                                          gt_reconstructors,
+                                          reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                          segmentation_reconstructor, augmented_input_reconstructor,
+                                          augmented_normalized_reconstructor,
+                                          gt_reconstructor,
                                           run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -2211,7 +2207,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -2309,9 +2306,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.LSGAN:
             trainer = LSGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                    dataloaders[2],
-                                   reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                   segmentation_reconstructors, augmented_input_reconstructors,
-                                   gt_reconstructors,
+                                   reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                   segmentation_reconstructor, augmented_input_reconstructor,
+                                   gt_reconstructor,
                                    run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -2651,7 +2648,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -2756,8 +2754,8 @@ class TrainerFactory(object):
 
         elif self._trainer == TrainerType.DUALUNET:
             trainer = DualUNetTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                      reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                      segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
+                                      reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                      segmentation_reconstructor, augmented_input_reconstructor, gt_reconstructor,
                                       run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -3064,7 +3062,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -3152,8 +3151,8 @@ class TrainerFactory(object):
 
         elif self._trainer == TrainerType.UNET:
             trainer = UNetTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1], dataloaders[2],
-                                  reconstruction_datasets, input_reconstructors,
-                                  segmentation_reconstructors, augmented_input_reconstructors, gt_reconstructors,
+                                  reconstruction_datasets, input_reconstructor,
+                                  segmentation_reconstructor, augmented_input_reconstructor, gt_reconstructor,
                                   run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -3439,9 +3438,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.WGAN_Multimodal:
             trainer = WGANMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                             dataloaders[2],
-                                            reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                            segmentation_reconstructors, augmented_input_reconstructors,
-                                            gt_reconstructors,
+                                            reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                            segmentation_reconstructor, augmented_input_reconstructor,
+                                            gt_reconstructor,
                                             run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -3835,7 +3834,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -3941,9 +3941,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.ResNet_Multimodal:
             trainer = ResNetMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                               dataloaders[2],
-                                              reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                              segmentation_reconstructors, augmented_input_reconstructors,
-                                              gt_reconstructors,
+                                              reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                              segmentation_reconstructor, augmented_input_reconstructor,
+                                              gt_reconstructor,
                                               run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -4341,7 +4341,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -4447,9 +4448,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.DCGAN_Multimodal:
             trainer = DCGANMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                              dataloaders[2],
-                                             reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                             segmentation_reconstructors, augmented_input_reconstructors,
-                                             gt_reconstructors,
+                                             reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                             segmentation_reconstructor, augmented_input_reconstructor,
+                                             gt_reconstructor,
                                              run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -4852,7 +4853,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -4963,9 +4965,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.LSGAN_Multimodal:
             trainer = LSGANMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                              dataloaders[2],
-                                             reconstruction_datasets, normalized_reconstructors, input_reconstructors,
-                                             segmentation_reconstructors, augmented_input_reconstructors,
-                                             gt_reconstructors,
+                                             reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                             segmentation_reconstructor, augmented_input_reconstructor,
+                                             gt_reconstructor,
                                              run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -5363,7 +5365,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -5469,10 +5472,10 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.DualUNet_Multimodal:
             trainer = DualUNetMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                                 dataloaders[2],
-                                                reconstruction_datasets, normalized_reconstructors,
-                                                input_reconstructors,
-                                                segmentation_reconstructors, augmented_input_reconstructors,
-                                                gt_reconstructors,
+                                                reconstruction_datasets, normalized_reconstructor,
+                                                input_reconstructor,
+                                                segmentation_reconstructor, augmented_input_reconstructor,
+                                                gt_reconstructor,
                                                 run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
@@ -5837,7 +5840,8 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Initial Noise iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization", PlotType.IMAGE_PLOT,
+                PlotCustomVariables(visdom_logger, "Reconstructed Augmented iSEG After Normalization",
+                                    PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Augmented iSEG After Normalization"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
@@ -5926,9 +5930,9 @@ class TrainerFactory(object):
         elif self._trainer == TrainerType.UNet_Multimodal:
             trainer = UNetMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                             dataloaders[2],
-                                            reconstruction_datasets, input_reconstructors,
-                                            segmentation_reconstructors, augmented_input_reconstructors,
-                                            gt_reconstructors,
+                                            reconstruction_datasets, input_reconstructor,
+                                            segmentation_reconstructor, augmented_input_reconstructor,
+                                            gt_reconstructor,
                                             run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \

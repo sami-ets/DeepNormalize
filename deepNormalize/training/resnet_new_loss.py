@@ -42,11 +42,12 @@ from deepNormalize.training.sampler import Sampler
 from deepNormalize.utils.constants import GENERATOR, SEGMENTER, DISCRIMINATOR, IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
     NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, NON_AUGMENTED_TARGETS, AUGMENTED_TARGETS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
-from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, FeatureMapSlicer
+from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, FeatureMapSlicer, \
+    ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, count, \
     construct_triple_histrogram, construct_double_histrogram, construct_single_histogram, construct_class_histogram, \
-    get_all_patches, rebuild_augmented_images, save_augmented_rebuilt_images, \
-    rebuild_image, save_rebuilt_image
+    save_augmented_rebuilt_images, \
+    save_rebuilt_image
 
 
 class ResNetTrainerNewLoss(Trainer):
@@ -54,8 +55,13 @@ class ResNetTrainerNewLoss(Trainer):
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
                  reconstruction_datasets: List[Dataset],
-                 normalize_reconstructors: list, input_reconstructors: list, segmentation_reconstructors: list,
-                 augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
+                 normalize_reconstructor: ImageReconstructor,
+                 input_reconstructor: ImageReconstructor,
+                 segmentation_reconstructor: ImageReconstructor,
+                 augmented_input_reconstructor: ImageReconstructor,
+                 augmented_normalized_reconstructor: ImageReconstructor,
+                 gt_reconstructor: ImageReconstructor,
+                 run_config: RunConfiguration,
                  dataset_config: dict, save_folder: str):
         super(ResNetTrainerNewLoss, self).__init__("ResNetTrainer", train_data_loader, valid_data_loader,
                                                    test_data_loader, model_trainers, run_config)
@@ -69,12 +75,13 @@ class ResNetTrainerNewLoss(Trainer):
         self._fm_slicer = FeatureMapSlicer()
         self._label_mapper = LabelMapper()
         self._reconstruction_datasets = reconstruction_datasets
-        self._normalize_reconstructors = normalize_reconstructors
-        self._input_reconstructors = input_reconstructors
-        self._gt_reconstructors = gt_reconstructors
-        self._segmentation_reconstructors = segmentation_reconstructors
-        self._augmented_reconstructors = augmented_reconstructors
-        self._num_real_datasets = len(input_reconstructors)
+        self._normalize_reconstructor = normalize_reconstructor
+        self._input_reconstructor = input_reconstructor
+        self._gt_reconstructor = gt_reconstructor
+        self._segmentation_reconstructor = segmentation_reconstructor
+        self._augmented_input_reconstructor = augmented_input_reconstructor
+        self._augmented_normalized_reconstructor = augmented_normalized_reconstructor
+        self._num_real_datasets = len(list(dataset_config.keys()))
         self._num_datasets = self._num_real_datasets + 1
         self._fake_class_id = self._num_datasets - 1
         self._D_G_X_as_X_train_gauge = AverageGauge()
@@ -104,8 +111,6 @@ class ResNetTrainerNewLoss(Trainer):
         self._js_div_inputs_gauge = AverageGauge()
         self._js_div_gen_gauge = AverageGauge()
         self._general_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
-        self._generator_output_confusion_matrix_iseg = ConfusionMatrix(num_classes=2)
-        self._generator_output_confusion_matrix_mrbrains = ConfusionMatrix(num_classes=2)
         self._iSEG_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._MRBrainS_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
@@ -123,6 +128,14 @@ class ResNetTrainerNewLoss(Trainer):
         self._real_T1_pool = ImagePool()
         self._n_critics = training_config.n_critics
         self._is_sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
+        self._iseg_pred = torch.zeros(3, )
+        self._iseg_pred_real = torch.zeros(3, )
+        self._mrbrains_pred = torch.zeros(3, )
+        self._mrbrains_pred_real = torch.zeros(3, )
+        self._iseg_pred_test = torch.zeros(3, )
+        self._iseg_pred_real_test = torch.zeros(3, )
+        self._mrbrains_pred_test = torch.zeros(3, )
+        self._mrbrains_pred_real_test = torch.zeros(3, )
         print("Total number of parameters: {}".format(
             sum(p.numel() for p in self._model_trainers[SEGMENTER].parameters()) +
             sum(p.numel() for p in self._model_trainers[GENERATOR].parameters()) +
@@ -176,7 +189,7 @@ class ResNetTrainerNewLoss(Trainer):
                                                       y_fake)
 
         # Combined loss
-        loss_D = (loss_D_fake + loss_D_real) / 2
+        loss_D = (loss_D_fake + loss_D_real)
         loss_gauge.update(loss_D.item())
 
         pred = torch.cat((pred_D_X, pred_D_G_X), dim=0)
@@ -305,21 +318,13 @@ class ResNetTrainerNewLoss(Trainer):
 
     def _loss_D_G_X_as_X(self, D: ModelTrainer, generated, real_target, fake_target, loss_gauge: AverageGauge):
         pred_D_G_X, _, _, _, _ = D.forward(generated)
-        ones = torch.Tensor().new_ones(size=pred_D_G_X.size(), device=pred_D_G_X.device, dtype=pred_D_G_X.dtype,
-                                       requires_grad=False)
-        term_1 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
-                                                                  torch.nn.functional.log_softmax(
-                                                                      ones - torch.nn.functional.softmax(pred_D_G_X,
-                                                                                                         dim=1),
-                                                                      dim=1),
-                                                                  fake_target)
-        term_2 = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Real",
-                                                                  torch.nn.functional.log_softmax(
-                                                                      ones - torch.nn.functional.softmax(pred_D_G_X,
-                                                                                                         dim=1),
-                                                                      dim=1),
-                                                                  real_target)
-        loss_D_G_X_as_X = term_1 + term_2
+
+        inverse_target = torch.abs(1 - real_target)
+        loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
+                                                                           torch.nn.functional.log_softmax(
+                                                                               pred_D_G_X, dim=1),
+                                                                           inverse_target)
+
         loss_gauge.update(loss_D_G_X_as_X.item())
 
         return loss_D_G_X_as_X
@@ -399,19 +404,22 @@ class ResNetTrainerNewLoss(Trainer):
             to_onehot(torch.argmax(torch.nn.functional.softmax(disc_pred, dim=1), dim=1),
                       num_classes=self._num_datasets), disc_target))
 
+        if self._num_real_datasets == 2:
+            self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID])
+
         if self.current_train_step % 500 == 0:
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
                 torch.nn.functional.interpolate(x_conv1.cpu().detach(), scale_factor=5, mode="trilinear",
                                                 align_corners=True).numpy()[0], 0))
-        self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-            torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
-                                            align_corners=True).numpy()[0], 0))
-        self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-            torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
-                                            align_corners=True).numpy()[0], 0))
-        self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
-            torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
-                                            align_corners=True).numpy()[0], 0))
+            self.custom_variables["Layer1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                torch.nn.functional.interpolate(x_layer1.cpu().detach(), scale_factor=10, mode="trilinear",
+                                                align_corners=True).numpy()[0], 0))
+            self.custom_variables["Layer2 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                torch.nn.functional.interpolate(x_layer2.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                align_corners=True).numpy()[0], 0))
+            self.custom_variables["Layer3 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
+                torch.nn.functional.interpolate(x_layer3.cpu().detach(), scale_factor=20, mode="trilinear",
+                                                align_corners=True).numpy()[0], 0))
 
     def validate_step(self, inputs, target):
         if self._should_activate_autoencoder():
@@ -436,7 +444,7 @@ class ResNetTrainerNewLoss(Trainer):
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
             disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID], fake_target,
+                                                   target[DATASET_ID], fake_target,
                                                    self._D_G_X_as_X_valid_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
@@ -474,9 +482,9 @@ class ResNetTrainerNewLoss(Trainer):
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
             disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID],
+                                                   target[DATASET_ID],
                                                    fake_target,
-                                                   self._D_G_X_as_X_valid_gauge)
+                                                   self._D_G_X_as_X_test_gauge)
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
@@ -597,6 +605,8 @@ class ResNetTrainerNewLoss(Trainer):
                       num_classes=self._num_datasets),
             disc_target))
 
+        if self._num_real_datasets == 2:
+            self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID], test=True)
         if self.current_test_step % 100 == 0:
             self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
             self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
@@ -637,6 +647,14 @@ class ResNetTrainerNewLoss(Trainer):
         self._discriminator_loss_train_gauge.reset()
         self._discriminator_loss_valid_gauge.reset()
         self._discriminator_loss_test_gauge.reset()
+        self._iseg_pred = torch.zeros(3, )
+        self._iseg_pred_real = torch.zeros(3, )
+        self._mrbrains_pred = torch.zeros(3, )
+        self._mrbrains_pred_real = torch.zeros(3, )
+        self._iseg_pred_test = torch.zeros(3, )
+        self._iseg_pred_real_test = torch.zeros(3, )
+        self._mrbrains_pred_test = torch.zeros(3, )
+        self._mrbrains_pred_real_test = torch.zeros(3, )
 
         if self._current_epoch == self._training_config.patience_segmentation:
             self._model_trainers[GENERATOR].optimizer_lr = 0.001
@@ -645,6 +663,11 @@ class ResNetTrainerNewLoss(Trainer):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_train_gauge.compute()]
         self.custom_variables["Discriminator Loss"] = [self._discriminator_loss_train_gauge.compute()]
         self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
+        self.custom_variables["Discriminator Augmented Confusion Matrix Training"] = np.fliplr(
+            np.vstack((self._iseg_pred_real.cpu().numpy(),
+                       self._mrbrains_pred_real.cpu().numpy(),
+                       self._iseg_pred.cpu().numpy(),
+                       self._mrbrains_pred.cpu().numpy())))
 
         if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
@@ -675,12 +698,10 @@ class ResNetTrainerNewLoss(Trainer):
             self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.reset()
             self._hausdorff_distance_gauge_on_reconstructed_abide_images.reset()
 
-            all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)
-
-            img_input = rebuild_image(self._dataset_configs.keys(), all_patches, self._input_reconstructors)
-            img_gt = rebuild_image(self._dataset_configs.keys(), ground_truth_patches, self._gt_reconstructors)
-            img_norm = rebuild_image(self._dataset_configs.keys(), all_patches, self._normalize_reconstructors)
-            img_seg = rebuild_image(self._dataset_configs.keys(), all_patches, self._segmentation_reconstructors)
+            img_input = self._input_reconstructor.reconstruct_from_patches_3d()
+            img_gt = self._gt_reconstructor.reconstruct_from_patches_3d()
+            img_norm = self._normalize_reconstructor.reconstruct_from_patches_3d()
+            img_seg = self._segmentation_reconstructor.reconstruct_from_patches_3d()
 
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input,
                                "Input")
@@ -692,42 +713,35 @@ class ResNetTrainerNewLoss(Trainer):
                                "Segmented")
 
             if self._training_config.build_augmented_images:
-                img_augmented = rebuild_image(self._dataset_configs.keys(), all_patches, self._augmented_reconstructors)
-                augmented_minus_inputs, normalized_minus_inputs = rebuild_augmented_images(img_augmented, img_input,
-                                                                                           img_gt, img_norm, img_seg)
-
+                img_augmented_input = self._augmented_input_reconstructor.reconstruct_from_patches_3d()
+                img_augmented_normalized = self._augmented_normalized_reconstructor.reconstruct_from_patches_3d()
                 save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
-                                              img_augmented, augmented_minus_inputs, normalized_minus_inputs)
+                                              img_augmented_input, img_augmented_normalized)
 
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
                     "Reconstructed Normalized {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_norm[dataset], 0), 0), 160)
+                    SliceType.AXIAL, np.expand_dims(img_norm[dataset], 0), 160)
                 self.custom_variables[
                     "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0), 160).squeeze(0)
+                    SliceType.AXIAL, np.expand_dims(img_seg[dataset], 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Ground Truth {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
+                    SliceType.AXIAL, np.expand_dims(img_gt[dataset], 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
+                    SliceType.AXIAL, np.expand_dims(img_input[dataset], 0), 160)
 
                 if self._training_config.build_augmented_images:
                     self.custom_variables[
                         "Reconstructed Augmented Input {} Image".format(dataset)] = self._slicer.get_slice(
-                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented[dataset], 0), 0), 160)
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented_input[dataset], 0), 0), 160)
                     self.custom_variables[
-                        "Reconstructed Initial Noise {} Image".format(
+                        "Reconstructed Augmented {} After Normalization".format(
                             dataset)] = self._seg_slicer.get_colored_slice(
                         SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(augmented_minus_inputs[dataset], 0), 0), 160).squeeze(0)
-                    self.custom_variables[
-                        "Reconstructed Noise {} After Normalization".format(
-                            dataset)] = self._seg_slicer.get_colored_slice(
-                        SliceType.AXIAL,
-                        np.expand_dims(np.expand_dims(normalized_minus_inputs[dataset], 0), 0), 160).squeeze(0)
+                        np.expand_dims(np.expand_dims(img_augmented_normalized[dataset], 0), 0), 160).squeeze(0)
                 else:
                     self.custom_variables["Reconstructed Augmented Input {} Image".format(
                         dataset)] = np.zeros((224, 192))
@@ -735,7 +749,7 @@ class ResNetTrainerNewLoss(Trainer):
                         "Reconstructed Initial Noise {} Image".format(
                             dataset)] = np.zeros((224, 192))
                     self.custom_variables[
-                        "Reconstructed Noise {} After Normalization".format(
+                        "Reconstructed Augmented {} After Normalization".format(
                             dataset)] = np.zeros((224, 192))
 
                 mean_mhd.append(mean_hausdorff_distance(
@@ -940,6 +954,11 @@ class ResNetTrainerNewLoss(Trainer):
         self.custom_variables["Total Loss"] = [self._total_loss_test_gauge.compute()]
         self.custom_variables[
             "Per Dataset Mean Hausdorff Distance"] = self._per_dataset_hausdorff_distance_gauge.compute()
+        self.custom_variables["Discriminator Augmented Confusion Matrix Test"] = np.fliplr(
+            np.vstack((self._iseg_pred_real_test.cpu().numpy(),
+                       self._mrbrains_pred_real_test.cpu().numpy(),
+                       self._iseg_pred_test.cpu().numpy(),
+                       self._mrbrains_pred_test.cpu().numpy())))
 
     def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",
@@ -1004,6 +1023,33 @@ class ResNetTrainerNewLoss(Trainer):
             torch.where(target[IMAGE_TARGET] == 2)].cpu().detach()
         self.custom_variables["WM Input Intensity Histogram"] = inputs[
             torch.where(target[IMAGE_TARGET] == 3)].cpu().detach()
+
+    def _compute_augmented_confusion_matrix(self, disc_pred, real_targets, test=False):
+        disc_pred_on_real = (
+            torch.argmax(torch.nn.functional.softmax(disc_pred[:self._training_config.batch_size], dim=1), dim=1))
+        disc_pred_on_generated = (
+            torch.argmax(torch.nn.functional.softmax(disc_pred[self._training_config.batch_size:], dim=1), dim=1))
+
+        mrbrains_pred = to_onehot(disc_pred_on_generated[torch.where(real_targets == MRBRAINS_ID)],
+                                  num_classes=3).sum(dim=0).cpu().numpy()
+        iseg_pred = to_onehot(disc_pred_on_generated[torch.where(real_targets == ISEG_ID)],
+                              num_classes=3).sum(dim=0).cpu().numpy()
+
+        mrbrains_pred_real = to_onehot(disc_pred_on_real[torch.where(real_targets == MRBRAINS_ID)], num_classes=3).sum(
+            dim=0).cpu().numpy()
+        iseg_pred_real = to_onehot(disc_pred_on_real[torch.where(real_targets == ISEG_ID)], num_classes=3).sum(
+            dim=0).cpu().numpy()
+
+        if not test:
+            self._mrbrains_pred += mrbrains_pred
+            self._iseg_pred += iseg_pred
+            self._mrbrains_pred_real += mrbrains_pred_real
+            self._iseg_pred_real += iseg_pred_real
+        else:
+            self._mrbrains_pred_test += mrbrains_pred
+            self._iseg_pred_test += iseg_pred
+            self._mrbrains_pred_real_test += mrbrains_pred_real
+            self._iseg_pred_real_test += iseg_pred_real
 
     @staticmethod
     def _save(epoch_num, model_name, model_state, optimizer_states, save_folder):

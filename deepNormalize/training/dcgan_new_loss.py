@@ -46,8 +46,8 @@ from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, La
     ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, count, \
     construct_triple_histrogram, construct_double_histrogram, construct_single_histogram, construct_class_histogram, \
-    get_all_patches, rebuild_augmented_images, save_augmented_rebuilt_images, \
-    rebuild_image, save_rebuilt_image
+    save_augmented_rebuilt_images, \
+    save_rebuilt_image
 
 
 class DCGANTrainerNewLoss(Trainer):
@@ -116,8 +116,6 @@ class DCGANTrainerNewLoss(Trainer):
         self._ABIDE_confusion_matrix_gauge = ConfusionMatrix(num_classes=4)
         self._discriminator_confusion_matrix_gauge = ConfusionMatrix(num_classes=self._num_datasets)
         self._discriminator_confusion_matrix_gauge_training = ConfusionMatrix(num_classes=self._num_datasets)
-        self._heatmap_train_data = np.zeros((4, 3))
-        self._heatmap_test_data = np.zeros((4, 3))
         self._previous_mean_dice = 0.0
         self._previous_per_dataset_table = ""
         self._start_time = time.time()
@@ -649,8 +647,6 @@ class DCGANTrainerNewLoss(Trainer):
         self._discriminator_loss_train_gauge.reset()
         self._discriminator_loss_valid_gauge.reset()
         self._discriminator_loss_test_gauge.reset()
-        self._heatmap_train_data = np.zeros((4, 3))
-        self._heatmap_test_data = np.zeros((4, 3))
         self._iseg_pred = torch.zeros(3, )
         self._iseg_pred_real = torch.zeros(3, )
         self._mrbrains_pred = torch.zeros(3, )
