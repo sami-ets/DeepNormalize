@@ -257,8 +257,8 @@ class ImageReconstructor(object):
     def reconstruct_from_patches_3d(self):
         data_loaders = list(map(
             lambda dataset: DataLoader(dataset, batch_size=self._batch_size, num_workers=0, drop_last=False,
-                                       shuffle=False,
-                                       pin_memory=False, collate_fn=self.custom_collate), self._datasets))
+                                       shuffle=False, pin_memory=False, collate_fn=self.custom_collate),
+            self._datasets))
 
         if len(self._datasets) == 2:
 
@@ -301,17 +301,17 @@ class ImageReconstructor(object):
 
         if len(self._datasets) == 3:
             reconstructed_image = [np.zeros(self._datasets[0].image_shape), np.zeros(self._datasets[1].image_shape),
-                                   np.zeros(self._datasets[1].image_shape)]
+                                   np.zeros(self._datasets[2].image_shape)]
             for idx, (iseg_inputs, mrbrains_inputs, abide_inputs) in enumerate(
                     zip(data_loaders[ISEG_ID], data_loaders[MRBRAINS_ID], data_loaders[ABIDE_ID])):
                 inputs = torch.cat((iseg_inputs[PATCH], mrbrains_inputs[PATCH], abide_inputs[PATCH]))
                 slices = [iseg_inputs[SLICE], mrbrains_inputs[SLICE], abide_inputs[SLICE]]
 
                 if self._do_normalize:
-                    patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs)))
+                    patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs.cuda())))
 
                 elif self._do_normalize_and_segment:
-                    normalized_patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs)))
+                    normalized_patches = torch.nn.functional.sigmoid((self._models[GENERATOR](inputs.cuda())))
                     patches = torch.argmax(
                         torch.nn.functional.softmax(self._models[SEGMENTER](normalized_patches), dim=1), dim=1,
                         keepdim=True)
@@ -327,7 +327,7 @@ class ImageReconstructor(object):
                                                               pred_patch.data.cpu().numpy()
 
                 for pred_patch, slice in zip(patches[self._batch_size * 2:self._batch_size * 3], slices[ABIDE_ID]):
-                    reconstructed_image[MRBRAINS_ID][slice] = reconstructed_image[ABIDE_ID][slice] + \
+                    reconstructed_image[ABIDE_ID][slice] = reconstructed_image[ABIDE_ID][slice] + \
                                                               pred_patch.data.cpu().numpy()
 
             reconstructed_image[ISEG_ID] = reconstructed_image[ISEG_ID] * self._overlap_maps[ISEG_ID]
@@ -339,6 +339,6 @@ class ImageReconstructor(object):
                 reconstructed_image[MRBRAINS_ID] = np.clip(np.round(reconstructed_image[MRBRAINS_ID]), a_min=0, a_max=3)
                 reconstructed_image[ABIDE_ID] = np.clip(np.round(reconstructed_image[ABIDE_ID]), a_min=0, a_max=3)
 
-        return {"iSEG": reconstructed_image[ISEG_ID],
-                "MRBrainS": reconstructed_image[MRBRAINS_ID],
-                "ABIDE": reconstructed_image[ABIDE_ID]}
+            return {"iSEG": reconstructed_image[ISEG_ID],
+                    "MRBrainS": reconstructed_image[MRBRAINS_ID],
+                    "ABIDE": reconstructed_image[ABIDE_ID]}

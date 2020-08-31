@@ -15,7 +15,7 @@ PATCH = 0
 SLICE = 1
 SEGMENTER = 1
 
-DEVICE = "cuda:1"
+DEVICE = "cuda:0"
 
 
 def custom_collate(batch):
@@ -184,12 +184,12 @@ if __name__ == "__main__":
     MRBrainS_path = "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData/2/T1/T1.nii.gz"
     iSEG_Path = "/mnt/md0/Data/iSEG_scaled/Training/9/T1/T1.nii.gz"
 
-    alphas = [0.9, 0.7, 0.5, 0.3, 0.1]
+    snrs = [20.0, 40.0, 60.0, 80.0, 100.0]
 
-    for alpha in alphas:
+    for snr in snrs:
         reconstructor = ImageReconstructor([iSEG_Path, MRBrainS_path],
                                            patch_size=(1, 32, 32, 32),
-                                           reconstructed_image_size=(1, 256, 256, 192), step=(1, 4, 4, 4),
-                                           batch_size=5, models=models, normalize=True,
-                                           alpha=alpha, prob_bias=1.0, snr=0.0, prob_noise=0.0)
+                                           reconstructed_image_size=(1, 256, 256, 192), step=(1, 16, 16, 16),
+                                           batch_size=5, models=models, normalize=False,
+                                           alpha=0.0, prob_bias=0.0, snr=0.0, prob_noise=0.0)
         reconstructor.reconstruct_from_patches_3d()

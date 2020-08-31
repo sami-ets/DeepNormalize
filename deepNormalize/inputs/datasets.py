@@ -1247,14 +1247,14 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
     @staticmethod
     def create(source_images: np.ndarray, target_images: np.ndarray, patches: np.ndarray,
                modalities: Union[Modality, List[Modality]], dataset_id: int, transforms: List[Callable] = None,
-               augment: bool = None):
+               augment: bool = None, data_augmentation_config: dict = None):
 
         if target_images is not None:
 
             return SliceDataset(source_images, target_images, patches, modalities, dataset_id,
                                 Compose([transform for transform in
                                          transforms]) if transforms is not None else None,
-                                augment=augment)
+                                augment=augment, data_augmentation_config=data_augmentation_config)
 
         else:
             raise NotImplementedError
@@ -1284,7 +1284,7 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                 patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                 step: Union[List, Tuple] = (1, 4, 4, 4),
                                 test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                test_step: Union[List, Tuple] = (1, 16, 16, 16)):
+                                test_step: Union[List, Tuple] = (1, 16, 16, 16), data_augmentation_config: dict = None):
 
         if isinstance(modalities, list):
             raise NotImplementedError("ABIDE only contain T1 modality.")
@@ -1293,7 +1293,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                                                      dataset_id, test_size, sites,
                                                                                      max_subjects, max_num_patches,
                                                                                      augment, patch_size,
-                                                                                     step, test_patch_size, test_step)
+                                                                                     step, test_patch_size, test_step,
+                                                                                     data_augmentation_config)
 
     @staticmethod
     def _create_single_modality_train_test(source_dir: str, modality: Modality, dataset_id: int, test_size: float,
@@ -1302,7 +1303,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                            patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                            step: Union[List, Tuple] = (1, 4, 4, 4),
                                            test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                           test_step: Union[List, Tuple] = (1, 16, 16, 16)):
+                                           test_step: Union[List, Tuple] = (1, 16, 16, 16),
+                                           data_augmentation_config: dict = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
@@ -1387,7 +1389,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augment=augment)
+            augment=augment,
+            data_augmentation_config=data_augmentation_config["training"])
 
         test_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(test_images),
@@ -1405,7 +1408,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augment=augment)
+            augment=augment,
+            data_augmentation_config=data_augmentation_config["test"])
 
         return train_dataset, test_dataset, reconstruction_dataset
 
@@ -1417,7 +1421,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
                                                  patch_size: Union[List, Tuple] = (1, 32, 32, 32),
                                                  step: Union[List, Tuple] = (1, 4, 4, 4),
                                                  test_patch_size: Union[List, Tuple] = (1, 64, 64, 64),
-                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16)):
+                                                 test_step: Union[List, Tuple] = (1, 16, 16, 16),
+                                                 data_augmentation_config: dict = None):
 
         csv = pandas.read_csv(os.path.join(source_dir, "output_abide_images.csv"))
 
@@ -1520,7 +1525,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             modalities=modality,
             dataset_id=dataset_id,
             transforms=[ToNDTensor()],
-            augment=augment)
+            augment=augment,
+            data_augmentation_config=data_augmentation_config["training"])
 
         valid_dataset = ABIDESliceDatasetFactory.create(
             source_images=np.array(valid_images),
@@ -1547,7 +1553,8 @@ class ABIDESliceDatasetFactory(AbstractDatasetFactory):
             dataset_id=dataset_id,
             modalities=modality,
             transforms=[ToNDTensor()],
-            augment=augment)
+            augment=augment,
+            data_augmentation_config=data_augmentation_config["test"])
 
         return train_dataset, valid_dataset, test_dataset, reconstruction_dataset
 

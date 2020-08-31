@@ -6,7 +6,7 @@ from kerosene.events.handlers.visdom import PlotMonitors, PlotLR, PlotCustomVari
 from kerosene.loggers.visdom import PlotType
 from kerosene.training.events import Event
 
-from deepNormalize.events.handlers.handlers import PlotCustomLinePlotWithLegend, PlotCustomLoss
+from deepNormalize.events.handlers.handlers import PlotCustomLinePlotWithLegend, PlotCustomLoss, PrintMonitorsTable
 from deepNormalize.training.dcgan import DCGANTrainer
 from deepNormalize.training.dcgan_multimodal import DCGANMultimodalTrainer
 from deepNormalize.training.dcgan_new_loss import DCGANTrainerNewLoss
@@ -962,7 +962,7 @@ class TrainerFactory(object):
                                            gt_reconstructor,
                                            run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
-                .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
+                .with_event_handler(PrintMonitorsTable(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(

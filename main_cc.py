@@ -28,7 +28,6 @@ from kerosene.loggers.visdom import PlotType, PlotFrequency
 from kerosene.loggers.visdom.config import VisdomConfiguration
 from kerosene.loggers.visdom.visdom import VisdomLogger, VisdomData
 from kerosene.training.trainers import ModelTrainerFactory
-from kerosene.utils.devices import on_multiple_gpus
 from samitorch.inputs.utils import augmented_sample_collate
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
@@ -139,7 +138,8 @@ if __name__ == '__main__':
             patch_size=dataset_configs["ABIDE"].patch_size,
             step=dataset_configs["ABIDE"].step,
             test_patch_size=dataset_configs["ABIDE"].test_patch_size,
-            test_step=dataset_configs["ABIDE"].test_step)
+            test_step=dataset_configs["ABIDE"].test_step,
+            data_augmentation_config=data_augmentation_config)
         train_datasets.append(ABIDE_train)
         valid_datasets.append(ABIDE_valid)
         test_datasets.append(ABIDE_test)
@@ -203,29 +203,44 @@ if __name__ == '__main__':
         normalized_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
              ABIDE_reconstruction._source_images[0]],
-            patch_size=(1, 32, 32, 32), reconstructed_image_size=(1, 256, 256, 192), step=(1, 4, 4, 4),
+            patch_size=(1, 32, 32, 32),
+            reconstructed_image_size=(1, 256, 256, 192),
+            step=dataset_configs["iSEG"].test_step,
             models=[model_trainers[GENERATOR]],
-            normalize=True, batch_size=50)
+            normalize=True,
+            batch_size=4)
         segmentation_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
              ABIDE_reconstruction._source_images[0]],
-            patch_size=(1, 32, 32, 32), reconstructed_image_size=(1, 256, 256, 192), step=(1, 4, 4, 4),
-            models=[model_trainers[GENERATOR], model_trainers[SEGMENTER]], normalize_and_segment=True, batch_size=5)
+            patch_size=(1, 32, 32, 32),
+            reconstructed_image_size=(1, 256, 256, 192),
+            step=dataset_configs["iSEG"].test_step,
+            models=[model_trainers[GENERATOR], model_trainers[SEGMENTER]],
+            normalize_and_segment=True,
+            batch_size=4)
         input_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
              ABIDE_reconstruction._source_images[0]],
-            patch_size=(1, 32, 32, 32), reconstructed_image_size=(1, 256, 256, 192), step=(1, 4, 4, 4), batch_size=50)
+            patch_size=(1, 32, 32, 32),
+            reconstructed_image_size=(1, 256, 256, 192),
+            step=dataset_configs["iSEG"].test_step,
+            batch_size=50)
         gt_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._target_images[0], MRBrainS_reconstruction._target_images[0],
              ABIDE_reconstruction._target_images[0]],
-            patch_size=(1, 32, 32, 32), reconstructed_image_size=(1, 256, 256, 192), step=(1, 4, 4, 4), batch_size=50,
+            patch_size=(1, 32, 32, 32),
+            reconstructed_image_size=(1, 256, 256, 192),
+            step=dataset_configs["iSEG"].test_step,
+            batch_size=50,
             is_ground_truth=True)
         if dataset_configs["iSEG"].augment:
             augmented_input_reconstructor = ImageReconstructor(
                 [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
                  ABIDE_reconstruction._source_images[0]],
                 patch_size=(1, 32, 32, 32),
-                reconstructed_image_size=(1, 256, 256, 192), step=dataset_configs["iSEG"].test_step, batch_size=50,
+                reconstructed_image_size=(1, 256, 256, 192),
+                step=dataset_configs["iSEG"].test_step,
+                batch_size=50,
                 alpha=data_augmentation_config["test"]["bias_field"]["alpha"][0],
                 prob_bias=data_augmentation_config["test"]["bias_field"]["prob_bias"],
                 snr=data_augmentation_config["test"]["noise"]["snr"],
@@ -234,12 +249,17 @@ if __name__ == '__main__':
                 [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
                  ABIDE_reconstruction._source_images[0]],
                 patch_size=(1, 32, 32, 32),
-                reconstructed_image_size=(1, 256, 256, 192), step=dataset_configs["iSEG"].test_step,
-                models=[model_trainers[GENERATOR]], batch_size=1,
+                reconstructed_image_size=(1, 256, 256, 192),
+                step=dataset_configs["iSEG"].test_step,
+                models=[model_trainers[GENERATOR]],
+                batch_size=4,
                 alpha=data_augmentation_config["test"]["bias_field"]["alpha"][0],
                 prob_bias=data_augmentation_config["test"]["bias_field"]["prob_bias"],
                 snr=data_augmentation_config["test"]["noise"]["snr"],
                 prob_noise=data_augmentation_config["test"]["noise"]["prob_noise"])
+        else:
+            augmented_input_reconstructor = None
+            augmented_normalized_input_reconstructor = None
 
     # Concat datasets.
     if len(dataset_configs) > 1:

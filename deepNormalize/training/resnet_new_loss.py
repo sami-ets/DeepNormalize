@@ -128,14 +128,32 @@ class ResNetTrainerNewLoss(Trainer):
         self._real_T1_pool = ImagePool()
         self._n_critics = training_config.n_critics
         self._is_sliced = True if isinstance(self._reconstruction_datasets[0], SliceDataset) else False
-        self._iseg_pred = torch.zeros(3, )
-        self._iseg_pred_real = torch.zeros(3, )
-        self._mrbrains_pred = torch.zeros(3, )
-        self._mrbrains_pred_real = torch.zeros(3, )
-        self._iseg_pred_test = torch.zeros(3, )
-        self._iseg_pred_real_test = torch.zeros(3, )
-        self._mrbrains_pred_test = torch.zeros(3, )
-        self._mrbrains_pred_real_test = torch.zeros(3, )
+        if self._num_real_datasets == 2:
+            self._iseg_pred = torch.zeros(3, )
+            self._iseg_pred_real = torch.zeros(3, )
+            self._mrbrains_pred = torch.zeros(3, )
+            self._mrbrains_pred_real = torch.zeros(3, )
+            self._abide_pred = torch.zeros(3, )
+            self._abide_pred_real = torch.zeros(3, )
+            self._iseg_pred_test = torch.zeros(3, )
+            self._iseg_pred_real_test = torch.zeros(3, )
+            self._mrbrains_pred_test = torch.zeros(3, )
+            self._mrbrains_pred_real_test = torch.zeros(3, )
+            self._abide_pred_test = torch.zeros(3, )
+            self._abide_pred_real_test = torch.zeros(3, )
+        else:
+            self._iseg_pred = torch.zeros(4, )
+            self._iseg_pred_real = torch.zeros(4, )
+            self._mrbrains_pred = torch.zeros(4, )
+            self._mrbrains_pred_real = torch.zeros(4, )
+            self._abide_pred = torch.zeros(4, )
+            self._abide_pred_real = torch.zeros(4, )
+            self._iseg_pred_test = torch.zeros(4, )
+            self._iseg_pred_real_test = torch.zeros(4, )
+            self._mrbrains_pred_test = torch.zeros(4, )
+            self._mrbrains_pred_real_test = torch.zeros(4, )
+            self._abide_pred_test = torch.zeros(4, )
+            self._abide_pred_real_test = torch.zeros(4, )
         print("Total number of parameters: {}".format(
             sum(p.numel() for p in self._model_trainers[SEGMENTER].parameters()) +
             sum(p.numel() for p in self._model_trainers[GENERATOR].parameters()) +
@@ -316,16 +334,25 @@ class ResNetTrainerNewLoss(Trainer):
 
         return seg_pred, loss_S
 
-    def _loss_D_G_X_as_X(self, D: ModelTrainer, generated, real_target, fake_target, loss_gauge: AverageGauge):
+    def _loss_D_G_X_as_X(self, D: ModelTrainer, generated, real_target, phase: str):
         pred_D_G_X, _, _, _, _ = D.forward(generated)
 
-        inverse_target = torch.abs(1 - real_target)
-        loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
-                                                                           torch.nn.functional.log_softmax(
-                                                                               pred_D_G_X, dim=1),
-                                                                           inverse_target)
-
-        loss_gauge.update(loss_D_G_X_as_X.item())
+        if self._num_real_datasets == 2:
+            inverse_target = (1 - real_target)
+            loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
+                                                                               torch.nn.functional.log_softmax(
+                                                                                   pred_D_G_X, dim=1),
+                                                                               inverse_target)
+        else:
+            if phase == "train":
+                loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_and_update_train_loss(
+                    "MultipleDatasetLoss", pred_D_G_X, real_target)
+            elif phase == "valid":
+                loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_and_update_valid_loss(
+                    "MultipleDatasetLoss", pred_D_G_X, real_target)
+            elif phase == "test":
+                loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_and_update_test_loss(
+                    "MultipleDatasetLoss", pred_D_G_X, real_target)
 
         return loss_D_G_X_as_X
 
@@ -379,8 +406,7 @@ class ResNetTrainerNewLoss(Trainer):
                                                   requires_grad=False)
 
             disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID],
-                                                   fake_target, self._D_G_X_as_X_train_gauge)
+                                                   target[NON_AUGMENTED_TARGETS][DATASET_ID], phase="train")
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
@@ -406,6 +432,8 @@ class ResNetTrainerNewLoss(Trainer):
 
         if self._num_real_datasets == 2:
             self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID])
+        else:
+            self._compute_augmented_confusion_matrix_three_datasets(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID])
 
         if self.current_train_step % 500 == 0:
             self.custom_variables["Conv1 FM"] = self._fm_slicer.get_colored_slice(SliceType.AXIAL, np.expand_dims(
@@ -443,9 +471,8 @@ class ResNetTrainerNewLoss(Trainer):
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
-            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[DATASET_ID], fake_target,
-                                                   self._D_G_X_as_X_valid_gauge)
+            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred, target[DATASET_ID],
+                                                   phase="valid")
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
@@ -481,10 +508,8 @@ class ResNetTrainerNewLoss(Trainer):
             fake_target = torch.Tensor().new_full(fill_value=self._fake_class_id, size=(gen_pred.size(0),),
                                                   dtype=torch.long, device=inputs[NON_AUGMENTED_INPUTS].device,
                                                   requires_grad=False)
-            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred,
-                                                   target[DATASET_ID],
-                                                   fake_target,
-                                                   self._D_G_X_as_X_test_gauge)
+            disc_loss_as_X = self._loss_D_G_X_as_X(self._model_trainers[DISCRIMINATOR], gen_pred, target[DATASET_ID],
+                                                   phase="test")
 
             total_loss = self._training_config.variables["seg_ratio"] * loss_S.mean() + \
                          self._training_config.variables["disc_ratio"] * disc_loss_as_X
@@ -607,6 +632,10 @@ class ResNetTrainerNewLoss(Trainer):
 
         if self._num_real_datasets == 2:
             self._compute_augmented_confusion_matrix(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID], test=True)
+        else:
+            self._compute_augmented_confusion_matrix_three_datasets(disc_pred, target[AUGMENTED_TARGETS][DATASET_ID],
+                                                                    test=True)
+
         if self.current_test_step % 100 == 0:
             self._update_histograms(inputs[NON_AUGMENTED_INPUTS], target, gen_pred)
             self._update_image_plots(self.phase, inputs[NON_AUGMENTED_INPUTS].cpu().detach(),
@@ -647,14 +676,32 @@ class ResNetTrainerNewLoss(Trainer):
         self._discriminator_loss_train_gauge.reset()
         self._discriminator_loss_valid_gauge.reset()
         self._discriminator_loss_test_gauge.reset()
-        self._iseg_pred = torch.zeros(3, )
-        self._iseg_pred_real = torch.zeros(3, )
-        self._mrbrains_pred = torch.zeros(3, )
-        self._mrbrains_pred_real = torch.zeros(3, )
-        self._iseg_pred_test = torch.zeros(3, )
-        self._iseg_pred_real_test = torch.zeros(3, )
-        self._mrbrains_pred_test = torch.zeros(3, )
-        self._mrbrains_pred_real_test = torch.zeros(3, )
+        if self._num_real_datasets == 2:
+            self._iseg_pred = torch.zeros(3, )
+            self._iseg_pred_real = torch.zeros(3, )
+            self._mrbrains_pred = torch.zeros(3, )
+            self._mrbrains_pred_real = torch.zeros(3, )
+            self._abide_pred = torch.zeros(3, )
+            self._abide_pred_real = torch.zeros(3, )
+            self._iseg_pred_test = torch.zeros(3, )
+            self._iseg_pred_real_test = torch.zeros(3, )
+            self._mrbrains_pred_test = torch.zeros(3, )
+            self._mrbrains_pred_real_test = torch.zeros(3, )
+            self._abide_pred_test = torch.zeros(3, )
+            self._abide_pred_real_test = torch.zeros(3, )
+        else:
+            self._iseg_pred = torch.zeros(4, )
+            self._iseg_pred_real = torch.zeros(4, )
+            self._mrbrains_pred = torch.zeros(4, )
+            self._mrbrains_pred_real = torch.zeros(4, )
+            self._abide_pred = torch.zeros(4, )
+            self._abide_pred_real = torch.zeros(4, )
+            self._iseg_pred_test = torch.zeros(4, )
+            self._iseg_pred_real_test = torch.zeros(4, )
+            self._mrbrains_pred_test = torch.zeros(4, )
+            self._mrbrains_pred_real_test = torch.zeros(4, )
+            self._abide_pred_test = torch.zeros(4, )
+            self._abide_pred_real_test = torch.zeros(4, )
 
         if self._current_epoch == self._training_config.patience_segmentation:
             self._model_trainers[GENERATOR].optimizer_lr = 0.001
@@ -663,11 +710,20 @@ class ResNetTrainerNewLoss(Trainer):
         self.custom_variables["D(G(X)) | X"] = [self._D_G_X_as_X_train_gauge.compute()]
         self.custom_variables["Discriminator Loss"] = [self._discriminator_loss_train_gauge.compute()]
         self.custom_variables["Total Loss"] = [self._total_loss_train_gauge.compute()]
-        self.custom_variables["Discriminator Augmented Confusion Matrix Training"] = np.fliplr(
-            np.vstack((self._iseg_pred_real.cpu().numpy(),
-                       self._mrbrains_pred_real.cpu().numpy(),
-                       self._iseg_pred.cpu().numpy(),
-                       self._mrbrains_pred.cpu().numpy())))
+        if self._num_real_datasets == 2:
+            self.custom_variables["Discriminator Augmented Confusion Matrix Training"] = np.fliplr(
+                np.vstack((self._iseg_pred_real.cpu().numpy(),
+                           self._mrbrains_pred_real.cpu().numpy(),
+                           self._iseg_pred.cpu().numpy(),
+                           self._mrbrains_pred.cpu().numpy())))
+        else:
+            self.custom_variables["Discriminator Augmented Confusion Matrix Training"] = np.fliplr(
+                np.vstack((self._iseg_pred_real.cpu().numpy(),
+                           self._mrbrains_pred_real.cpu().numpy(),
+                           self._abide_pred_real.cpu().numpy(),
+                           self._iseg_pred.cpu().numpy(),
+                           self._mrbrains_pred.cpu().numpy(),
+                           self._abide_pred.cpu().numpy())))
 
         if self._discriminator_confusion_matrix_gauge_training._num_examples != 0:
             self.custom_variables["Discriminator Confusion Matrix Training"] = np.array(
@@ -1050,6 +1106,41 @@ class ResNetTrainerNewLoss(Trainer):
             self._iseg_pred_test += iseg_pred
             self._mrbrains_pred_real_test += mrbrains_pred_real
             self._iseg_pred_real_test += iseg_pred_real
+
+    def _compute_augmented_confusion_matrix_three_datasets(self, disc_pred, real_targets, test=False):
+        disc_pred_on_real = (
+            torch.argmax(torch.nn.functional.softmax(disc_pred[:self._training_config.batch_size], dim=1), dim=1))
+        disc_pred_on_generated = (
+            torch.argmax(torch.nn.functional.softmax(disc_pred[self._training_config.batch_size:], dim=1), dim=1))
+
+        mrbrains_pred = to_onehot(disc_pred_on_generated[torch.where(real_targets == MRBRAINS_ID)],
+                                  num_classes=4).sum(dim=0).cpu().numpy()
+        iseg_pred = to_onehot(disc_pred_on_generated[torch.where(real_targets == ISEG_ID)],
+                              num_classes=4).sum(dim=0).cpu().numpy()
+        abide_pred = to_onehot(disc_pred_on_generated[torch.where(real_targets == ABIDE_ID)],
+                               num_classes=4).sum(dim=0).cpu().numpy()
+
+        mrbrains_pred_real = to_onehot(disc_pred_on_real[torch.where(real_targets == MRBRAINS_ID)], num_classes=4).sum(
+            dim=0).cpu().numpy()
+        iseg_pred_real = to_onehot(disc_pred_on_real[torch.where(real_targets == ISEG_ID)], num_classes=4).sum(
+            dim=0).cpu().numpy()
+        abide_pred_real = to_onehot(disc_pred_on_real[torch.where(real_targets == ABIDE_ID)], num_classes=4).sum(
+            dim=0).cpu().numpy()
+
+        if not test:
+            self._mrbrains_pred += mrbrains_pred
+            self._iseg_pred += iseg_pred
+            self._mrbrains_pred_real += mrbrains_pred_real
+            self._iseg_pred_real += iseg_pred_real
+            self._abide_pred += abide_pred
+            self._abide_pred_real += abide_pred_real
+        else:
+            self._mrbrains_pred_test += mrbrains_pred
+            self._iseg_pred_test += iseg_pred
+            self._mrbrains_pred_real_test += mrbrains_pred_real
+            self._iseg_pred_real_test += iseg_pred_real
+            self._abide_pred_test += abide_pred
+            self._abide_pred_real_test += abide_pred_real
 
     @staticmethod
     def _save(epoch_num, model_name, model_state, optimizer_states, save_folder):

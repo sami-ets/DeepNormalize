@@ -319,11 +319,15 @@ class DCGANTrainerNewLoss(Trainer):
     def _loss_D_G_X_as_X(self, D: ModelTrainer, generated, real_target, fake_target, loss_gauge: AverageGauge):
         pred_D_G_X, _, _, _, _ = D.forward(generated)
 
-        inverse_target = torch.abs(1 - real_target)
-        loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
-                                                                           torch.nn.functional.log_softmax(
-                                                                               pred_D_G_X, dim=1),
-                                                                           inverse_target)
+        if self._num_real_datasets == 2:
+            inverse_target = (1 - real_target)
+            loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("Pred Fake",
+                                                                               torch.nn.functional.log_softmax(
+                                                                                   pred_D_G_X, dim=1),
+                                                                               inverse_target)
+        else:
+            loss_D_G_X_as_X = self._model_trainers[DISCRIMINATOR].compute_loss("MultipleDatasetLoss",
+                                                                               pred_D_G_X, real_target)
 
         loss_gauge.update(loss_D_G_X_as_X.item())
 

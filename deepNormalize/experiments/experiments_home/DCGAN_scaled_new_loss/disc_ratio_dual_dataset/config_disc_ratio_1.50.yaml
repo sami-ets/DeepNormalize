@@ -98,8 +98,12 @@ models:
     criterion:
       Pred Real:
         type: "NLLLoss"
+        params:
+          weight: !torch/tensor [ 1, 1, 0.5 ]
       Pred Fake:
         type: "NLLLoss"
+        params:
+          weight: !torch/tensor [ 1, 1, 0.5 ]
     metrics:
       Accuracy:
         type: "Accuracy"
@@ -163,7 +167,7 @@ training:
   n_critics: 3
   batch_size: 15
   nb_epochs: 150
-  patience_segmentation: 0
+  patience_segmentation: 10
   build_augmented_images: False
   data_augmentation: False
   variables:
@@ -173,7 +177,7 @@ training:
 visdom:
   server: "localhost"
   port: "8097"
-  env: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_4"
+  env: "DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_5"
   offline: False
-  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_4/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_4.json"
+  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled_new_loss/disc_ratio_dual_dataset/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_5/DCGAN_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_5.json"
   save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"
