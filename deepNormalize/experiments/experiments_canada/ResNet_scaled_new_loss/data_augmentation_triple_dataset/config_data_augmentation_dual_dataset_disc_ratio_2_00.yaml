@@ -203,7 +203,7 @@ training:
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_home_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset"
+  env: "ResNet_canada_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset"
   offline: True
-  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/data_augmentation_triple_dataset/ResNet_home_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset/ResNet_home_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset.json"
+  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/data_augmentation_triple_dataset/ResNet_canada_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset/ResNet_canada_new_loss_scaled_disc_ratio_2_00_data_augmentation_triple_dataset.json"
   save_destination: "/home/pld2602/scratch/"

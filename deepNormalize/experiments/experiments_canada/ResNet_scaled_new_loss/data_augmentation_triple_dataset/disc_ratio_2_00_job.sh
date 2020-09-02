@@ -11,8 +11,8 @@
 #SBATCH --mail-type=REQUEUE
 #SBATCH --mail-type=ALL
 #SBATCH --output=%x-%j.out
-#SBATCH --output=ResNet_home_new_loss_scaled_disc_ratio_data_augmentation_2_00.out
-#SBATCH --job-name=ResNet_home_new_loss_scaled_disc_ratio_data_augmentation_2_00
+#SBATCH --output=ResNet_canada_new_loss_scaled_disc_ratio_data_augmentation_2_00.out
+#SBATCH --job-name=ResNet_canada_new_loss_scaled_disc_ratio_data_augmentation_2_00
 nvidia-smi
 source /home/pld2602/venv/bin/activate
 CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/home/pld2602/projects/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/ResNet_scaled_new_loss/data_augmentation_triple_dataset/config_data_augmentation_triple_dataset_disc_ratio_2.00.yaml

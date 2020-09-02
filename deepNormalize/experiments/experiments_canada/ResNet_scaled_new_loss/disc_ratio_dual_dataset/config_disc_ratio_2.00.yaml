@@ -187,7 +187,7 @@ training:
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_2_00"
+  env: "ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_2_00"
   offline: True
-  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_2_00/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_2_00.json"
+  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_2_00/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_2_00.json"
   save_destination: "/home/pld2602/scratch/"
