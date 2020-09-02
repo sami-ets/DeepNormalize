@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --account=def-lombaert
+#SBATCH --gres=gpu:v100l:1              # Number of GPUs (per node)
+#SBATCH --cpus-per-task=8         # CPU cores/threads
+#SBATCH --mem=92G                 # memory (per node)
+#SBATCH --time=06-00:00            # time (DD-HH:MM)
+#SBATCH --mail-user=pierre-luc.delisle@live.com
+#SBATCH --mail-type=BEGIN
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-type=REQUEUE
+#SBATCH --mail-type=ALL
+#SBATCH --output=%x-%j.out
+#SBATCH --output=ResNet_home_new_loss_scaled_disc_ratio_data_augmentation_0_75.out
+#SBATCH --job-name=ResNet_home_new_loss_scaled_disc_ratio_data_augmentation_0_75
+nvidia-smi
+source /home/pld2602/venv/bin/activate
+CUDA_VISIBLE_DEVICES=0 python /project/def-lombaert/pld2602/code/deepNormalizev5/main_cc.py --config=/home/pld2602/projects/def-lombaert/pld2602/code/deepNormalizev5/deepNormalize/experiments/experiments_canada/ResNet_scaled_new_loss/data_augmentation_triple_dataset/config_data_augmentation_triple_dataset_disc_ratio_0.75.yaml

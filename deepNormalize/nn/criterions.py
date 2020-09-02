@@ -15,6 +15,7 @@ class CustomCriterionFactory(CriterionFactory):
     def __init__(self):
         super().__init__()
         self.register("MeanLoss", MeanLoss)
+        self.register("DualDatasetLoss", DualDatasetLoss)
         self.register("MultipleDatasetLoss", MultipleDatasetLoss)
 
 
@@ -42,3 +43,13 @@ class MultipleDatasetLoss(_Loss):
             return -torch.log(ones - (pred_real + pred_fake)).mean()
         else:
             return NotImplementedError
+
+
+class DualDatasetLoss(_Loss):
+    def __init__(self):
+        super(DualDatasetLoss, self).__init__()
+
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
+        ones = torch.Tensor().new_ones(targets.shape, device=targets.device, dtype=targets.dtype)
+        inverse_target = (ones - targets)
+        return torch.nn.functional.nll_loss(torch.nn.functional.log_softmax(inputs, dim=1), inverse_target)

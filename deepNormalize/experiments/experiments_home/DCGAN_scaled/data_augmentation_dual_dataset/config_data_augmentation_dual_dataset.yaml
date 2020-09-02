@@ -156,5 +156,5 @@ visdom:
   port: "8097"
   env: "DCGAN_home_data_augmentation_dual_dataset_disc_ratio_1_50"
   offline: True
-  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled/data_augmentation_dual_dataset/DCGAN_home_data_augmentation_dual_dataset_disc_ratio_1_50/DCGAN_home_data_augmentation_dual_dataset_disc_ratio_1_50.json"
+  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/DCGAN_scaled/data_augmentation_triple_dataset/DCGAN_home_data_augmentation_dual_dataset_disc_ratio_1_50/DCGAN_home_data_augmentation_dual_dataset_disc_ratio_1_50.json"
   save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"

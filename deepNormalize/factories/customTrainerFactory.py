@@ -316,7 +316,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Wasserstein Distance", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -761,7 +760,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -1211,7 +1209,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -1669,7 +1666,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -2124,7 +2120,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -2560,7 +2555,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -3750,7 +3744,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Wasserstein Distance", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -3940,13 +3933,14 @@ class TrainerFactory(object):
 
         elif self._trainer == TrainerType.ResNet_Multimodal:
             trainer = ResNetMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
-                                              dataloaders[2],
-                                              reconstruction_datasets, normalized_reconstructor, input_reconstructor,
-                                              segmentation_reconstructor, augmented_input_reconstructor,
-                                              gt_reconstructor,
-                                              run_config, dataset_configs, save_folder) \
+                                           dataloaders[2],
+                                           reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                           segmentation_reconstructor, augmented_input_reconstructor,
+                                           augmented_normalized_reconstructor,
+                                           gt_reconstructor,
+                                           run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
-                .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
+                .with_event_handler(PrintMonitorsTable(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
@@ -4250,10 +4244,27 @@ class TrainerFactory(object):
                                         "rownames": list(dataset_configs.keys()) + ["Generated"],
                                         "title": "Discriminator Confusion Matrix Training"}},
                                     every=1), Event.ON_TRAIN_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Discriminator Augmented Confusion Matrix Training",
+                                    PlotType.HEATMAP_PLOT,
+                                    params={"opts": {
+                                        "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                        "rownames": list(dataset_configs.keys()) + ["Generated iSEG",
+                                                                                    "Generated MRBrainS"],
+                                        "title": "Discriminator Augmented Confusion Matrix Training"}},
+                                    every=1), Event.ON_TRAIN_EPOCH_END) \
+                .with_event_handler(
+                PlotCustomVariables(visdom_logger, "Discriminator Augmented Confusion Matrix Test",
+                                    PlotType.HEATMAP_PLOT,
+                                    params={"opts": {
+                                        "columnnames": ["Generated"] + list(reversed(list(dataset_configs.keys()))),
+                                        "rownames": list(dataset_configs.keys()) + ["Generated iSEG",
+                                                                                    "Generated MRBrainS"],
+                                        "title": "Discriminator Augmented Confusion Matrix Test"}},
+                                    every=1), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -4760,7 +4771,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -5277,7 +5287,6 @@ class TrainerFactory(object):
                 .with_event_handler(PlotCustomVariables(visdom_logger, "Runtime", PlotType.TEXT_PLOT,
                                                         params={"opts": {"title": "Runtime"}},
                                                         every=1), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(PlotCustomLoss(visdom_logger, "D(G(X)) | X", every=1), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Discriminator Loss", every=1),
                                     Event.ON_EPOCH_END) \
                 .with_event_handler(PlotCustomLoss(visdom_logger, "Total Loss", every=1), Event.ON_EPOCH_END) \
@@ -6244,3 +6253,6 @@ class TrainerFactory(object):
                            mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END)
             return trainer
+
+        else:
+            raise NotImplementedError

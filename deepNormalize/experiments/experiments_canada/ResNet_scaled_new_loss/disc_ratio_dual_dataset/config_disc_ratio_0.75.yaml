@@ -128,7 +128,7 @@ models:
 
 dataset:
   iSEG:
-    path: "/mnt/md0/Data/iSEG_scaled/Training/"
+    path: "/home/pld2602/projects/def-lombaert/pld2602/Data/iSEG_scaled/Training/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -141,7 +141,7 @@ dataset:
     test_step: !python/tuple [ 1, 16, 16, 16 ]
     reconstruction_size: [ 256, 192, 160 ]
   MRBrainS:
-    path: "/mnt/md0/Data/MRBrainS_scaled/DataNii/TrainingData/"
+    path: "/home/pld2602/projects/def-lombaert/pld2602/Data/MRBrainS_scaled/DataNii/TrainingData/"
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
@@ -175,19 +175,19 @@ data_augmentation:
 training:
   trainer: "ResNet_new_loss"
   n_critics: 3
-  batch_size: 13
+  batch_size: 72
   nb_epochs: 200
   patience_segmentation: 0
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio: 1.0
+    disc_ratio: 0.75
     seg_ratio: 1.0
 
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_00"
-  offline: False
-  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_00/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_00.json"
-  save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"
+  env: "ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_0_75"
+  offline: True
+  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_0.75/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_0_75.json"
+  save_destination: "/home/pld2602/scratch/"
