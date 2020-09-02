@@ -197,13 +197,13 @@ training:
   build_augmented_images: False
   data_augmentation: False
   variables:
-    disc_ratio: 2.0
+    disc_ratio: 0.10
     seg_ratio: 1.0
 
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_home_new_loss_scaled_disc_ratio_2_00"
+  env: "ResNet_home_new_loss_scaled_disc_ratio_0_10"
   offline: True
-  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio/ResNet_home_new_loss_scaled_disc_ratio_2_00/ResNet_home_new_loss_scaled_disc_ratio_2_00.json"
+  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio/ResNet_home_new_loss_scaled_disc_ratio_0_10/ResNet_home_new_loss_scaled_disc_ratio_0_10.json"
   save_destination: "/home/pld2602/scratch/"

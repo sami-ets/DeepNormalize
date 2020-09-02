@@ -153,14 +153,14 @@ if __name__ == '__main__':
             step=dataset_configs["iSEG"].test_step,
             models=[model_trainers[GENERATOR]],
             normalize=True,
-            batch_size=50)
+            batch_size=5)
         segmentation_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0]],
             patch_size=dataset_configs["iSEG"].test_patch_size,
             reconstructed_image_size=(1, 256, 256, 192), step=dataset_configs["iSEG"].test_step,
             models=[model_trainers[GENERATOR], model_trainers[SEGMENTER]],
             normalize_and_segment=True,
-            batch_size=50)
+            batch_size=5)
         input_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0]],
             patch_size=dataset_configs["iSEG"].test_patch_size,
@@ -191,7 +191,7 @@ if __name__ == '__main__':
                 reconstructed_image_size=(1, 256, 256, 192),
                 step=dataset_configs["iSEG"].test_step,
                 models=[model_trainers[GENERATOR]],
-                batch_size=50,
+                batch_size=5,
                 alpha=data_augmentation_config["test"]["bias_field"]["alpha"][0],
                 prob_bias=data_augmentation_config["test"]["bias_field"]["prob_bias"],
                 snr=data_augmentation_config["test"]["noise"]["snr"],
@@ -208,7 +208,7 @@ if __name__ == '__main__':
             step=dataset_configs["iSEG"].test_step,
             models=[model_trainers[GENERATOR]],
             normalize=True,
-            batch_size=50)
+            batch_size=4)
         segmentation_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
              ABIDE_reconstruction._source_images[0]],
@@ -217,7 +217,7 @@ if __name__ == '__main__':
             step=dataset_configs["iSEG"].test_step,
             models=[model_trainers[GENERATOR], model_trainers[SEGMENTER]],
             normalize_and_segment=True,
-            batch_size=50)
+            batch_size=4)
         input_reconstructor = ImageReconstructor(
             [iSEG_reconstruction._source_images[0], MRBrainS_reconstruction._source_images[0],
              ABIDE_reconstruction._source_images[0]],
@@ -252,7 +252,7 @@ if __name__ == '__main__':
                 reconstructed_image_size=(1, 256, 256, 192),
                 step=dataset_configs["iSEG"].test_step,
                 models=[model_trainers[GENERATOR]],
-                batch_size=50,
+                batch_size=4,
                 alpha=data_augmentation_config["test"]["bias_field"]["alpha"][0],
                 prob_bias=data_augmentation_config["test"]["bias_field"]["prob_bias"],
                 snr=data_augmentation_config["test"]["noise"]["snr"],
