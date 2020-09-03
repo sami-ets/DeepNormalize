@@ -134,7 +134,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 5000
     validation_split: 0.3
     augment: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -147,7 +147,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: !!null
-    max_num_patches: 40000
+    max_num_patches: 5000
     validation_split: 0.3
     augment: False
     patch_size: !python/tuple [1, 32, 32, 32]
@@ -160,7 +160,7 @@ dataset:
     path_augmented: !!null
     modalities: "T1"
     max_subjects: 10
-    max_num_patches: 40000
+    max_num_patches: 5000
     validation_split: 0.3
     augment: False
     sites: !!null

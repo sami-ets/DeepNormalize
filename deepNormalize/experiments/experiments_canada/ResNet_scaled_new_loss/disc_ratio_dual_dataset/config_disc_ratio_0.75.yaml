@@ -189,5 +189,5 @@ visdom:
   port: "8097"
   env: "ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_0_75"
   offline: True
-  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_0.75/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_0_75.json"
+  filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_0_75/ResNet_canada_new_loss_scaled_dual_dataset_disc_ratio_0_75.json"
   save_destination: "/home/pld2602/scratch/"

@@ -159,7 +159,7 @@ dataset:
     path: "/home/pld2602/projects/def-lombaert/pld2602/Data/ABIDE_scaled"
     path_augmented: !!null
     modalities: "T1"
-    max_subjects: 10
+    max_subjects: 150
     max_num_patches: 40000
     validation_split: 0.3
     augment: False
@@ -203,7 +203,7 @@ training:
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_canada_new_loss_scaled_disc_ratio_2_00"
+  env: "ResNet_canada_new_loss_scaled_disc_ratio_5_00"
   offline: True
   filename: "/home/pld2602/scratch/ResNet_scaled_new_loss/disc_ratio/ResNet_canada_new_loss_scaled_disc_ratio_5_00/ResNet_canada_new_loss_scaled_disc_ratio_5_00.json"
   save_destination: "/home/pld2602/scratch/"

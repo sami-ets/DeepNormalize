@@ -1378,16 +1378,15 @@ class TrainerFactory(object):
                                                                  "title": "Layer3 FM"}},
                                     every=500), Event.ON_TRAIN_BATCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True}}, every=100), Event.ON_TEST_BATCH_END) \
-                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Images Histograms", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True}}, every=5), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 Checkpoint(save_folder, monitor_fn=lambda model_trainer: model_trainer.valid_loss, delta=0.01,
                            mode=MonitorMode.MIN), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotAvgGradientPerLayer(visdom_logger, every=25), Event.ON_TRAIN_BATCH_END)
-
+            #         .with_event_handler(
+            # PlotCustomVariables(visdom_logger, "Per-Dataset Histograms", PlotType.IMAGE_PLOT,
+            #                     params={"opts": {"store_history": True}}, every=100), Event.ON_TEST_BATCH_END) \
             return trainer
 
         elif self._trainer == TrainerType.DCGAN:

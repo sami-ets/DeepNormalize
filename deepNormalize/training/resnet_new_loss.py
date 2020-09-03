@@ -1014,8 +1014,8 @@ class ResNetTrainerNewLoss(Trainer):
     def _update_histograms(self, inputs, target, gen_pred):
         self.custom_variables["Generated Intensity Histogram"] = flatten(gen_pred.cpu().detach())
         self.custom_variables["Input Intensity Histogram"] = flatten(inputs.cpu().detach())
-        self.custom_variables["Per-Dataset Histograms"] = cv2.imread(
-            construct_class_histogram(inputs, target, gen_pred)).transpose((2, 0, 1))
+        # self.custom_variables["Per-Dataset Histograms"] = cv2.imread(
+        #     construct_class_histogram(inputs, target, gen_pred)).transpose((2, 0, 1))
         self.custom_variables["Background Generated Intensity Histogram"] = gen_pred[
             torch.where(target[IMAGE_TARGET] == 0)].cpu().detach()
         self.custom_variables["CSF Generated Intensity Histogram"] = gen_pred[

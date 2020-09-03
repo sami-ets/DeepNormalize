@@ -132,7 +132,7 @@ dataset:
     path_augmented: !!null
     modalities: [ "T1", "T2" ]
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     augment: False
     patch_size: !python/tuple [ 1, 32, 32, 32 ]
@@ -145,7 +145,7 @@ dataset:
     path_augmented: !!null
     modalities: [ "T1", "T2_FLAIR" ]
     max_subjects: !!null
-    max_num_patches: 100
+    max_num_patches: 40000
     validation_split: 0.3
     augment: False
     patch_size: !python/tuple [ 1, 32, 32, 32 ]
@@ -175,7 +175,7 @@ data_augmentation:
 training:
   trainer: "ResNet_Multimodal"
   n_critics: 3
-  batch_size: 72
+  batch_size: 64
   nb_epochs: 200
   patience_segmentation: 0
   build_augmented_images: False
