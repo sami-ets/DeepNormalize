@@ -1,6 +1,7 @@
 import torch
 from kerosene.nn.criterions import CriterionFactory
 from torch.nn.modules.loss import _Loss
+from deepNormalize.utils.constants import EPSILON
 
 
 class MeanLoss(_Loss):
@@ -33,14 +34,15 @@ class MultipleDatasetLoss(_Loss):
         pred_real = inputs.gather(1, targets.view(-1, 1))
         pred_fake = inputs.gather(1, target_fake.view(-1, 1))
 
-        ones = torch.Tensor().new_ones(pred_fake.shape, device=inputs.device, dtype=pred_real.dtype)
+        ones = torch.Tensor().new_ones(pred_fake.shape, device=inputs.device, dtype=pred_real.dtype,
+                                       requires_grad=False)
 
         if self._reduction == "sum":
             # return torch.log(pred_real + pred_fake).sum()
-            return -torch.log(ones - (pred_real + pred_fake)).sum()
+            return -torch.log(ones - ((pred_real + EPSILON) + (pred_fake + EPSILON))).sum()
         elif self._reduction == "mean":
             # return torch.log(pred_real + pred_fake).mean()
-            return -torch.log(ones - (pred_real + pred_fake)).mean()
+            return -torch.log(ones - ((pred_real + EPSILON) + (pred_fake + EPSILON))).mean()
         else:
             return NotImplementedError
 

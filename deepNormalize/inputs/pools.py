@@ -5,7 +5,7 @@ import torch
 
 
 class ImagePool(object):
-    def __init__(self, size: int = 360):
+    def __init__(self, size: int = 576):
         self._size = size
         self._inputs = []
         self._targets = []
