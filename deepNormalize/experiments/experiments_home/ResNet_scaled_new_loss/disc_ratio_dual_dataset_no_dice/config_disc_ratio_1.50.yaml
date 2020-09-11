@@ -182,12 +182,12 @@ training:
   data_augmentation: False
   variables:
     disc_ratio: 1.5
-    seg_ratio: 1.0
+    seg_ratio: 0.0
 
 visdom:
   server: "localhost"
   port: "8097"
-  env: "ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_3"
+  env: "ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_no_dice"
   offline: False
-  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/ResNet_scaled_new_loss/disc_ratio_dual_dataset/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_3/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_3.json"
+  filename: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/ResNet_scaled_new_loss/disc_ratio_dual_dataset_no_dice/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_no_dice/ResNet_home_new_loss_scaled_dual_dataset_disc_ratio_1_50_no_dice.json"
   save_destination: "/mnt/home/Etudes/ETS/Maitrise/Projet/Logs/home/"

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 import visdom
 
 from deepNormalize.models.dcgan3d import DCGAN
+from deepNormalize.models.resnet3d import ResNet18
 from deepNormalize.models.unet3d import Unet
 from deepNormalize.utils.slices import SliceBuilder
 
@@ -19,6 +20,8 @@ PATCH_SIZE = (1, 32, 32, 32)
 STEP = (1, 8, 8, 8)
 
 BATCH_SIZE = 5
+
+DEVICE = "cuda:1"
 
 
 class SingleImageDataset(Dataset):
@@ -71,19 +74,28 @@ if __name__ == "__main__":
 
     # TODO restore your model from checkpoint
     generator = Unet(1, 1, True, True)
-    discriminator = DCGAN(1, 3)
+    discriminator = ResNet18({"in_channels": 1,
+                              "out_channels": 3,
+                              "num_groups": None,
+                              "conv_groups": 1,
+                              "width_per_group": 64,
+                              "padding": [1, 1, 1, 1, 1, 1],
+                              "activation": "ReLU",
+                              "zero_init_residual": False,
+                              "replace_stride_with_dilation": None,
+                              "gaussian_filter": False})
 
-    checkpoint = torch.load("/mnt/md0/models/Generator/Generator_76.tar")
+    checkpoint = torch.load("/mnt/md0/models/Generator/Generator_147.tar", map_location="cpu")
     generator.load_state_dict(checkpoint["model_state_dict"])
-    generator.to("cuda:0")
-    checkpoint = torch.load("/mnt/md0/models/Discriminator/Discriminator_76.tar")
+    generator.to(DEVICE)
+    checkpoint = torch.load("/mnt/md0/models/Discriminator/Discriminator_147.tar", map_location="cpu")
     discriminator.load_state_dict(checkpoint["model_state_dict"])
-    discriminator.to("cuda:0")
+    discriminator.to(DEVICE)
 
-    iseg_pred = torch.zeros(3, ).to("cuda:0")
-    iseg_pred_real = torch.zeros(3, ).to("cuda:0")
-    mrbrains_pred = torch.zeros(3, ).to("cuda:0")
-    mrbrains_pred_real = torch.zeros(3, ).to("cuda:0")
+    iseg_pred = torch.zeros(3, ).to(DEVICE)
+    iseg_pred_real = torch.zeros(3, ).to(DEVICE)
+    mrbrains_pred = torch.zeros(3, ).to(DEVICE)
+    mrbrains_pred_real = torch.zeros(3, ).to(DEVICE)
 
     iseg_count = 0
     mrbrain_count = 0
@@ -91,8 +103,8 @@ if __name__ == "__main__":
     for idx, (iseg_inputs, mrbrains_inputs) in enumerate(zip(iseg_data_loader, mrbrains_dataloader)):
         inputs = torch.cat((iseg_inputs, mrbrains_inputs))
 
-        disc_pred_on_real = discriminator.forward(inputs.to("cuda:0"))[0]
-        normalised_patches = torch.nn.functional.sigmoid(generator(inputs.to("cuda:0")))
+        disc_pred_on_real = discriminator.forward(inputs.to(DEVICE))[0]
+        normalised_patches = torch.nn.functional.sigmoid(generator(inputs.to(DEVICE)))
         disc_pred_on_gen = discriminator.forward(normalised_patches)[0]
 
         mrbrains_pred = mrbrains_pred + to_onehot(

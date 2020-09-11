@@ -18,6 +18,7 @@ class CustomCriterionFactory(CriterionFactory):
         self.register("MeanLoss", MeanLoss)
         self.register("DualDatasetLoss", DualDatasetLoss)
         self.register("MultipleDatasetLoss", MultipleDatasetLoss)
+        self.register("ISBILoss", ISBILoss)
 
 
 class MultipleDatasetLoss(_Loss):
@@ -52,6 +53,23 @@ class DualDatasetLoss(_Loss):
         super(DualDatasetLoss, self).__init__()
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
-        ones = torch.Tensor().new_ones(targets.shape, device=targets.device, dtype=targets.dtype)
+        ones = torch.Tensor().new_ones(targets.shape, device=targets.device, dtype=targets.dtype, requires_grad=False)
         inverse_target = (ones - targets)
         return torch.nn.functional.nll_loss(torch.nn.functional.log_softmax(inputs, dim=1), inverse_target)
+
+
+class ISBILoss(_Loss):
+    def __init__(self):
+        super(ISBILoss, self).__init__()
+
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
+        ones = torch.Tensor().new_ones(inputs.shape, device=targets.device, dtype=targets.dtype, requires_grad=False)
+
+        inputs = ones - torch.nn.functional.softmax(inputs, dim=1)
+
+        fake_target = torch.Tensor().new_full(fill_value=inputs.shape[1] - 1,
+                                              size=(inputs.size(0),),
+                                              dtype=torch.long, device=targets.device,
+                                              requires_grad=False)
+
+        return torch.nn.functional.nll_loss(torch.nn.functional.log_softmax(inputs, dim=1), fake_target)

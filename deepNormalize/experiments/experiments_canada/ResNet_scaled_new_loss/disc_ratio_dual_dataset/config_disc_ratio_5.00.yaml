@@ -138,7 +138,7 @@ dataset:
     patch_size: !python/tuple [ 1, 32, 32, 32 ]
     step: !python/tuple [ 1, 4, 4, 4 ]
     test_patch_size: !python/tuple [ 1, 32, 32, 32 ]
-    test_step: !python/tuple [ 1, 16, 16, 16 ]
+    test_step: !python/tuple [ 1, 8, 8, 8 ]
     reconstruction_size: [ 256, 192, 160 ]
   MRBrainS:
     path: "/home/pld2602/projects/def-lombaert/pld2602/Data/MRBrainS_scaled/DataNii/TrainingData/"
@@ -151,7 +151,7 @@ dataset:
     patch_size: !python/tuple [ 1, 32, 32, 32 ]
     step: !python/tuple [ 1, 4, 4, 4 ]
     test_patch_size: !python/tuple [ 1, 32, 32, 32 ]
-    test_step: !python/tuple [ 1, 16, 16, 16 ]
+    test_step: !python/tuple [ 1, 8, 8, 8 ]
     reconstruction_size: [ 256, 256, 192 ]
 
 data_augmentation:

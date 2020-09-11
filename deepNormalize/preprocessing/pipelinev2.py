@@ -645,11 +645,11 @@ if __name__ == "__main__":
     #              do_extract_patches=False,
     #              augment=True,
     #              do_min_max_scaling=False).run()
-    iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
-                 step=None,
-                 do_extract_patches=False,
-                 augment=True,
-                 do_min_max_scaling=True).run()
+    # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_scaled_augmented/iSEG/Training",
+    #              step=None,
+    #              do_extract_patches=False,
+    #              augment=True,
+    #              do_min_max_scaling=True).run()
     # iSEGPipeline(args.path_iseg, "/mnt/md0/Data/iSEG_standardized_triple/iSEG/Training",
     #              step=None,
     #              do_extract_patches=False,

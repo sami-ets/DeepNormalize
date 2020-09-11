@@ -143,9 +143,9 @@ class AddBiasField(object):
 
     @staticmethod
     def compute_bias_field(alpha, input_shape):
-        x = np.linspace(max(0, 1 - alpha), 1 + alpha, input_shape[1])
-        y = np.linspace(max(0, 1 - alpha), 1 + alpha, input_shape[2])
-        z = np.linspace(max(0, 1 - alpha), 1 + alpha, input_shape[3])
+        x = np.linspace(max(0, 1 - alpha), 1, input_shape[1])
+        y = np.linspace(max(0, 1 - alpha), 1, input_shape[2])
+        z = np.linspace(max(0, 1 - alpha), 1, input_shape[3])
         [X, Y, Z] = np.meshgrid(x, y, z)
         bias = np.multiply(X, Y, Z).transpose(1, 0, 2)
         bias = np.expand_dims(bias, 0)

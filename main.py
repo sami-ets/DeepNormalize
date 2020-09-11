@@ -43,8 +43,8 @@ from deepNormalize.utils.image_slicer import ImageReconstructor
 cudnn.benchmark = True
 cudnn.enabled = True
 
-np.random.seed(42)
-random.seed(42)
+np.random.seed(43)
+random.seed(43)
 
 if __name__ == '__main__':
     # Basic settings
