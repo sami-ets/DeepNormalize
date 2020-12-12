@@ -46,8 +46,7 @@ from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, La
     ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_JS, to_html_time, count, \
     construct_triple_histrogram, construct_double_histrogram, construct_single_histogram, construct_class_histogram, \
-    save_augmented_rebuilt_images, \
-    save_rebuilt_image
+    save_augmented_rebuilt_images, save_rebuilt_image
 
 
 class ResNetTrainerNewLoss(Trainer):
@@ -967,7 +966,6 @@ class ResNetTrainerNewLoss(Trainer):
                            self._iseg_pred.cpu().numpy(),
                            self._mrbrains_pred.cpu().numpy(),
                            self._abide_pred.cpu().numpy())))
-
 
     def _update_image_plots(self, phase, inputs, generator_predictions, segmenter_predictions, target, dataset_ids):
         inputs = torch.nn.functional.interpolate(inputs, scale_factor=5, mode="trilinear",

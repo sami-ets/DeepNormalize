@@ -211,13 +211,15 @@ class ImageReconstructor(object):
     def __init__(self, images: List[np.ndarray], patch_size: Tuple[int, int, int, int],
                  reconstructed_image_size: Tuple[int, int, int, int], step: Tuple[int, int, int, int],
                  batch_size: int = 5, models: List[torch.nn.Module] = None, normalize: bool = False,
-                 is_ground_truth: bool = False, normalize_and_segment: bool = False, is_multimodal=False, prob_bias=0.0,
+                 is_ground_truth: bool = False, normalize_and_segment: bool = False, segment: bool = False,
+                 is_multimodal=False, prob_bias=0.0,
                  prob_noise=0.0, alpha=0.0, snr=0.0):
         self._patch_size = patch_size
         self._reconstructed_image_size = reconstructed_image_size
         self._step = step
         self._models = models
         self._do_normalize = normalize
+        self._do_segment = segment
         self._is_ground_truth = is_ground_truth
         self._do_normalize_and_segment = normalize_and_segment
         self._transform = Compose([ToNumpyArray()])
@@ -276,6 +278,9 @@ class ImageReconstructor(object):
                     patches = torch.argmax(
                         torch.nn.functional.softmax(self._models[SEGMENTER](normalized_patches), dim=1), dim=1,
                         keepdim=True)
+                elif self._do_segment:
+                    patches = torch.argmax(
+                        torch.nn.functional.softmax(self._models[0](inputs.cuda()), dim=1), dim=1, keepdim=True)
                 else:
                     patches = inputs
 
@@ -328,7 +333,7 @@ class ImageReconstructor(object):
 
                 for pred_patch, slice in zip(patches[self._batch_size * 2:self._batch_size * 3], slices[ABIDE_ID]):
                     reconstructed_image[ABIDE_ID][slice] = reconstructed_image[ABIDE_ID][slice] + \
-                                                              pred_patch.data.cpu().numpy()
+                                                           pred_patch.data.cpu().numpy()
 
             reconstructed_image[ISEG_ID] = reconstructed_image[ISEG_ID] * self._overlap_maps[ISEG_ID]
             reconstructed_image[MRBRAINS_ID] = reconstructed_image[MRBRAINS_ID] * self._overlap_maps[MRBRAINS_ID]

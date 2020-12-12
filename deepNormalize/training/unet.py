@@ -34,17 +34,21 @@ from deepNormalize.training.sampler import Sampler
 from deepNormalize.utils.constants import IMAGE_TARGET, DATASET_ID, ABIDE_ID, \
     NON_AUGMENTED_INPUTS, AUGMENTED_INPUTS, AUGMENTED_TARGETS
 from deepNormalize.utils.constants import ISEG_ID, MRBRAINS_ID
-from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper
+from deepNormalize.utils.image_slicer import ImageSlicer, SegmentationSlicer, LabelMapper, ImageReconstructor
 from deepNormalize.utils.utils import to_html, to_html_per_dataset, to_html_time, get_all_patches, rebuild_image, \
-    save_rebuilt_image
+    save_rebuilt_image, save_augmented_rebuilt_images
 
 
 class UNetTrainer(Trainer):
 
     def __init__(self, training_config, model_trainers: List[ModelTrainer],
                  train_data_loader: DataLoader, valid_data_loader: DataLoader, test_data_loader: DataLoader,
-                 reconstruction_datasets: List[Dataset], input_reconstructors: list, segmentation_reconstructors: list,
-                 augmented_reconstructors: list, gt_reconstructors: list, run_config: RunConfiguration,
+                 reconstruction_datasets: List[Dataset],
+                 input_reconstructor: ImageReconstructor,
+                 segmentation_reconstructor: ImageReconstructor,
+                 augmented_input_reconstructor: ImageReconstructor,
+                 gt_reconstructor: ImageReconstructor,
+                 run_config: RunConfiguration,
                  dataset_config: dict, save_folder: str):
         super(UNetTrainer, self).__init__("UNetTrainer", train_data_loader, valid_data_loader, test_data_loader,
                                           model_trainers, run_config)
@@ -56,11 +60,11 @@ class UNetTrainer(Trainer):
         self._seg_slicer = SegmentationSlicer()
         self._label_mapper = LabelMapper()
         self._reconstruction_datasets = reconstruction_datasets
-        self._gt_reconstructors = gt_reconstructors
-        self._input_reconstructors = input_reconstructors
-        self._segmentation_reconstructors = segmentation_reconstructors
-        self._augmented_reconstructors = augmented_reconstructors
-        self._num_datasets = len(input_reconstructors)
+        self._input_reconstructor = input_reconstructor
+        self._gt_reconstructor = gt_reconstructor
+        self._segmentation_reconstructor = segmentation_reconstructor
+        self._augmented_input_reconstructor = augmented_input_reconstructor
+        self._num_datasets = len(list(dataset_config.keys()))
         self._class_hausdorff_distance_gauge = AverageGauge()
         self._mean_hausdorff_distance_gauge = AverageGauge()
         self._per_dataset_hausdorff_distance_gauge = AverageGauge()
@@ -147,27 +151,24 @@ class UNetTrainer(Trainer):
         return seg_pred, loss_S
 
     def train_step(self, inputs, target):
-        inputs, target = self._sampler(inputs, target)
-
         seg_pred, _ = self._train_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS],
-                                    target[AUGMENTED_TARGETS][IMAGE_TARGET])
+                                    target[IMAGE_TARGET])
 
         if self.current_train_step % 500 == 0:
             self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
-                                     target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
-                                     target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def validate_step(self, inputs, target):
-        inputs, target = self._sampler(inputs, target)
-
-        seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS], target[AUGMENTED_TARGETS][IMAGE_TARGET])
+        seg_pred, _ = self._valid_s(self._model_trainers[0], inputs[AUGMENTED_INPUTS],
+                                    target[IMAGE_TARGET])
 
         if self.current_valid_step % 100 == 0:
             self._update_image_plots(self.phase, inputs[AUGMENTED_INPUTS].cpu().detach(),
                                      seg_pred.cpu().detach(),
-                                     target[AUGMENTED_TARGETS][IMAGE_TARGET].cpu().detach(),
-                                     target[AUGMENTED_TARGETS][DATASET_ID].cpu().detach())
+                                     target[IMAGE_TARGET].cpu().detach(),
+                                     target[DATASET_ID].cpu().detach())
 
     def test_step(self, inputs, target):
         inputs, target = self._sampler(inputs, target)
@@ -294,37 +295,60 @@ class UNetTrainer(Trainer):
     def on_test_epoch_end(self):
         if self.epoch % 10 == 0:
             self._per_dataset_hausdorff_distance_gauge.reset()
+            self._class_dice_gauge_on_reconstructed_iseg_images.reset()
+            self._class_dice_gauge_on_reconstructed_mrbrains_images.reset()
+            self._class_dice_gauge_on_reconstructed_abide_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_iseg_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_mrbrains_images.reset()
+            self._hausdorff_distance_gauge_on_reconstructed_abide_images.reset()
 
-            all_patches, ground_truth_patches = get_all_patches(self._reconstruction_datasets, self._is_sliced)
+            img_input = self._input_reconstructor.reconstruct_from_patches_3d()
+            img_gt = self._gt_reconstructor.reconstruct_from_patches_3d()
+            img_seg = self._segmentation_reconstructor.reconstruct_from_patches_3d()
 
-            img_input = rebuild_image(self._dataset_configs.keys(), all_patches, self._input_reconstructors)
-            img_gt = rebuild_image(self._dataset_configs.keys(), ground_truth_patches, self._gt_reconstructors)
-            img_seg = rebuild_image(self._dataset_configs.keys(), all_patches, self._segmentation_reconstructors)
-
-            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input, "Input")
+            save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_input,
+                               "Input")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_gt,
                                "Ground_Truth")
             save_rebuilt_image(self._current_epoch, self._save_folder, self._dataset_configs.keys(), img_seg,
                                "Segmented")
 
+            if self._training_config.build_augmented_images:
+                img_augmented_input = self._augmented_input_reconstructor.reconstruct_from_patches_3d()
+                img_augmented_normalized = self._augmented_normalized_reconstructor.reconstruct_from_patches_3d()
+                save_augmented_rebuilt_images(self._current_epoch, self._save_folder, self._dataset_configs.keys(),
+                                              img_augmented_input, img_augmented_normalized)
+
             mean_mhd = []
             for dataset in self._dataset_configs.keys():
                 self.custom_variables[
                     "Reconstructed Segmented {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_seg[dataset], 0), 0), 160).squeeze(0)
+                    SliceType.AXIAL, np.expand_dims(img_seg[dataset], 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Ground Truth {} Image".format(dataset)] = self._seg_slicer.get_colored_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_gt[dataset], 0), 0), 160).squeeze(0)
+                    SliceType.AXIAL, np.expand_dims(img_gt[dataset], 0), 160).squeeze(0)
                 self.custom_variables[
                     "Reconstructed Input {} Image".format(dataset)] = self._slicer.get_slice(
-                    SliceType.AXIAL, np.expand_dims(np.expand_dims(img_input[dataset], 0), 0), 160)
+                    SliceType.AXIAL, np.expand_dims(img_input[dataset], 0), 160)
 
-                self.custom_variables[
-                    "Reconstructed Initial Noise {} Image".format(
+                if self._training_config.build_augmented_images:
+                    self.custom_variables[
+                        "Reconstructed Augmented Input {} Image".format(dataset)] = self._slicer.get_slice(
+                        SliceType.AXIAL, np.expand_dims(np.expand_dims(img_augmented_input[dataset], 0), 0), 160)
+                    self.custom_variables[
+                        "Reconstructed Augmented {} After Normalization".format(
+                            dataset)] = self._seg_slicer.get_colored_slice(
+                        SliceType.AXIAL,
+                        np.expand_dims(np.expand_dims(img_augmented_normalized[dataset], 0), 0), 160).squeeze(0)
+                else:
+                    self.custom_variables["Reconstructed Augmented Input {} Image".format(
                         dataset)] = np.zeros((224, 192))
-                self.custom_variables[
-                    "Reconstructed Noise {} After Normalization".format(
-                        dataset)] = np.zeros((224, 192))
+                    self.custom_variables[
+                        "Reconstructed Initial Noise {} Image".format(
+                            dataset)] = np.zeros((224, 192))
+                    self.custom_variables[
+                        "Reconstructed Augmented {} After Normalization".format(
+                            dataset)] = np.zeros((224, 192))
 
                 mean_mhd.append(mean_hausdorff_distance(
                     to_onehot(torch.tensor(img_gt[dataset], dtype=torch.long), num_classes=4),
@@ -333,6 +357,7 @@ class UNetTrainer(Trainer):
                 metric = self._model_trainers[0].compute_metrics(
                     to_onehot(torch.tensor(img_seg[dataset]).unsqueeze(0).long(), num_classes=4),
                     torch.tensor(img_gt[dataset]).unsqueeze(0).long())
+
                 self._class_dice_gauge_on_reconstructed_images.update(np.array(metric["Dice"]))
 
             self._per_dataset_hausdorff_distance_gauge.update(np.array(mean_mhd))

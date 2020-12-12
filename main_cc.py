@@ -61,7 +61,7 @@ if __name__ == '__main__':
     data_augmentation_config = YamlConfigurationParser.parse_section(args.config_file, "data_augmentation")
     config_html = [training_config.to_html(), list(map(lambda config: config.to_html(), dataset_configs.values())),
                    list(map(lambda config: config.to_html(), model_trainer_configs))]
-
+    torch.manual_seed(training_config.seed)
     # Prepare the data.
     train_datasets = list()
     valid_datasets = list()

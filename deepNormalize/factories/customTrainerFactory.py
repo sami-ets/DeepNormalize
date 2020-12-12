@@ -57,8 +57,7 @@ class TrainerFactory(object):
     def create(self, training_config, model_trainers, dataloaders, reconstruction_datasets,
                normalized_reconstructor, input_reconstructor, segmentation_reconstructor,
                augmented_input_reconstructor, augmented_normalized_reconstructor, gt_reconstructor, run_config,
-               dataset_configs, save_folder,
-               visdom_logger):
+               dataset_configs, save_folder, visdom_logger):
         if self._trainer == TrainerType.WGAN:
             trainer = WGANTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
                                   dataloaders[2],
@@ -3148,7 +3147,7 @@ class TrainerFactory(object):
                                   segmentation_reconstructor, augmented_input_reconstructor, gt_reconstructor,
                                   run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
-                .with_event_handler(PrintMonitors(every=25), Event.ON_BATCH_END) \
+                .with_event_handler(PrintMonitorsTable(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(PlotLR(visdom_logger), Event.ON_EPOCH_END) \
                 .with_event_handler(
@@ -3369,11 +3368,6 @@ class TrainerFactory(object):
                                                      "title": "Reconstructed Input iSEG Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 iSEG Image", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Input T2 iSEG Image"}},
-                                    every=10), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented iSEG Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Segmented iSEG Image"}},
@@ -3388,11 +3382,6 @@ class TrainerFactory(object):
                                     params={"opts": {"store_history": True,
                                                      "title": "Reconstructed Input MRBrainS Image"}},
                                     every=10), Event.ON_TEST_EPOCH_END) \
-                .with_event_handler(
-                PlotCustomVariables(visdom_logger, "Reconstructed Input T2 MRBrainS Image", PlotType.IMAGE_PLOT,
-                                    params={"opts": {"store_history": True,
-                                                     "title": "Reconstructed Input T2 MRBrainS Image"}},
-                                    every=100), Event.ON_TEST_EPOCH_END) \
                 .with_event_handler(
                 PlotCustomVariables(visdom_logger, "Reconstructed Segmented MRBrainS Image", PlotType.IMAGE_PLOT,
                                     params={"opts": {"store_history": True,
@@ -3932,12 +3921,12 @@ class TrainerFactory(object):
 
         elif self._trainer == TrainerType.ResNet_Multimodal:
             trainer = ResNetMultimodalTrainer(training_config, model_trainers, dataloaders[0], dataloaders[1],
-                                           dataloaders[2],
-                                           reconstruction_datasets, normalized_reconstructor, input_reconstructor,
-                                           segmentation_reconstructor, augmented_input_reconstructor,
-                                           augmented_normalized_reconstructor,
-                                           gt_reconstructor,
-                                           run_config, dataset_configs, save_folder) \
+                                              dataloaders[2],
+                                              reconstruction_datasets, normalized_reconstructor, input_reconstructor,
+                                              segmentation_reconstructor, augmented_input_reconstructor,
+                                              augmented_normalized_reconstructor,
+                                              gt_reconstructor,
+                                              run_config, dataset_configs, save_folder) \
                 .with_event_handler(PrintTrainingStatus(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PrintMonitorsTable(every=25), Event.ON_BATCH_END) \
                 .with_event_handler(PlotMonitors(visdom_logger), Event.ON_EPOCH_END) \
